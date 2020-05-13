@@ -1,6 +1,8 @@
 #ifndef WINMTRSTATUSBAR_H_
 #define WINMTRSTATUSBAR_H_
 
+#include <vector>
+
 class WinMTRStatusBar : public CStatusBar
 {
 // Construction
@@ -23,7 +25,7 @@ public:
 		_STATUSBAR_PANE_ pane;
 		PaneInfoGet(nIndex, &pane);
 		pane.cxText = nWidth;
-		PaneInfoSet(nIndex, &pane);
+		PaneInfoSet(nIndex, pane);
 	}
 	
 	BOOL AddPane(
@@ -45,10 +47,10 @@ public:
 	void DisableControl( int nIndex, BOOL bDisable=TRUE)
 	{
 		UINT uItemID = GetItemID(nIndex);
-		for ( int i = 0; i < m_arrPaneControls.GetSize(); i++ ){
-			if( uItemID == m_arrPaneControls[i]->nID ){
-				if( m_arrPaneControls[i]->hWnd && ::IsWindow(m_arrPaneControls[i]->hWnd) ) {
-					::EnableWindow(m_arrPaneControls[i]->hWnd, bDisable); 
+		for (const auto & cntl : m_arrPaneControls){
+			if( uItemID == cntl.nID ){
+				if(cntl.hWnd && ::IsWindow(cntl.hWnd) ) {
+					::EnableWindow(cntl.hWnd, bDisable);
 				}
 			}
 		}
@@ -98,10 +100,17 @@ protected:
 	{
 		HWND hWnd;
 		UINT nID;
-		BOOL bAutoDestroy;		
+		bool bAutoDestroy;
+		_STATUSBAR_PANE_CTRL_(HWND hWnd, UINT nID, bool bAutoDestroy)
+			:hWnd(hWnd),nID(nID),bAutoDestroy(bAutoDestroy){}
+		_STATUSBAR_PANE_CTRL_();
+		_STATUSBAR_PANE_CTRL_(const _STATUSBAR_PANE_CTRL_&) = delete;
+		~_STATUSBAR_PANE_CTRL_();
+		_STATUSBAR_PANE_CTRL_(_STATUSBAR_PANE_CTRL_&&) = default;
+		_STATUSBAR_PANE_CTRL_& operator=(_STATUSBAR_PANE_CTRL_&&) = default;
 	};
 	
-	CArray < _STATUSBAR_PANE_CTRL_*, _STATUSBAR_PANE_CTRL_* > m_arrPaneControls; 
+	std::vector<_STATUSBAR_PANE_CTRL_> m_arrPaneControls;
 	
 	_STATUSBAR_PANE_* GetPanePtr(int nIndex) const
 	{
@@ -109,8 +118,8 @@ protected:
 		return ((_STATUSBAR_PANE_*)m_pData) + nIndex;
 	}
 	
-	BOOL PaneInfoGet(int nIndex, _STATUSBAR_PANE_* pPane);
-	BOOL PaneInfoSet(int nIndex, _STATUSBAR_PANE_* pPane);
+	bool PaneInfoGet(int nIndex, _STATUSBAR_PANE_* pPane);
+	bool PaneInfoSet(int nIndex, const _STATUSBAR_PANE_& pPane);
 	
 	void RepositionControls();
 	

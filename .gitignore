@@ -6,3 +6,6 @@
 /Release
 /Release_x64
 /WinMTR.suo
+/Debug
+/Debug_x64
+*.user

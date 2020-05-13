@@ -1,8 +1,9 @@
 #include "WinMTRGlobal.h"
 #include "WinMTRStatusBar.h"
+#include <vector>
 
 #ifdef _DEBUG
-#define new DEBUG_NEW
+//#define new DEBUG_NEW
 #undef THIS_FILE
 static char THIS_FILE[] = __FILE__;
 #endif
@@ -13,16 +14,13 @@ WinMTRStatusBar::WinMTRStatusBar()
 
 WinMTRStatusBar::~WinMTRStatusBar()
 {
-	for ( int i = 0; i < m_arrPaneControls.GetSize(); i++ ){
-		if( m_arrPaneControls[i]->hWnd && ::IsWindow(m_arrPaneControls[i]->hWnd) ) {
-			::ShowWindow(m_arrPaneControls[i]->hWnd, SW_HIDE); 
-			if( m_arrPaneControls[i]->bAutoDestroy ) {
-				::DestroyWindow(m_arrPaneControls[i]->hWnd);
+	for (const auto& cntl : m_arrPaneControls ){
+		if( cntl.hWnd && ::IsWindow(cntl.hWnd) ) {
+			::ShowWindow(cntl.hWnd, SW_HIDE); 
+			if( cntl.bAutoDestroy ) {
+				::DestroyWindow(cntl.hWnd);
 			}
 		}
-		_STATUSBAR_PANE_CTRL_ *pPaneCtrl = m_arrPaneControls[i];
-		if( pPaneCtrl )
-			delete pPaneCtrl;
 	}
 }
 
@@ -60,14 +58,14 @@ LRESULT WinMTRStatusBar::WindowProc(UINT message, WPARAM wParam, LPARAM lParam)
 
 void WinMTRStatusBar::RepositionControls()
 {
-	HDWP _hDWP = ::BeginDeferWindowPos( m_arrPaneControls.GetSize() );
+	HDWP _hDWP = ::BeginDeferWindowPos( m_arrPaneControls.size() );
 	
 	CRect rcClient;
 	GetClientRect(&rcClient);
-	for (int i = 0; i < m_arrPaneControls.GetSize(); i++ )
+	for (const auto & cntl : m_arrPaneControls)
 	{
-		int   iIndex  = CommandToIndex(m_arrPaneControls[i]->nID);
-		HWND hWnd    = m_arrPaneControls[i]->hWnd;
+		int   iIndex  = CommandToIndex(cntl.nID);
+		HWND hWnd    = cntl.hWnd;
 		
 		CRect rcPane;
 		GetItemRect(iIndex, &rcPane);
@@ -147,49 +145,40 @@ BOOL WinMTRStatusBar::AddPane(
 		return FALSE;
 	}
 	
-	CArray<_STATUSBAR_PANE_*,_STATUSBAR_PANE_*> arrPanesTmp;
-	int iIndex = 0;
-	for (iIndex = 0; iIndex < m_nCount+1; iIndex++)
+	std::vector<_STATUSBAR_PANE_> arrPanesTmp;
+	arrPanesTmp.reserve(m_nCount + 1);
+	for (int iIndex = 0; iIndex < m_nCount+1; iIndex++)
 	{
-		_STATUSBAR_PANE_* pNewPane = new _STATUSBAR_PANE_;
+		_STATUSBAR_PANE_ pNewPane;
 		
 		if (iIndex == nIndex){
-			pNewPane->nID    = nID;
-			pNewPane->nStyle = SBPS_NORMAL;
+			pNewPane.nID    = nID;
+			pNewPane.nStyle = SBPS_NORMAL;
 		}else{
 			int idx = iIndex;
 			if (iIndex > nIndex) idx--;
 			
 			_STATUSBAR_PANE_* pOldPane  = GetPanePtr(idx);
-			pNewPane->cxText  = pOldPane->cxText;
-			pNewPane->nFlags  = pOldPane->nFlags;
-			pNewPane->nID     = pOldPane->nID;
-			pNewPane->nStyle  = pOldPane->nStyle;
-			pNewPane->strText = pOldPane->strText;
+			pNewPane = *pOldPane;
 		}
-		arrPanesTmp.Add(pNewPane);
+		arrPanesTmp.emplace_back(std::move(pNewPane));
 	}
-	
-	int nPanesCount = arrPanesTmp.GetSize();
-	UINT* lpIDArray = new UINT[ nPanesCount ];
-	for (iIndex = 0; iIndex < nPanesCount; iIndex++) {
-		lpIDArray[iIndex] = arrPanesTmp[iIndex]->nID;
+
+	std::vector<UINT> IDArray;
+	IDArray.reserve(arrPanesTmp.size());
+	for (const auto& pane : arrPanesTmp) {
+		IDArray.emplace_back(pane.nID);
 	}
 	
 	// set the indicators 
-	SetIndicators(lpIDArray, nPanesCount);
+	SetIndicators(IDArray.data(), IDArray.size());
 	// free memory
-	for (iIndex = 0; iIndex < nPanesCount; iIndex++){
-		_STATUSBAR_PANE_* pPane = arrPanesTmp[iIndex];
+	auto nPanesCount = arrPanesTmp.size();
+	for (size_t iIndex = 0; iIndex < nPanesCount; iIndex++){
 		if (iIndex != nIndex)
-			PaneInfoSet(iIndex, pPane);
-		if(pPane) 
-			delete pPane;
+			PaneInfoSet(iIndex, arrPanesTmp[iIndex]);
 	}
 	
-	arrPanesTmp.RemoveAll();
-	if(lpIDArray) 
-		delete []lpIDArray;
 	
 	RepositionControls();
 	
@@ -207,41 +196,37 @@ BOOL WinMTRStatusBar::RemovePane(
 		return FALSE;
 	}
 	
-	CArray<_STATUSBAR_PANE_*,_STATUSBAR_PANE_*> arrPanesTmp;
-	int nIndex;
-	for (nIndex = 0; nIndex < m_nCount; nIndex++)
+	std::vector<_STATUSBAR_PANE_> arrPanesTmp;
+	arrPanesTmp.reserve(m_nCount);
+	for (int nIndex = 0; nIndex < m_nCount; nIndex++)
 	{
 		_STATUSBAR_PANE_* pOldPane = GetPanePtr(nIndex);
 		
 		if (pOldPane->nID == nID)
 			continue;
 		
-		_STATUSBAR_PANE_* pNewPane = new _STATUSBAR_PANE_;
-		
-		pNewPane->cxText  = pOldPane->cxText;
-		pNewPane->nFlags  = pOldPane->nFlags;
-		pNewPane->nID     = pOldPane->nID;
-		pNewPane->nStyle  = pOldPane->nStyle;
-		pNewPane->strText = pOldPane->strText;
-		arrPanesTmp.Add(pNewPane);
+		_STATUSBAR_PANE_ pNewPane = *pOldPane;
+		arrPanesTmp.emplace_back(std::move(pNewPane));
 	}
-	
-	UINT* lpIDArray = new UINT[arrPanesTmp.GetSize()];
-	for (nIndex = 0; nIndex < arrPanesTmp.GetSize(); nIndex++) {
-		lpIDArray[nIndex] = arrPanesTmp[nIndex]->nID;
+	std::vector<UINT> IDArray;
+	IDArray.reserve(arrPanesTmp.size());
+	for (const auto &pane : arrPanesTmp) {
+		IDArray.emplace_back(pane.nID);
 	}
 	
 	// set the indicators
-	SetIndicators(lpIDArray, arrPanesTmp.GetSize());
+	SetIndicators(IDArray.data(), IDArray.size());
 	// free memory
-	for (nIndex = 0; nIndex < arrPanesTmp.GetSize(); nIndex++){
-		_STATUSBAR_PANE_* pPane = arrPanesTmp[nIndex];
-		PaneInfoSet(nIndex, pPane);
-		if(pPane) 
-			delete pPane;
+	int nIndex = 0;
+	for (const auto& pane : arrPanesTmp) {
+		PaneInfoSet(nIndex, pane);
+		++nIndex;
 	}
-	
-	for ( int i = 0; i < m_arrPaneControls.GetSize(); i++ ){
+	m_arrPaneControls.erase(std::remove_if(m_arrPaneControls.begin(), m_arrPaneControls.end(), [nID](const auto& cntl) {
+		return cntl.nID == nID;
+		}),
+		m_arrPaneControls.end());
+	/*for ( int i = 0; i < m_arrPaneControls.GetSize(); i++ ){
 		if (m_arrPaneControls[i]->nID == nID){
 			if( m_arrPaneControls[i]->hWnd && ::IsWindow(m_arrPaneControls[i]->hWnd) ) {
 				::ShowWindow(m_arrPaneControls[i]->hWnd, SW_HIDE); 
@@ -255,11 +240,7 @@ BOOL WinMTRStatusBar::RemovePane(
 			m_arrPaneControls.RemoveAt(i);
 			break;
 		}
-	}
-	
-	arrPanesTmp.RemoveAll();
-	if(lpIDArray) 
-		delete []lpIDArray;
+	}*/
 	
 	RepositionControls();
 	
@@ -274,12 +255,12 @@ BOOL WinMTRStatusBar::AddPaneControl(HWND hWnd, UINT nID, BOOL bAutoDestroy)
 		return FALSE;
 	}
 	
-	_STATUSBAR_PANE_CTRL_* pPaneCtrl = new _STATUSBAR_PANE_CTRL_;
-	pPaneCtrl->nID         = nID;
-	pPaneCtrl->hWnd        = hWnd;
-	pPaneCtrl->bAutoDestroy = bAutoDestroy;
+	/*_STATUSBAR_PANE_CTRL_ pPaneCtrl{};
+	pPaneCtrl.nID         = nID;
+	pPaneCtrl.hWnd        = hWnd;
+	pPaneCtrl.bAutoDestroy = bAutoDestroy;*/
 	
-	m_arrPaneControls.Add(pPaneCtrl);
+	m_arrPaneControls.emplace_back(hWnd, nID, bAutoDestroy);
 
 	RepositionControls();
 	return TRUE;
@@ -287,7 +268,7 @@ BOOL WinMTRStatusBar::AddPaneControl(HWND hWnd, UINT nID, BOOL bAutoDestroy)
 
 //////////////////////////////////////////////////////////////////////////
 
-BOOL WinMTRStatusBar::PaneInfoGet(int nIndex, _STATUSBAR_PANE_* pPane)
+bool WinMTRStatusBar::PaneInfoGet(int nIndex, _STATUSBAR_PANE_* pPane)
 {
 	if( nIndex < m_nCount  && nIndex >= 0 )
 	{
@@ -295,19 +276,36 @@ BOOL WinMTRStatusBar::PaneInfoGet(int nIndex, _STATUSBAR_PANE_* pPane)
 		CString strPaneText;
 		GetPaneText( nIndex , strPaneText );
 		pPane->strText = LPCTSTR(strPaneText);
-		return TRUE;
+		return true;
 	}
-	return FALSE;
+	return true;
 }
 
 //////////////////////////////////////////////////////////////////////////
 
-BOOL WinMTRStatusBar::PaneInfoSet(int nIndex, _STATUSBAR_PANE_* pPane)
+bool WinMTRStatusBar::PaneInfoSet(int nIndex, const _STATUSBAR_PANE_& pPane)
 {
 	if( nIndex < m_nCount  && nIndex >= 0 ){
-		SetPaneInfo( nIndex, pPane->nID, pPane->nStyle, pPane->cxText );
-		SetPaneText( nIndex, LPCTSTR( pPane->strText) );
-		return TRUE;
+		SetPaneInfo( nIndex, pPane.nID, pPane.nStyle, pPane.cxText );
+		SetPaneText( nIndex, LPCTSTR( pPane.strText) );
+		return true;
 	}
-	return FALSE;
+	return false;
+}
+
+WinMTRStatusBar::_STATUSBAR_PANE_CTRL_::_STATUSBAR_PANE_CTRL_()
+	:hWnd(nullptr),
+	nID(0),
+	bAutoDestroy(false)
+{
+}
+
+WinMTRStatusBar::_STATUSBAR_PANE_CTRL_::~_STATUSBAR_PANE_CTRL_()
+{
+	if (this->hWnd && ::IsWindow(this->hWnd)) {
+		::ShowWindow(this->hWnd, SW_HIDE);
+		if (this->bAutoDestroy) {
+			::DestroyWindow(this->hWnd);
+		}
+	}
 }
