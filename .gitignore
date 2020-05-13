@@ -1,0 +1,8 @@
+﻿################################################################################
+# This .gitignore file was automatically created by Microsoft(R) Visual Studio.
+################################################################################
+
+/.vs/WinMTR/v16
+/Release
+/Release_x64
+/WinMTR.suo
