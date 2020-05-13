@@ -306,7 +306,7 @@ BOOL WinMTRDialog::InitRegistry()
 		wchar_t str_host[255];
 		nrLRU = tmp_dword;
 		for(int i=0;i<maxLRU;i++) {
-			wsprintf(key_name,L"Host%d", i+1);
+			std::swprintf(key_name,L"Host%d", i+1);
 			if((r = RegQueryValueExW(hKey_v, key_name, 0, NULL, NULL, &value_size)) == ERROR_SUCCESS) {
 				RegQueryValueExW(hKey_v, key_name, 0, NULL, (LPBYTE)str_host, &value_size);
 				str_host[value_size]=L'\0';
@@ -462,7 +462,7 @@ void WinMTRDialog::OnDblclkList(NMHDR* pNMHDR, LRESULT* pResult)
 			} else {
 				wmtrprop.host = wmtrnet->GetName(nItem);
 				int addr = wmtrnet->GetAddr(nItem);
-				wsprintf (	wmtrprop.ip , L"%d.%d.%d.%d", 
+				std::swprintf (	wmtrprop.ip , L"%d.%d.%d.%d", 
 							(addr >> 24) & 0xff, 
 							(addr >> 16) & 0xff, 
 							(addr >> 8) & 0xff, 
@@ -584,7 +584,7 @@ void WinMTRDialog::OnRestart()
 					nrLRU = 0;
 				
 				nrLRU++;
-				wsprintf(key_name, L"Host%d", nrLRU);
+				std::swprintf(key_name, L"Host%d", nrLRU);
 				size_t sHostLen = 0;
 				StringCbLengthW(sHost, sizeof(sHost), &sHostLen);
 				r = RegSetValueExW(hKey,key_name, 0, REG_SZ, (const unsigned char *)(LPCTSTR)sHost, sHostLen);
@@ -644,7 +644,7 @@ void WinMTRDialog::OnOptions()
 			r = RegOpenKeyExW(	hKey, L"LRU", 0, KEY_ALL_ACCESS, &hKey);
 
 			for(int i = maxLRU; i<=nrLRU; i++) {
-					wsprintf(key_name, L"Host%d", i);
+					std::swprintf(key_name, L"Host%d", i);
 					r = RegDeleteValue(hKey,key_name);
 			}
 			nrLRU = maxLRU;
@@ -801,7 +801,7 @@ void WinMTRDialog::OnEXPT()
 				name = L"No response from host";
 			}
 		
-			wsprintf(t_buf, L"|%40ws - %4d | %4d | %4d | %4d | %4d | %4d | %4d |\r\n" , 
+			std::swprintf(t_buf, L"|%40ws - %4d | %4d | %4d | %4d | %4d | %4d | %4d |\r\n" , 
 					name.c_str(), wmtrnet->GetPercent(i),
 					wmtrnet->GetXmit(i), wmtrnet->GetReturned(i), wmtrnet->GetBest(i),
 					wmtrnet->GetAvg(i), wmtrnet->GetWorst(i), wmtrnet->GetLast(i));
@@ -911,7 +911,7 @@ int WinMTRDialog::DisplayRedraw()
 		}
 		wcscpy(buf, name.c_str());
 		
-		wsprintf(nr_crt, L"%d", i+1);
+		std::swprintf(nr_crt, L"%d", i+1);
 		if(m_listMTR.GetItemCount() <= i )
 			m_listMTR.InsertItem(i, buf);
 		else
@@ -919,25 +919,25 @@ int WinMTRDialog::DisplayRedraw()
 		
 		m_listMTR.SetItem(i, 1, LVIF_TEXT, nr_crt, 0, 0, 0, 0); 
 
-		wsprintf(buf, L"%d", wmtrnet->GetPercent(i));
+		std::swprintf(buf, L"%d", wmtrnet->GetPercent(i));
 		m_listMTR.SetItem(i, 2, LVIF_TEXT, buf, 0, 0, 0, 0);
 
-		wsprintf(buf, L"%d", wmtrnet->GetXmit(i));
+		std::swprintf(buf, L"%d", wmtrnet->GetXmit(i));
 		m_listMTR.SetItem(i, 3, LVIF_TEXT, buf, 0, 0, 0, 0);
 
-		wsprintf(buf, L"%d", wmtrnet->GetReturned(i));
+		std::swprintf(buf, L"%d", wmtrnet->GetReturned(i));
 		m_listMTR.SetItem(i, 4, LVIF_TEXT, buf, 0, 0, 0, 0);
 
-		wsprintf(buf, L"%d", wmtrnet->GetBest(i));
+		std::swprintf(buf, L"%d", wmtrnet->GetBest(i));
 		m_listMTR.SetItem(i, 5, LVIF_TEXT, buf, 0, 0, 0, 0);
 
-		wsprintf(buf, L"%d", wmtrnet->GetAvg(i));
+		std::swprintf(buf, L"%d", wmtrnet->GetAvg(i));
 		m_listMTR.SetItem(i, 6, LVIF_TEXT, buf, 0, 0, 0, 0);
 
-		wsprintf(buf, L"%d", wmtrnet->GetWorst(i));
+		std::swprintf(buf, L"%d", wmtrnet->GetWorst(i));
 		m_listMTR.SetItem(i, 7, LVIF_TEXT, buf, 0, 0, 0, 0);
 
-		wsprintf(buf, L"%d", wmtrnet->GetLast(i));
+		std::swprintf(buf, L"%d", wmtrnet->GetLast(i));
 		m_listMTR.SetItem(i, 8, LVIF_TEXT, buf, 0, 0, 0, 0);
 
    
@@ -973,7 +973,7 @@ int WinMTRDialog::InitMTRNet()
 	}
 
 	if(!isIP) {
-		wsprintf(buf, L"Resolving host %s...", strtmp);
+		std::swprintf(buf, L"Resolving host %s...", strtmp);
 		statusBar.SetPaneText(0,buf);
 		PADDRINFOW out = nullptr;
 		ADDRINFOW hint = {};
@@ -1002,7 +1002,6 @@ void PingThread(void *p)
 	WinMTRDialog *wmtrdlg = (WinMTRDialog *)p;
 	WaitForSingleObject(wmtrdlg->traceThreadMutex, INFINITE);
 
-	struct hostent *host, *lhost;
 	wchar_t strtmp[255];
 	wchar_t *Hostname = strtmp;
 	int traddr;
@@ -1039,7 +1038,7 @@ void PingThread(void *p)
 	}
       
 
-	lhost = gethostbyname("localhost");
+	auto lhost = gethostbyname("localhost");
 	if(lhost == NULL) {
       AfxMessageBox(L"Unable to get local IP address.");
       ReleaseMutex(wmtrdlg->traceThreadMutex);
@@ -1071,7 +1070,7 @@ void WinMTRDialog::ClearHistory()
 	r = RegOpenKeyExW(	hKey, L"LRU", 0, KEY_ALL_ACCESS, &hKey);
 
 	for(int i = 0; i<=nrLRU; i++) {
-		wsprintf(key_name, L"Host%d", i);
+		std::swprintf(key_name, L"Host%d", i);
 		r = RegDeleteValueW(hKey,key_name);
 	}
 	nrLRU = 0;

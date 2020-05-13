@@ -211,21 +211,6 @@ BOOL WinMTRStatusBar::RemovePane(
 		return cntl.nID == nID;
 		}),
 		m_arrPaneControls.end());
-	/*for ( int i = 0; i < m_arrPaneControls.GetSize(); i++ ){
-		if (m_arrPaneControls[i]->nID == nID){
-			if( m_arrPaneControls[i]->hWnd && ::IsWindow(m_arrPaneControls[i]->hWnd) ) {
-				::ShowWindow(m_arrPaneControls[i]->hWnd, SW_HIDE); 
-				if( m_arrPaneControls[i]->bAutoDestroy ) {
-					::DestroyWindow(m_arrPaneControls[i]->hWnd);
-				}
-			}
-			_STATUSBAR_PANE_CTRL_ *pPaneCtrl = m_arrPaneControls[i];
-			if( pPaneCtrl )
-				delete pPaneCtrl;
-			m_arrPaneControls.RemoveAt(i);
-			break;
-		}
-	}*/
 	
 	RepositionControls();
 	
@@ -239,11 +224,6 @@ BOOL WinMTRStatusBar::AddPaneControl(HWND hWnd, UINT nID, BOOL bAutoDestroy)
 	if (CommandToIndex (nID) == -1) {
 		return FALSE;
 	}
-	
-	/*_STATUSBAR_PANE_CTRL_ pPaneCtrl{};
-	pPaneCtrl.nID         = nID;
-	pPaneCtrl.hWnd        = hWnd;
-	pPaneCtrl.bAutoDestroy = bAutoDestroy;*/
 	
 	m_arrPaneControls.emplace_back(hWnd, nID, bAutoDestroy);
 
