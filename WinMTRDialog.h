@@ -37,7 +37,7 @@ public:
 
 	WinMTRStatusBar	statusBar;
 
-	enum STATES {
+	enum class STATES {
 		IDLE,
 		TRACING,
 		STOPPING,

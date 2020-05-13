@@ -30,7 +30,7 @@ public:
 	enum { IDD = IDD_DIALOG_PROPERTIES };
 
 	std::wstring	host;
-	wchar_t	ip[16];
+	std::wstring	ip;
 	std::wstring	comment;
 
 	float	ping_last;

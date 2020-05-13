@@ -10,12 +10,15 @@
 #include "WinMTRProperties.h"
 #include "WinMTRNet.h"
 #include <iostream>
+#include <string>
+#include <string_view>
 #include <fstream>
 #include <sstream>
 #include "afxlinkctrl.h"
 #include <strsafe.h>
 #include <bcrypt.h>
 #include <ip2string.h>
+using namespace std::string_view_literals;
 
 #define TRACE_MSG(msg)										\
 	{														\
@@ -65,7 +68,7 @@ END_MESSAGE_MAP()
 //*****************************************************************************
 WinMTRDialog::WinMTRDialog(CWnd* pParent) 
 			: CDialog(WinMTRDialog::IDD, pParent),
-			state(IDLE),
+			state(STATES::IDLE),
 			transition(IDLE_TO_IDLE)
 {
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
@@ -441,9 +444,10 @@ HCURSOR WinMTRDialog::OnQueryDragIcon()
 //*****************************************************************************
 void WinMTRDialog::OnDblclkList(NMHDR* pNMHDR, LRESULT* pResult)
 {
+	using namespace std::string_view_literals;
 	*pResult = 0;
 
-	if(state == TRACING) {
+	if(state == STATES::TRACING) {
 		
 		POSITION pos = m_listMTR.GetFirstSelectedItemPosition();
 		if(pos!=NULL) {
@@ -452,7 +456,7 @@ void WinMTRDialog::OnDblclkList(NMHDR* pNMHDR, LRESULT* pResult)
 
 			if(wmtrnet->GetAddr(nItem)==0) {
 				wmtrprop.host.clear();
-				wcscpy(wmtrprop.ip,L"");
+				wmtrprop.ip.clear();
 				wmtrprop.comment = wmtrnet->GetName(nItem);
 
 				wmtrprop.pck_loss = wmtrprop.pck_sent = wmtrprop.pck_recv = 0;
@@ -462,13 +466,17 @@ void WinMTRDialog::OnDblclkList(NMHDR* pNMHDR, LRESULT* pResult)
 			} else {
 				wmtrprop.host = wmtrnet->GetName(nItem);
 				int addr = wmtrnet->GetAddr(nItem);
-				std::swprintf (	wmtrprop.ip , L"%d.%d.%d.%d", 
+				wmtrprop.ip.resize(20);
+				auto written = std::swprintf (	wmtrprop.ip.data() , L"%d.%d.%d.%d", 
 							(addr >> 24) & 0xff, 
 							(addr >> 16) & 0xff, 
 							(addr >> 8) & 0xff, 
 							addr & 0xff
 				);
-				wmtrprop.comment = L"Host alive.";
+				if (written > 0) {
+					wmtrprop.ip.resize(written);
+				}
+				wmtrprop.comment = L"Host alive."sv;
 
 				wmtrprop.ping_avrg = (float)wmtrnet->GetAvg(nItem); 
 				wmtrprop.ping_last = (float)wmtrnet->GetLast(nItem); 
@@ -552,7 +560,7 @@ void WinMTRDialog::OnRestart()
 
 	CString sHost;
 
-	if(state == IDLE) {
+	if(state == STATES::IDLE) {
 		m_comboHost.GetWindowText(sHost);
 		sHost.TrimLeft();
 		sHost.TrimLeft();
@@ -565,7 +573,7 @@ void WinMTRDialog::OnRestart()
 		m_listMTR.DeleteAllItems();
 	}
 
-	if(state == IDLE) {
+	if(state == STATES::IDLE) {
 
 		if(InitMTRNet()) {
 			if(m_comboHost.FindString(-1, sHost) == CB_ERR) {
@@ -592,10 +600,10 @@ void WinMTRDialog::OnRestart()
 				r = RegSetValueExW(hKey,L"NrLRU", 0, REG_DWORD, (const unsigned char *)&tmp_dword, sizeof(DWORD));
 				RegCloseKey(hKey);
 			}
-			Transit(TRACING);
+			Transit(STATES::TRACING);
 		}
 	} else {
-		Transit(STOPPING);
+		Transit(STATES::STOPPING);
 	}
 }
 
@@ -790,15 +798,15 @@ void WinMTRDialog::OnEXPT()
 		std::wostringstream f_buf;
 		int nh = wmtrnet->GetMax();
 	
-		f_buf << L"|------------------------------------------------------------------------------------------|\r\n";
-		f_buf << L"|                                      WinMTR statistics                                   |\r\n";
-		f_buf << L"|                       Host              -   %%  | Sent | Recv | Best | Avrg | Wrst | Last |\r\n";
-		f_buf << L"|------------------------------------------------|------|------|------|------|------|------|\r\n"; 
+		f_buf << L"|------------------------------------------------------------------------------------------|\r\n"sv;
+		f_buf << L"|                                      WinMTR statistics                                   |\r\n"sv;
+		f_buf << L"|                       Host              -   %%  | Sent | Recv | Best | Avrg | Wrst | Last |\r\n"sv;
+		f_buf << L"|------------------------------------------------|------|------|------|------|------|------|\r\n"sv; 
 
 		for(int i=0;i <nh ; i++) {
 			auto name = wmtrnet->GetName(i);
 			if (name.empty()) {
-				name = L"No response from host";
+				name = L"No response from host"sv;
 			}
 		
 			std::swprintf(t_buf, L"|%40ws - %4d | %4d | %4d | %4d | %4d | %4d | %4d |\r\n" , 
@@ -808,7 +816,7 @@ void WinMTRDialog::OnEXPT()
 			f_buf<< t_buf;
 		}	
 	
-		f_buf << "|________________________________________________|______|______|______|______|______|______|\r\n"; 
+		f_buf << L"|________________________________________________|______|______|______|______|______|______|\r\n"sv; 
 
 	
 		CString cs_tmp((LPCTSTR)IDS_STRING_SB_NAME);
@@ -907,7 +915,7 @@ int WinMTRDialog::DisplayRedraw()
 
 		auto name = wmtrnet->GetName(i);
 		if (name.empty()) {
-			name = L"No response from host";
+			name = L"No response from host"sv;
 		}
 		wcscpy(buf, name.c_str());
 		
@@ -960,12 +968,12 @@ int WinMTRDialog::InitMTRNet()
 	struct hostent *host;
 	m_comboHost.GetWindowText(strtmp, 255);
    	
-	if (Hostname == NULL) Hostname = L"localhost";
+	if (Hostname == nullptr) Hostname = L"localhost";
    
 	int isIP=1;
 	wchar_t *t = Hostname;
 	while(*t) {
-		if(!isdigit(*t) && *t!='.') {
+		if(!isdigit(*t) && *t!=L'.') {
 			isIP=0;
 			break;
 		}
@@ -1009,7 +1017,7 @@ void PingThread(void *p)
 
 	wmtrdlg->m_comboHost.GetWindowTextW(strtmp, 255);
    	
-	if (Hostname == NULL) Hostname = L"localhost";
+	if (Hostname == nullptr) Hostname = L"localhost";
    
 	bool isIP=true;
 	wchar_t *t = Hostname;
@@ -1098,69 +1106,69 @@ void WinMTRDialog::OnCbnCloseupComboHost()
 void WinMTRDialog::Transit(STATES new_state)
 {
 	switch(new_state) {
-		case IDLE:
+	case STATES::IDLE:
 			switch (state) {
-				case STOPPING:
+			case STATES::STOPPING:
 					transition = STOPPING_TO_IDLE;
 				break;
-				case IDLE:
+			case STATES::IDLE:
 					transition = IDLE_TO_IDLE;
 				break;
 				default:
-					TRACE_MSG("Received state IDLE after " << state);
+					TRACE_MSG( L"Received state IDLE after " << static_cast<int>(state));
 					return;
 			}
-			state = IDLE;
+			state = STATES::IDLE;
 		break;
-		case TRACING:
+	case STATES::TRACING:
 			switch (state) {
-				case IDLE:
+				case STATES::IDLE:
 					transition = IDLE_TO_TRACING;
 				break;
-				case TRACING:
+				case STATES::TRACING:
 					transition = TRACING_TO_TRACING;
 				break;
 				default:
-					TRACE_MSG("Received state TRACING after " << state);
+					TRACE_MSG(L"Received state TRACING after " << static_cast<int>(state));
 					return;
 			}
-			state = TRACING;
+			state = STATES::TRACING;
 		break;
-		case STOPPING:
+		case STATES::STOPPING:
 			switch (state) {
-				case STOPPING:
+				case STATES::STOPPING:
 					transition = STOPPING_TO_STOPPING;
 				break;
-				case TRACING:
+				case STATES::TRACING:
 					transition = TRACING_TO_STOPPING;
 				break;
 				default:
-					TRACE_MSG("Received state STOPPING after " << state);
+					TRACE_MSG(L"Received state STOPPING after " << static_cast<int>(state));
 					return;
 			}
-			state = STOPPING;
+			state = STATES::STOPPING;
 		break;
-		case EXIT:
+		case STATES::EXIT:
 			switch (state) {
-				case IDLE:
+				case STATES::IDLE:
 					transition = IDLE_TO_EXIT;
 				break;
-				case STOPPING:
+				case STATES::STOPPING:
 					transition = STOPPING_TO_EXIT;
 				break;
-				case TRACING:
+				case STATES::TRACING:
 					transition = TRACING_TO_EXIT;
 				break;
-				case EXIT:
+				case STATES::EXIT:
 				break;
 				default:
-					TRACE_MSG("Received state EXIT after " << state);
+					TRACE_MSG(L"Received state EXIT after " << static_cast<int>(state));
 					return;
 			}
-			state = EXIT;
+			state = STATES::EXIT;
 		break;
 		default:
-			TRACE_MSG("Received state " << state);
+			TRACE_MSG(L"Received state " << static_cast<int>(state));
 	}
 
 	// modify controls according to new state
@@ -1227,7 +1235,7 @@ void WinMTRDialog::OnTimer(UINT_PTR nIDEvent)
 	static unsigned int call_count = 0;
 	call_count += 1;
 
-	if(state == EXIT && WaitForSingleObject(traceThreadMutex, 0) == WAIT_OBJECT_0) {
+	if(state == STATES::EXIT && WaitForSingleObject(traceThreadMutex, 0) == WAIT_OBJECT_0) {
 		ReleaseMutex(traceThreadMutex);
 		OnOK();
 	}
@@ -1235,11 +1243,11 @@ void WinMTRDialog::OnTimer(UINT_PTR nIDEvent)
 
 	if( WaitForSingleObject(traceThreadMutex, 0) == WAIT_OBJECT_0 ) {
 		ReleaseMutex(traceThreadMutex);
-		Transit(IDLE);
+		Transit(STATES::IDLE);
 	} else if( (call_count % 10 == 0) && (WaitForSingleObject(traceThreadMutex, 0) == WAIT_TIMEOUT) ) {
 		ReleaseMutex(traceThreadMutex);
-		if( state == TRACING) Transit(TRACING);
-		else if( state == STOPPING) Transit(STOPPING);
+		if( state == STATES::TRACING) Transit(STATES::TRACING);
+		else if( state == STATES::STOPPING) Transit(STATES::STOPPING);
 	}
 
 	CDialog::OnTimer(nIDEvent);
@@ -1248,11 +1256,11 @@ void WinMTRDialog::OnTimer(UINT_PTR nIDEvent)
 
 void WinMTRDialog::OnClose()
 {
-	Transit(EXIT);
+	Transit(STATES::EXIT);
 }
 
 
 void WinMTRDialog::OnBnClickedCancel()
 {
-	Transit(EXIT);
+	Transit(STATES::EXIT);
 }

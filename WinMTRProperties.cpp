@@ -66,7 +66,7 @@ BOOL WinMTRProperties::OnInitDialog()
 	CDialog::OnInitDialog();
 	wchar_t buf[255];
 	
-	m_editIP.SetWindowText(ip);
+	m_editIP.SetWindowText(ip.c_str());
 	m_editHost.SetWindowText(host.c_str());
 	m_editComment.SetWindowText(comment.c_str());
 
