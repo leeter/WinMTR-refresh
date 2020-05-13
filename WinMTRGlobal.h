@@ -46,10 +46,10 @@
 
 #include "resource.h"
 
-#define WINMTR_VERSION	"0.9"
-#define WINMTR_LICENSE	"GPL - GNU Public License"
-#define WINMTR_COPYRIGHT "WinMTR 0.9 (c) 2010-2011 Appnor MSP - Fully Managed Hosting & Cloud Provider www.appnor.com"
-#define WINMTR_HOMEPAGE	"http://WinMTR.sourceforge.net"
+#define WINMTR_VERSION	L"0.9"
+#define WINMTR_LICENSE	L"GPL - GNU Public License"
+#define WINMTR_COPYRIGHT L"WinMTR 0.9 (c) 2010-2011 Appnor MSP - Fully Managed Hosting & Cloud Provider www.appnor.com"
+#define WINMTR_HOMEPAGE	L"http://WinMTR.sourceforge.net"
 
 #define DEFAULT_PING_SIZE	64
 #define DEFAULT_INTERVAL	1.0
@@ -85,16 +85,16 @@
 
 #define MTR_NR_COLS 9
 
-const char MTR_COLS[ MTR_NR_COLS ][10] = {
-		"Hostname",
-		"Nr",
-		"Loss %",
-		"Sent",
-		"Recv",
-		"Best",
-		"Avrg",
-		"Worst",
-		"Last"
+const wchar_t MTR_COLS[ MTR_NR_COLS ][10] = {
+		L"Hostname",
+		L"Nr",
+		L"Loss %",
+		L"Sent",
+		L"Recv",
+		L"Best",
+		L"Avrg",
+		L"Worst",
+		L"Last"
 };
 
 const int MTR_COL_LENGTH[ MTR_NR_COLS ] = {

@@ -15,6 +15,7 @@
 
 #include "WinMTRDialog.h"
 #include <string>
+#include <optional>
 
 
 //*****************************************************************************
@@ -35,7 +36,7 @@ public:
 private:
 	void	ParseCommandLineParams(LPTSTR cmd, WinMTRDialog *wmtrdlg);
 	int		GetParamValue(LPTSTR cmd, char * param, char sparam, char *value);
-	int		GetHostNameParamValue(LPTSTR cmd, std::string& value);
+	std::optional<std::wstring>		GetHostNameParamValue(LPTSTR cmd);
 
 };
 

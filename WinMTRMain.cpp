@@ -77,8 +77,8 @@ BOOL WinMTRMain::InitInstance()
 	WinMTRDialog mtrDialog;
 	m_pMainWnd = &mtrDialog;
 
-	if (strlen(m_lpCmdLine)) {	
-		strcat(m_lpCmdLine," ");
+	if (wcslen(m_lpCmdLine)) {	
+		wcscat(m_lpCmdLine,L" ");
 		ParseCommandLineParams(m_lpCmdLine, &mtrDialog);
 	}
 
@@ -106,8 +106,8 @@ void WinMTRMain::ParseCommandLineParams(LPTSTR cmd, WinMTRDialog *wmtrdlg)
 		exit(0);
 	}
 
-	if(GetHostNameParamValue(cmd, host_name)) {
-		wmtrdlg->SetHostName(host_name.c_str());
+	if (auto host_name = GetHostNameParamValue(cmd); host_name) {
+		wmtrdlg->SetHostName(*host_name);
 	}
 	if(GetParamValue(cmd, "interval",'i', value)) {
 		wmtrdlg->SetInterval((float)atof(value));
@@ -134,17 +134,17 @@ void WinMTRMain::ParseCommandLineParams(LPTSTR cmd, WinMTRDialog *wmtrdlg)
 //*****************************************************************************
 int WinMTRMain::GetParamValue(LPTSTR cmd, char * param, char sparam, char *value)
 {
-	char *p;
+	wchar_t *p;
 	
-	char p_long[1024];
-	char p_short[1024];
+	wchar_t p_long[1024];
+	wchar_t p_short[1024];
 	
-	sprintf(p_long,"--%s ", param);
-	sprintf(p_short,"-%c ", sparam);
+	wsprintf(p_long,L"--%s ", param);
+	wsprintf(p_short,L"-%c ", sparam);
 	
-	if( (p=strstr(cmd, p_long)) ) ;
+	if( (p=wcsstr(cmd, p_long)) ) ;
 	else 
-		p=strstr(cmd, p_short);
+		p=wcsstr(cmd, p_short);
 
 	if(p == NULL)
 		return 0;
@@ -169,41 +169,39 @@ int WinMTRMain::GetParamValue(LPTSTR cmd, char * param, char sparam, char *value
 //
 // 
 //*****************************************************************************
-int WinMTRMain::GetHostNameParamValue(LPTSTR cmd, std::string& host_name)
+std::optional<std::wstring> WinMTRMain::GetHostNameParamValue(LPTSTR cmd)
 {
 // WinMTR -h -i 1 -n google.com
-	int size = strlen(cmd);
-	std::string name = "";
-	while(cmd[--size] == ' ');
+	int size = wcslen(cmd);
+	std::wstring name;
+	while(cmd[--size] == L' ');
 
 	size++;
-	while(size-- && cmd[size] != ' ' && (cmd[size] != '-' || cmd[size - 1] != ' ')) {
+	while(size-- && cmd[size] != L' ' && (cmd[size] != L'-' || cmd[size - 1] != L' ')) {
 		name = cmd[size ] + name;
 	}
 
 	if(size == -1) {
 		if(name.length() == 0) {
-			return 0;
+			return std::nullopt;
 		} else {
-			host_name = name;
-			return 1;
+			return name;
 		}
 	}
-	if(cmd[size] == '-' && cmd[size - 1] == ' ') {
+	if(cmd[size] == L'-' && cmd[size - 1] == L' ') {
 		// no target specified
-		return 0;
+		return std::nullopt;
 	}
 
-	std::string possible_argument = "";
+	std::wstring possible_argument;
 
-	while(size-- && cmd[size] != ' ') {
+	while(size-- && cmd[size] != L' ') {
 		possible_argument = cmd[size] + possible_argument;
 	}
 
-	if(possible_argument.length() && (possible_argument[0] != '-' || possible_argument == "-n" || possible_argument == "--numeric")) {
-		host_name = name;
-		return 1;
+	if(possible_argument.length() && (possible_argument[0] != L'-' || possible_argument == L"-n" || possible_argument == L"--numeric")) {
+		return name;
 	}
 
-	return 0;
+	return std::nullopt;
 }

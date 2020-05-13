@@ -17,6 +17,7 @@
 
 #include "WinMTRStatusBar.h"
 #include "WinMTRNet.h"
+#include <string>
 
 //*****************************************************************************
 // CLASS:  WinMTRDialog
@@ -86,7 +87,7 @@ public:
 	bool				hasUseDNSFromCmdLine;
 	WinMTRNet*			wmtrnet;
 
-	void SetHostName(const char *host);
+	void SetHostName(std::wstring host);
 	void SetInterval(float i);
 	void SetPingSize(int ps);
 	void SetMaxLRU(int mlru);
@@ -96,7 +97,7 @@ protected:
 	virtual void DoDataExchange(CDataExchange* pDX);
 
 	int m_autostart;
-	char msz_defaulthostname[1000];
+	std::wstring msz_defaulthostname;
 	
 	HICON m_hIcon;
 

@@ -8,21 +8,6 @@
 static char THIS_FILE[] = __FILE__;
 #endif
 
-WinMTRStatusBar::WinMTRStatusBar()
-{
-}
-
-WinMTRStatusBar::~WinMTRStatusBar()
-{
-	for (const auto& cntl : m_arrPaneControls ){
-		if( cntl.hWnd && ::IsWindow(cntl.hWnd) ) {
-			::ShowWindow(cntl.hWnd, SW_HIDE); 
-			if( cntl.bAutoDestroy ) {
-				::DestroyWindow(cntl.hWnd);
-			}
-		}
-	}
-}
 
 BEGIN_MESSAGE_MAP(WinMTRStatusBar, CStatusBar)
 	//{{AFX_MSG_MAP(WinMTRStatusBar)

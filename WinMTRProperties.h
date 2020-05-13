@@ -13,7 +13,7 @@
 #ifndef WINMTRPROPERTIES_H_
 #define WINMTRPROPERTIES_H_
 
-
+#include <string>
 
 //*****************************************************************************
 // CLASS:  WinMTRLicense
@@ -29,9 +29,9 @@ public:
 	
 	enum { IDD = IDD_DIALOG_PROPERTIES };
 
-	char	host[255];
-	char	ip[16];
-	char	comment[255];
+	std::wstring	host;
+	wchar_t	ip[16];
+	std::wstring	comment;
 
 	float	ping_last;
 	float	ping_best;

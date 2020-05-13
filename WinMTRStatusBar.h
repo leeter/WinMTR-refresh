@@ -8,8 +8,6 @@ class WinMTRStatusBar : public CStatusBar
 // Construction
 public:
 
-	WinMTRStatusBar();
-
 // Attributes
 public:
 
@@ -77,7 +75,7 @@ public:
 
 // Implementation
 public:
-	virtual ~WinMTRStatusBar();
+	virtual ~WinMTRStatusBar() {};
 
 protected:
 

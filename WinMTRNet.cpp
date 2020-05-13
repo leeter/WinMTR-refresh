@@ -10,7 +10,7 @@
 
 #define TRACE_MSG(msg)										\
 	{														\
-	std::ostringstream dbg_msg(std::ostringstream::out);	\
+	std::wostringstream dbg_msg(std::wostringstream::out);	\
 	dbg_msg << msg << std::endl;							\
 	OutputDebugString(dbg_msg.str().c_str());				\
 	}
@@ -41,13 +41,13 @@ WinMTRNet::WinMTRNet(WinMTRDialog *wp) {
 	WSADATA wsaData;
 
     if( WSAStartup(MAKEWORD(2, 2), &wsaData) ) {
-        AfxMessageBox("Failed initializing windows sockets library!");
+        AfxMessageBox(L"Failed initializing windows sockets library!");
 		return;
     }
 
     hICMP_DLL =  LoadLibrary(_T("ICMP.DLL"));
     if (hICMP_DLL == 0) {
-        AfxMessageBox("Failed: Unable to locate ICMP.DLL!");
+        AfxMessageBox(L"Failed: Unable to locate ICMP.DLL!");
         return;
     }
 
@@ -58,7 +58,7 @@ WinMTRNet::WinMTRNet(WinMTRDialog *wp) {
     lpfnIcmpCloseHandle = (LPFNICMPCLOSEHANDLE)GetProcAddress(hICMP_DLL,"IcmpCloseHandle");
     lpfnIcmpSendEcho    = (LPFNICMPSENDECHO)GetProcAddress(hICMP_DLL,"IcmpSendEcho");
     if ((!lpfnIcmpCreateFile) || (!lpfnIcmpCloseHandle) || (!lpfnIcmpSendEcho)) {
-        AfxMessageBox("Wrong ICMP.DLL system library !");
+        AfxMessageBox(L"Wrong ICMP.DLL system library !");
         return;
     }
 
@@ -67,7 +67,7 @@ WinMTRNet::WinMTRNet(WinMTRDialog *wp) {
      */
     hICMP = (HANDLE) lpfnIcmpCreateFile();
     if (hICMP == INVALID_HANDLE_VALUE) {
-        AfxMessageBox("Error in ICMP.DLL !");
+        AfxMessageBox(L"Error in ICMP.DLL !");
         return;
     }
 
@@ -138,7 +138,7 @@ void TraceThread(void *p)
 {
 	trace_thread* current = (trace_thread*)p;
 	WinMTRNet *wmtrnet = current->winmtr;
-	TRACE_MSG("Threaad with TTL=" << current->ttl << " started.");
+	TRACE_MSG(L"Threaad with TTL=" << current->ttl << L" started.");
 
     IPINFO			stIPInfo, *lpstIPInfo;
     DWORD			dwReplyCount;
@@ -178,7 +178,7 @@ void TraceThread(void *p)
 
 		wmtrnet->AddXmit(current->ttl - 1);
 		if (dwReplyCount != 0) {
-			TRACE_MSG("TTL " << current->ttl << " reply TTL " << icmp_echo_reply->Options.Ttl << " Status " << icmp_echo_reply->Status << " Reply count " << dwReplyCount);
+			TRACE_MSG(L"TTL " << current->ttl << L" reply TTL " << icmp_echo_reply->Options.Ttl << L" Status " << icmp_echo_reply->Status << L" Reply count " << dwReplyCount);
 
 			switch(icmp_echo_reply->Status) {
 				case IP_SUCCESS:
@@ -253,7 +253,7 @@ void TraceThread(void *p)
 
     } /* end ping loop */
 
-	TRACE_MSG("Thread with TTL=" << current->ttl << " stopped.");
+	TRACE_MSG(L"Thread with TTL=" << current->ttl << L" stopped.");
 
 	delete p;
 	_endthread();
@@ -267,24 +267,26 @@ int WinMTRNet::GetAddr(int at)
 	return addr;
 }
 
-int WinMTRNet::GetName(int at, char *n)
+std::wstring WinMTRNet::GetName(int at)
 {
 	WaitForSingleObject(ghMutex, INFINITE);
 	if(!strcmp(host[at].name, "")) {
 		int addr = GetAddr(at);
-		sprintf (	n, "%d.%d.%d.%d", 
-							(addr >> 24) & 0xff, 
-							(addr >> 16) & 0xff, 
-							(addr >> 8) & 0xff, 
-							addr & 0xff
-		);
-		if(addr==0)
-			strcpy(n,"");
-	} else {
-		strcpy(n, host[at].name);
+		ReleaseMutex(ghMutex);
+		if (addr == 0) {
+			return {};
+		}
+		std::wostringstream out;
+		out << ((addr >> 24) & 0xff) << L'.' <<
+			((addr >> 16) & 0xff) << L'.' << 
+			((addr >> 8) & 0xff) << L'.' << (addr & 0xff);
+		
+		return out.str();
 	}
+	std::wostringstream out;
+	out << host[at].name;
 	ReleaseMutex(ghMutex);
-	return 0;
+	return out.str();
 }
 
 int WinMTRNet::GetBest(int at)
@@ -369,7 +371,7 @@ void WinMTRNet::SetAddr(int at, __int32 addr)
 {
 	WaitForSingleObject(ghMutex, INFINITE);
 	if(host[at].addr == 0 && addr != 0) {
-		TRACE_MSG("Start DnsResolverThread for new address " << addr << ". Old addr value was " << host[at].addr);
+		TRACE_MSG(L"Start DnsResolverThread for new address " << addr << L". Old addr value was " << host[at].addr);
 		host[at].addr = addr;
 		dns_resolver_thread *dnt = new dns_resolver_thread;
 		dnt->index = at;
@@ -430,7 +432,7 @@ void WinMTRNet::AddXmit(int at)
 
 void DnsResolverThread(void *p)
 {
-	TRACE_MSG("DNS resolver thread started.");
+	TRACE_MSG(L"DNS resolver thread started.");
 	dns_resolver_thread *dnt = (dns_resolver_thread*)p;
 	WinMTRNet* wn = dnt->winmtr;
 

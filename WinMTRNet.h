@@ -12,6 +12,7 @@
 
 #ifndef WINMTRNET_H_
 #define WINMTRNET_H_
+#include <string>
 
 
 class WinMTRDialog;
@@ -57,7 +58,7 @@ public:
 	void	StopTrace();
 
 	int		GetAddr(int at);
-	int		GetName(int at, char *n);
+	std::wstring GetName(int at);
 	int		GetBest(int at);
 	int		GetWorst(int at);
 	int		GetAvg(int at);
