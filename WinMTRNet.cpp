@@ -143,6 +143,7 @@ void WinMTRNet::StopTrace()
 
 void TraceThread(trace_thread current)
 {
+	using namespace std::chrono_literals;
 	WinMTRNet *wmtrnet = current.winmtr;
 	TRACE_MSG(L"Threaad with TTL=" << current.ttl << L" started.");
 
@@ -252,9 +253,12 @@ void TraceThread(trace_thread current)
 				default:
 					wmtrnet->SetName(current.ttl - 1, "General failure.");
 			}
-
-			if(wmtrnet->wmtrdlg->interval * 1000 > icmp_echo_reply->RoundTripTime)
-				Sleep(wmtrnet->wmtrdlg->interval * 1000 - icmp_echo_reply->RoundTripTime);
+			const auto intervalInSec = wmtrnet->wmtrdlg->interval * 1s;
+			const auto roundTripDuration = std::chrono::milliseconds(icmp_echo_reply->RoundTripTime);
+			if (intervalInSec > roundTripDuration) {
+				const auto sleepTime = intervalInSec - roundTripDuration;
+				std::this_thread::sleep_for(sleepTime);
+			}
 		}
 
     } /* end ping loop */
