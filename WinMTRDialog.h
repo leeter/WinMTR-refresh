@@ -18,6 +18,8 @@
 #include "WinMTRStatusBar.h"
 #include "WinMTRNet.h"
 #include <string>
+#include <memory>
+#include <mutex>
 
 //*****************************************************************************
 // CLASS:  WinMTRDialog
@@ -29,7 +31,6 @@ class WinMTRDialog : public CDialog
 {
 public:
 	WinMTRDialog(CWnd* pParent = NULL);
-	~WinMTRDialog();
 
 	enum { IDD = IDD_WINMTR_DIALOG };
 
@@ -75,7 +76,7 @@ public:
 
 	STATES				state;
 	STATE_TRANSITIONS	transition;
-	HANDLE				traceThreadMutex; 
+	std::recursive_mutex			traceThreadMutex; 
 	double				interval;
 	bool				hasIntervalFromCmdLine;
 	int					pingsize;
@@ -85,7 +86,7 @@ public:
 	int					nrLRU;
 	BOOL				useDNS;
 	bool				hasUseDNSFromCmdLine;
-	WinMTRNet*			wmtrnet;
+	std::unique_ptr<WinMTRNet>			wmtrnet;
 
 	void SetHostName(std::wstring host);
 	void SetInterval(float i);

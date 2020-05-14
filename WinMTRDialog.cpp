@@ -10,12 +10,13 @@
 #include "WinMTRProperties.h"
 #include "WinMTRNet.h"
 #include <iostream>
+#include <cwctype>
 #include <string>
 #include <string_view>
 #include <fstream>
 #include <sstream>
+#include <thread>
 #include "afxlinkctrl.h"
-#include <strsafe.h>
 #include <bcrypt.h>
 #include <ip2string.h>
 using namespace std::string_view_literals;
@@ -33,7 +34,7 @@ using namespace std::string_view_literals;
 static	 char THIS_FILE[] = __FILE__;
 #endif
 
-void PingThread(void *p);
+void PingThread(WinMTRDialog* wmtrdlg);
 
 //*****************************************************************************
 // BEGIN_MESSAGE_MAP
@@ -66,10 +67,10 @@ END_MESSAGE_MAP()
 //
 // 
 //*****************************************************************************
-WinMTRDialog::WinMTRDialog(CWnd* pParent) 
-			: CDialog(WinMTRDialog::IDD, pParent),
-			state(STATES::IDLE),
-			transition(IDLE_TO_IDLE)
+WinMTRDialog::WinMTRDialog(CWnd* pParent)
+	: CDialog(WinMTRDialog::IDD, pParent),
+	state(STATES::IDLE),
+	transition(IDLE_TO_IDLE)
 {
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
 	m_autostart = 0;
@@ -84,14 +85,7 @@ WinMTRDialog::WinMTRDialog(CWnd* pParent)
 	hasMaxLRUFromCmdLine = false;
 	hasUseDNSFromCmdLine = false;
 
-	traceThreadMutex = CreateMutex(NULL, FALSE, NULL);
-	wmtrnet = new WinMTRNet(this);
-}
-
-WinMTRDialog::~WinMTRDialog()
-{
-	delete wmtrnet;
-	CloseHandle(traceThreadMutex);
+	wmtrnet = std::make_unique<WinMTRNet>(this);
 }
 
 //*****************************************************************************
@@ -559,9 +553,8 @@ void WinMTRDialog::OnRestart()
 	}
 
 	CString sHost;
-
 	if(state == STATES::IDLE) {
-		m_comboHost.GetWindowText(sHost);
+		m_comboHost.GetWindowTextW(sHost);
 		sHost.TrimLeft();
 		sHost.TrimLeft();
       
@@ -593,8 +586,7 @@ void WinMTRDialog::OnRestart()
 				
 				nrLRU++;
 				std::swprintf(key_name, L"Host%d", nrLRU);
-				size_t sHostLen = 0;
-				StringCbLengthW(sHost, sizeof(sHost), &sHostLen);
+				const auto sHostLen = sHost.GetAllocLength() * sizeof(wchar_t) + sizeof(wchar_t);
 				r = RegSetValueExW(hKey,key_name, 0, REG_SZ, (const unsigned char *)(LPCTSTR)sHost, sHostLen);
 				tmp_dword = nrLRU;
 				r = RegSetValueExW(hKey,L"NrLRU", 0, REG_DWORD, (const unsigned char *)&tmp_dword, sizeof(DWORD));
@@ -973,7 +965,7 @@ int WinMTRDialog::InitMTRNet()
 	int isIP=1;
 	wchar_t *t = Hostname;
 	while(*t) {
-		if(!isdigit(*t) && *t!=L'.') {
+		if(!std::iswdigit(*t) && *t!=L'.') {
 			isIP=0;
 			break;
 		}
@@ -1005,10 +997,10 @@ int WinMTRDialog::InitMTRNet()
 //
 // 
 //*****************************************************************************
-void PingThread(void *p)
+void PingThread(WinMTRDialog* wmtrdlg)
 {
-	WinMTRDialog *wmtrdlg = (WinMTRDialog *)p;
-	WaitForSingleObject(wmtrdlg->traceThreadMutex, INFINITE);
+
+	std::unique_lock lock(wmtrdlg->traceThreadMutex);
 
 	wchar_t strtmp[255];
 	wchar_t *Hostname = strtmp;
@@ -1022,7 +1014,7 @@ void PingThread(void *p)
 	bool isIP=true;
 	wchar_t *t = Hostname;
 	while(*t) {
-		if(!isdigit(*t) && *t!=L'.') {
+		if(!std::iswdigit(*t) && *t!=L'.') {
 			isIP=false;
 			break;
 		}
@@ -1049,15 +1041,11 @@ void PingThread(void *p)
 	auto lhost = gethostbyname("localhost");
 	if(lhost == NULL) {
       AfxMessageBox(L"Unable to get local IP address.");
-      ReleaseMutex(wmtrdlg->traceThreadMutex);
       return;
 	}
 	//localaddr = *(int *)lhost->h_addr;
 	
 	wmtrdlg->wmtrnet->DoTrace(traddr);
-
-	ReleaseMutex(wmtrdlg->traceThreadMutex);
-   _endthread();
 }
 
 
@@ -1179,7 +1167,10 @@ void WinMTRDialog::Transit(STATES new_state)
 			m_comboHost.EnableWindow(FALSE);
 			m_buttonOptions.EnableWindow(FALSE);
 			statusBar.SetPaneText(0, L"Double click on host name for more information.");
-			_beginthread(PingThread, 0 , this);
+			{
+				std::thread pingThread(PingThread, this);
+				pingThread.detach();
+			}
 			m_buttonStart.EnableWindow(TRUE);
 		break;
 		case IDLE_TO_IDLE:
@@ -1234,18 +1225,14 @@ void WinMTRDialog::OnTimer(UINT_PTR nIDEvent)
 {
 	static unsigned int call_count = 0;
 	call_count += 1;
-
-	if(state == STATES::EXIT && WaitForSingleObject(traceThreadMutex, 0) == WAIT_OBJECT_0) {
-		ReleaseMutex(traceThreadMutex);
+	std::unique_lock lock(traceThreadMutex, std::try_to_lock);
+	if(state == STATES::EXIT && lock) {
 		OnOK();
 	}
 
-
-	if( WaitForSingleObject(traceThreadMutex, 0) == WAIT_OBJECT_0 ) {
-		ReleaseMutex(traceThreadMutex);
+	if(lock) {
 		Transit(STATES::IDLE);
-	} else if( (call_count % 10 == 0) && (WaitForSingleObject(traceThreadMutex, 0) == WAIT_TIMEOUT) ) {
-		ReleaseMutex(traceThreadMutex);
+	} else if( (call_count % 10 == 0) && !lock) {
 		if( state == STATES::TRACING) Transit(STATES::TRACING);
 		else if( state == STATES::STOPPING) Transit(STATES::STOPPING);
 	}
