@@ -3,7 +3,7 @@
 #include <vector>
 
 #ifdef _DEBUG
-//#define new DEBUG_NEW
+#define new DEBUG_NEW
 #undef THIS_FILE
 static char THIS_FILE[] = __FILE__;
 #endif
@@ -131,7 +131,7 @@ BOOL WinMTRStatusBar::AddPane(
 	}
 	
 	std::vector<_STATUSBAR_PANE_> arrPanesTmp;
-	arrPanesTmp.reserve(m_nCount + 1);
+	arrPanesTmp.reserve(static_cast<size_t>(m_nCount) + 1);
 	for (int iIndex = 0; iIndex < m_nCount+1; iIndex++)
 	{
 		_STATUSBAR_PANE_ pNewPane;
