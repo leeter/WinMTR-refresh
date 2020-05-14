@@ -13,6 +13,7 @@
 #ifndef WINMTRNET_H_
 #define WINMTRNET_H_
 #include <string>
+#include <atomic>
 
 
 class WinMTRDialog;
@@ -78,7 +79,7 @@ public:
 
 	WinMTRDialog		*wmtrdlg;
 	__int32				last_remote_addr;
-	bool				tracing;
+	std::atomic_bool	tracing;
 	bool				initialized;
     HANDLE				hICMP;
 	LPFNICMPCREATEFILE	lpfnIcmpCreateFile;

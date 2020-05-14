@@ -29,13 +29,13 @@ struct dns_resolver_thread {
 	WinMTRNet	*winmtr;
 };
 
-void TraceThread(void *p);
+void TraceThread(trace_thread current);
 void DnsResolverThread(void *p);
 
-WinMTRNet::WinMTRNet(WinMTRDialog *wp) {
+WinMTRNet::WinMTRNet(WinMTRDialog *wp)
+:tracing(false){
 	
 	ghMutex = CreateMutex(NULL, FALSE, NULL);
-	tracing=false;
 	initialized = false;
 	wmtrdlg = wp;
 	WSADATA wsaData;
@@ -110,7 +110,9 @@ void WinMTRNet::ResetHops()
 
 void WinMTRNet::DoTrace(int address)
 {
-	HANDLE hThreads[MAX_HOPS];
+	std::vector<std::thread> threads;
+	threads.reserve(MAX_HOPS);
+	//HANDLE hThreads[MAX_HOPS];
 	tracing = true;
 
 	ResetHops();
@@ -119,14 +121,19 @@ void WinMTRNet::DoTrace(int address)
 
 	// one thread per TTL value
 	for(int i = 0; i < MAX_HOPS; i++) {
-		trace_thread *current = new trace_thread;
-		current->address = address;
-		current->winmtr = this;
-		current->ttl = i + 1;
-		hThreads[i] = (HANDLE)_beginthread(TraceThread, 0 , current);
+		trace_thread current{};
+		current.address = address;
+		current.winmtr = this;
+		current.ttl = i + 1;
+		threads.emplace_back(TraceThread, current);
+		//hThreads[i] = (HANDLE)_beginthread(TraceThread, 0 , current);
 	}
 
-	WaitForMultipleObjects(MAX_HOPS, hThreads, TRUE, INFINITE);
+	for (auto& thread : threads) {
+		thread.join();
+	}
+
+	//WaitForMultipleObjects(MAX_HOPS, hThreads, TRUE, INFINITE);
 }
 
 void WinMTRNet::StopTrace()
@@ -134,11 +141,10 @@ void WinMTRNet::StopTrace()
 	tracing = false;
 }
 
-void TraceThread(void *p)
+void TraceThread(trace_thread current)
 {
-	trace_thread* current = (trace_thread*)p;
-	WinMTRNet *wmtrnet = current->winmtr;
-	TRACE_MSG(L"Threaad with TTL=" << current->ttl << L" started.");
+	WinMTRNet *wmtrnet = current.winmtr;
+	TRACE_MSG(L"Threaad with TTL=" << current.ttl << L" started.");
 
     IPINFO			stIPInfo, *lpstIPInfo;
     DWORD			dwReplyCount;
@@ -151,7 +157,7 @@ void TraceThread(void *p)
      * Init IPInfo structure
      */
     lpstIPInfo				= &stIPInfo;
-    stIPInfo.Ttl			= current->ttl;
+    stIPInfo.Ttl			= current.ttl;
     stIPInfo.Tos			= 0;
     stIPInfo.Flags			= IPFLAG_DONT_FRAGMENT;
     stIPInfo.OptionsSize	= 0;
@@ -163,7 +169,7 @@ void TraceThread(void *p)
 	    
 		// For some strange reason, ICMP API is not filling the TTL for icmp echo reply
 		// Check if the current thread should be closed
-		if( current->ttl > wmtrnet->GetMax() ) break;
+		if( current.ttl > wmtrnet->GetMax() ) break;
 
 		// NOTE: some servers does not respond back everytime, if TTL expires in transit; e.g. :
 		// ping -n 20 -w 5000 -l 64 -i 7 www.chinapost.com.tw  -> less that half of the replies are coming back from 219.80.240.93
@@ -172,79 +178,79 @@ void TraceThread(void *p)
 		// - as soon as we get a hop, we start pinging directly that hop, with a greater TTL
 		// - a drawback would be that, some servers are configured to reply for TTL transit expire, but not to ping requests, so,
 		// for these servers we'll have 100% loss
-		dwReplyCount = wmtrnet->lpfnIcmpSendEcho(wmtrnet->hICMP, current->address, achReqData, nDataLen, lpstIPInfo, achRepData, sizeof(achRepData), ECHO_REPLY_TIMEOUT);
+		dwReplyCount = wmtrnet->lpfnIcmpSendEcho(wmtrnet->hICMP, current.address, achReqData, nDataLen, lpstIPInfo, achRepData, sizeof(achRepData), ECHO_REPLY_TIMEOUT);
 
 		PICMPECHO icmp_echo_reply = (PICMPECHO)achRepData;
 
-		wmtrnet->AddXmit(current->ttl - 1);
+		wmtrnet->AddXmit(current.ttl - 1);
 		if (dwReplyCount != 0) {
-			TRACE_MSG(L"TTL " << current->ttl << L" reply TTL " << icmp_echo_reply->Options.Ttl << L" Status " << icmp_echo_reply->Status << L" Reply count " << dwReplyCount);
+			TRACE_MSG(L"TTL " << current.ttl << L" reply TTL " << icmp_echo_reply->Options.Ttl << L" Status " << icmp_echo_reply->Status << L" Reply count " << dwReplyCount);
 
 			switch(icmp_echo_reply->Status) {
 				case IP_SUCCESS:
 				case IP_TTL_EXPIRED_TRANSIT:
-					wmtrnet->SetLast(current->ttl - 1, icmp_echo_reply->RoundTripTime);
-					wmtrnet->SetBest(current->ttl - 1, icmp_echo_reply->RoundTripTime);
-					wmtrnet->SetWorst(current->ttl - 1, icmp_echo_reply->RoundTripTime);
-					wmtrnet->AddReturned(current->ttl - 1);
-					wmtrnet->SetAddr(current->ttl - 1, icmp_echo_reply->Address);
+					wmtrnet->SetLast(current.ttl - 1, icmp_echo_reply->RoundTripTime);
+					wmtrnet->SetBest(current.ttl - 1, icmp_echo_reply->RoundTripTime);
+					wmtrnet->SetWorst(current.ttl - 1, icmp_echo_reply->RoundTripTime);
+					wmtrnet->AddReturned(current.ttl - 1);
+					wmtrnet->SetAddr(current.ttl - 1, icmp_echo_reply->Address);
 				break;
 				case IP_BUF_TOO_SMALL:
-					wmtrnet->SetName(current->ttl - 1, "Reply buffer too small.");
+					wmtrnet->SetName(current.ttl - 1, "Reply buffer too small.");
 				break;
 				case IP_DEST_NET_UNREACHABLE:
-					wmtrnet->SetName(current->ttl - 1, "Destination network unreachable.");
+					wmtrnet->SetName(current.ttl - 1, "Destination network unreachable.");
 				break;
 				case IP_DEST_HOST_UNREACHABLE:
-					wmtrnet->SetName(current->ttl - 1, "Destination host unreachable.");
+					wmtrnet->SetName(current.ttl - 1, "Destination host unreachable.");
 				break;
 				case IP_DEST_PROT_UNREACHABLE:
-					wmtrnet->SetName(current->ttl - 1, "Destination protocol unreachable.");
+					wmtrnet->SetName(current.ttl - 1, "Destination protocol unreachable.");
 				break;
 				case IP_DEST_PORT_UNREACHABLE:
-					wmtrnet->SetName(current->ttl - 1, "Destination port unreachable.");
+					wmtrnet->SetName(current.ttl - 1, "Destination port unreachable.");
 				break;
 				case IP_NO_RESOURCES:
-					wmtrnet->SetName(current->ttl - 1, "Insufficient IP resources were available.");
+					wmtrnet->SetName(current.ttl - 1, "Insufficient IP resources were available.");
 				break;
 				case IP_BAD_OPTION:
-					wmtrnet->SetName(current->ttl - 1, "Bad IP option was specified.");
+					wmtrnet->SetName(current.ttl - 1, "Bad IP option was specified.");
 				break;
 				case IP_HW_ERROR:
-					wmtrnet->SetName(current->ttl - 1, "Hardware error occurred.");
+					wmtrnet->SetName(current.ttl - 1, "Hardware error occurred.");
 				break;
 				case IP_PACKET_TOO_BIG:
-					wmtrnet->SetName(current->ttl - 1, "Packet was too big.");
+					wmtrnet->SetName(current.ttl - 1, "Packet was too big.");
 				break;
 				case IP_REQ_TIMED_OUT:
-					wmtrnet->SetName(current->ttl - 1, "Request timed out.");
+					wmtrnet->SetName(current.ttl - 1, "Request timed out.");
 				break;
 				case IP_BAD_REQ:
-					wmtrnet->SetName(current->ttl - 1, "Bad request.");
+					wmtrnet->SetName(current.ttl - 1, "Bad request.");
 				break;
 				case IP_BAD_ROUTE:
-					wmtrnet->SetName(current->ttl - 1, "Bad route.");
+					wmtrnet->SetName(current.ttl - 1, "Bad route.");
 				break;
 				case IP_TTL_EXPIRED_REASSEM:
-					wmtrnet->SetName(current->ttl - 1, "The time to live expired during fragment reassembly.");
+					wmtrnet->SetName(current.ttl - 1, "The time to live expired during fragment reassembly.");
 				break;
 				case IP_PARAM_PROBLEM:
-					wmtrnet->SetName(current->ttl - 1, "Parameter problem.");
+					wmtrnet->SetName(current.ttl - 1, "Parameter problem.");
 				break;
 				case IP_SOURCE_QUENCH:
-					wmtrnet->SetName(current->ttl - 1, "Datagrams are arriving too fast to be processed and datagrams may have been discarded.");
+					wmtrnet->SetName(current.ttl - 1, "Datagrams are arriving too fast to be processed and datagrams may have been discarded.");
 				break;
 				case IP_OPTION_TOO_BIG:
-					wmtrnet->SetName(current->ttl - 1, "An IP option was too big.");
+					wmtrnet->SetName(current.ttl - 1, "An IP option was too big.");
 				break;
 				case IP_BAD_DESTINATION:
-					wmtrnet->SetName(current->ttl - 1, "Bad destination.");
+					wmtrnet->SetName(current.ttl - 1, "Bad destination.");
 				break;
 				case IP_GENERAL_FAILURE:
-					wmtrnet->SetName(current->ttl - 1, "General failure.");
+					wmtrnet->SetName(current.ttl - 1, "General failure.");
 				break;
 				default:
-					wmtrnet->SetName(current->ttl - 1, "General failure.");
+					wmtrnet->SetName(current.ttl - 1, "General failure.");
 			}
 
 			if(wmtrnet->wmtrdlg->interval * 1000 > icmp_echo_reply->RoundTripTime)
@@ -253,10 +259,7 @@ void TraceThread(void *p)
 
     } /* end ping loop */
 
-	TRACE_MSG(L"Thread with TTL=" << current->ttl << L" stopped.");
-
-	delete p;
-	_endthread();
+	TRACE_MSG(L"Thread with TTL=" << current.ttl << L" stopped.");
 }
 
 int WinMTRNet::GetAddr(int at)
