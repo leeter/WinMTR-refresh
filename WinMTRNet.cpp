@@ -7,6 +7,8 @@
 #include "WinMTRDialog.h"
 #include <iostream>
 #include <sstream>
+#include <iphlpapi.h>
+#include <icmpapi.h>
 
 #define TRACE_MSG(msg)										\
 	{														\
@@ -30,10 +32,11 @@ struct dns_resolver_thread {
 };
 
 void TraceThread(trace_thread current);
-void DnsResolverThread(void *p);
+void DnsResolverThread(dns_resolver_thread dnt);
+
 
 WinMTRNet::WinMTRNet(WinMTRDialog *wp)
-:tracing(false){
+	:last_remote_addr(0), tracing(false) {
 	
 	ghMutex = CreateMutex(NULL, FALSE, NULL);
 	initialized = false;
@@ -45,27 +48,10 @@ WinMTRNet::WinMTRNet(WinMTRDialog *wp)
 		return;
     }
 
-    hICMP_DLL =  LoadLibrary(_T("ICMP.DLL"));
-    if (hICMP_DLL == 0) {
-        AfxMessageBox(L"Failed: Unable to locate ICMP.DLL!");
-        return;
-    }
-
-    /* 
-     * Get pointers to ICMP.DLL functions
-     */
-    lpfnIcmpCreateFile  = (LPFNICMPCREATEFILE)GetProcAddress(hICMP_DLL,"IcmpCreateFile");
-    lpfnIcmpCloseHandle = (LPFNICMPCLOSEHANDLE)GetProcAddress(hICMP_DLL,"IcmpCloseHandle");
-    lpfnIcmpSendEcho    = (LPFNICMPSENDECHO)GetProcAddress(hICMP_DLL,"IcmpSendEcho");
-    if ((!lpfnIcmpCreateFile) || (!lpfnIcmpCloseHandle) || (!lpfnIcmpSendEcho)) {
-        AfxMessageBox(L"Wrong ICMP.DLL system library !");
-        return;
-    }
-
     /*
      * IcmpCreateFile() - Open the ping service
      */
-    hICMP = (HANDLE) lpfnIcmpCreateFile();
+    hICMP = IcmpCreateFile();
     if (hICMP == INVALID_HANDLE_VALUE) {
         AfxMessageBox(L"Error in ICMP.DLL !");
         return;
@@ -74,7 +60,6 @@ WinMTRNet::WinMTRNet(WinMTRDialog *wp)
 	ResetHops();
 
 	initialized = true;
-	return;
 }
 
 WinMTRNet::~WinMTRNet()
@@ -83,10 +68,7 @@ WinMTRNet::~WinMTRNet()
 		/*
 		 * IcmpCloseHandle - Close the ICMP handle
 		 */
-		lpfnIcmpCloseHandle(hICMP);
-
-		// Shut down...
-		FreeLibrary(hICMP_DLL);
+		IcmpCloseHandle(hICMP);
 
 		WSACleanup();
 	
@@ -112,7 +94,6 @@ void WinMTRNet::DoTrace(int address)
 {
 	std::vector<std::thread> threads;
 	threads.reserve(MAX_HOPS);
-	//HANDLE hThreads[MAX_HOPS];
 	tracing = true;
 
 	ResetHops();
@@ -126,14 +107,11 @@ void WinMTRNet::DoTrace(int address)
 		current.winmtr = this;
 		current.ttl = i + 1;
 		threads.emplace_back(TraceThread, current);
-		//hThreads[i] = (HANDLE)_beginthread(TraceThread, 0 , current);
 	}
 
 	for (auto& thread : threads) {
 		thread.join();
 	}
-
-	//WaitForMultipleObjects(MAX_HOPS, hThreads, TRUE, INFINITE);
 }
 
 void WinMTRNet::StopTrace()
@@ -149,9 +127,9 @@ void TraceThread(trace_thread current)
 
     IPINFO			stIPInfo, *lpstIPInfo;
     DWORD			dwReplyCount;
-	char			achReqData[8192];
+	std::vector<char>	achReqData(wmtrnet->wmtrdlg->pingsize, 8192); //whitespaces
 	int				nDataLen									= wmtrnet->wmtrdlg->pingsize;
-	char			achRepData[sizeof(ICMPECHO) + 8192];
+	std::vector<char> achRepData(sizeof(ICMPECHO) + 8192);
 
 
     /*
@@ -164,7 +142,7 @@ void TraceThread(trace_thread current)
     stIPInfo.OptionsSize	= 0;
     stIPInfo.OptionsData	= NULL;
 
-    for (int i=0; i<nDataLen; i++) achReqData[i] = 32; //whitespaces
+   // for (int i=0; i<nDataLen; i++) achReqData[i] = 32; 
 
     while(wmtrnet->tracing) {
 	    
@@ -179,9 +157,9 @@ void TraceThread(trace_thread current)
 		// - as soon as we get a hop, we start pinging directly that hop, with a greater TTL
 		// - a drawback would be that, some servers are configured to reply for TTL transit expire, but not to ping requests, so,
 		// for these servers we'll have 100% loss
-		dwReplyCount = wmtrnet->lpfnIcmpSendEcho(wmtrnet->hICMP, current.address, achReqData, nDataLen, lpstIPInfo, achRepData, sizeof(achRepData), ECHO_REPLY_TIMEOUT);
+		dwReplyCount = IcmpSendEcho(wmtrnet->hICMP, current.address, achReqData.data(), nDataLen, lpstIPInfo, achRepData.data(), achRepData.size(), ECHO_REPLY_TIMEOUT);
 
-		PICMPECHO icmp_echo_reply = (PICMPECHO)achRepData;
+		PICMPECHO icmp_echo_reply = (PICMPECHO)achRepData.data();
 
 		wmtrnet->AddXmit(current.ttl - 1);
 		if (dwReplyCount != 0) {
@@ -380,10 +358,13 @@ void WinMTRNet::SetAddr(int at, __int32 addr)
 	if(host[at].addr == 0 && addr != 0) {
 		TRACE_MSG(L"Start DnsResolverThread for new address " << addr << L". Old addr value was " << host[at].addr);
 		host[at].addr = addr;
-		dns_resolver_thread *dnt = new dns_resolver_thread;
-		dnt->index = at;
-		dnt->winmtr = this;
-		if(wmtrdlg->useDNS) _beginthread(DnsResolverThread, 0, dnt);
+		dns_resolver_thread dnt;
+		dnt.index = at;
+		dnt.winmtr = this;
+		if (wmtrdlg->useDNS) {
+			auto dnsThread = std::thread(DnsResolverThread, dnt);
+			dnsThread.detach();
+		}
 	}
 
 	ReleaseMutex(ghMutex);
@@ -437,28 +418,27 @@ void WinMTRNet::AddXmit(int at)
 	ReleaseMutex(ghMutex);
 }
 
-void DnsResolverThread(void *p)
+void DnsResolverThread(dns_resolver_thread dnt)
 {
 	TRACE_MSG(L"DNS resolver thread started.");
-	dns_resolver_thread *dnt = (dns_resolver_thread*)p;
-	WinMTRNet* wn = dnt->winmtr;
+	WinMTRNet* wn = dnt.winmtr;
 
 	struct hostent *phent ;
 
 	char buf[100];
-	int addr = wn->GetAddr(dnt->index);
+	int addr = wn->GetAddr(dnt.index);
 	sprintf (buf, "%d.%d.%d.%d", (addr >> 24) & 0xff, (addr >> 16) & 0xff, (addr >> 8) & 0xff, addr & 0xff);
 
 	int haddr = htonl(addr);
 	phent = gethostbyaddr( (const char*)&haddr, sizeof(int), AF_INET);
 
 	if(phent) {
-		wn->SetName(dnt->index, phent->h_name);
+		wn->SetName(dnt.index, phent->h_name);
 	} else {
-		wn->SetName(dnt->index, buf);
+		wn->SetName(dnt.index, buf);
 	}
 	
-	delete p;
 	TRACE_MSG("DNS resolver thread stopped.");
-	_endthread();
 }
+
+

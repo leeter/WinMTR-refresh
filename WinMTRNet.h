@@ -46,9 +46,6 @@ struct s_nethost {
 //*****************************************************************************
 
 class WinMTRNet {
-	typedef HANDLE (WINAPI *LPFNICMPCREATEFILE)(VOID);
-	typedef BOOL  (WINAPI *LPFNICMPCLOSEHANDLE)(HANDLE);
-	typedef DWORD (WINAPI *LPFNICMPSENDECHO)(HANDLE, u_long, LPVOID, WORD, LPVOID, LPVOID, DWORD, DWORD);
 
 public:
 
@@ -82,11 +79,7 @@ public:
 	std::atomic_bool	tracing;
 	bool				initialized;
     HANDLE				hICMP;
-	LPFNICMPCREATEFILE	lpfnIcmpCreateFile;
-	LPFNICMPCLOSEHANDLE lpfnIcmpCloseHandle;
-	LPFNICMPSENDECHO	lpfnIcmpSendEcho;
 private:
-	HINSTANCE			hICMP_DLL;
 
     struct s_nethost	host[MaxHost];
 	HANDLE				ghMutex; 
