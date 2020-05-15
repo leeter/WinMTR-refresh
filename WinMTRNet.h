@@ -18,7 +18,13 @@
 
 class WinMTRDialog;
 
-typedef ip_option_information IPINFO, *PIPINFO, FAR *LPIPINFO;
+#ifdef _WIN64
+typedef IP_OPTION_INFORMATION32 IPINFO, * PIPINFO, FAR* LPIPINFO;
+#else
+typedef IP_OPTION_INFORMATION IPINFO, * PIPINFO, FAR* LPIPINFO;
+#endif
+
+
 
 #ifdef _WIN64
 typedef icmp_echo_reply32 ICMPECHO, *PICMPECHO, FAR *LPICMPECHO;

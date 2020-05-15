@@ -957,7 +957,6 @@ int WinMTRDialog::InitMTRNet()
 	wchar_t strtmp[255];
 	wchar_t *Hostname = strtmp;
 	wchar_t buf[255];
-	struct hostent *host;
 	m_comboHost.GetWindowText(strtmp, 255);
    	
 	if (Hostname == nullptr) Hostname = L"localhost";
@@ -978,7 +977,6 @@ int WinMTRDialog::InitMTRNet()
 		PADDRINFOW out = nullptr;
 		ADDRINFOW hint = {};
 		hint.ai_family = AF_INET;
-		//host = gethostbyname(Hostname);
 		if (auto result = GetAddrInfoW(Hostname, nullptr, &hint, &out); result) {
 			FreeAddrInfoW(out);
 			statusBar.SetPaneText(0, CString((LPCTSTR)IDS_STRING_SB_NAME) );
