@@ -16,6 +16,7 @@
 #include <atomic>
 #include <mutex>
 #include <array>
+#include <cstdint>
 #include "WinMTRWSAhelper.h"
 
 
@@ -38,7 +39,7 @@ typedef icmp_echo_reply ICMPECHO, *PICMPECHO, FAR *LPICMPECHO;
 #define ECHO_REPLY_TIMEOUT 5000
 
 struct s_nethost {
-  __int32 addr;		// IP as a decimal, big endian
+  std::int32_t addr;		// IP as a decimal, big endian
   int xmit;			// number of PING packets sent
   int returned;		// number of ICMP echo replies received
   unsigned long total;	// total time
@@ -93,7 +94,7 @@ private:
 	std::recursive_mutex	ghMutex;
 	WinMTRDialog* wmtrdlg;
 	HANDLE				hICMP;
-	__int32				last_remote_addr;
+	std::int32_t		last_remote_addr;
 	winmtr::helper::WSAHelper wsaHelper;
 	std::atomic_bool	tracing;
 
