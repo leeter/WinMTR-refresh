@@ -447,8 +447,8 @@ void WinMTRDialog::OnDblclkList(NMHDR* pNMHDR, LRESULT* pResult)
 		if(pos!=NULL) {
 			int nItem = m_listMTR.GetNextSelectedItem(pos);
 			WinMTRProperties wmtrprop;
-
-			if(wmtrnet->GetAddr(nItem)==0) {
+			
+			if(auto addr = wmtrnet->GetAddr(nItem); !isValidAddress(addr)) {
 				wmtrprop.host.clear();
 				wmtrprop.ip.clear();
 				wmtrprop.comment = wmtrnet->GetName(nItem);
@@ -459,17 +459,14 @@ void WinMTRDialog::OnDblclkList(NMHDR* pNMHDR, LRESULT* pResult)
 				wmtrprop.ping_best = wmtrprop.ping_worst = 0.0;
 			} else {
 				wmtrprop.host = wmtrnet->GetName(nItem);
-				int addr = wmtrnet->GetAddr(nItem);
-				wmtrprop.ip.resize(20);
-				auto written = std::swprintf (	wmtrprop.ip.data() , L"%d.%d.%d.%d", 
-							(addr >> 24) & 0xff, 
-							(addr >> 16) & 0xff, 
-							(addr >> 8) & 0xff, 
-							addr & 0xff
-				);
-				if (written > 0) {
-					wmtrprop.ip.resize(written);
+				wmtrprop.ip.resize(40);
+				auto addrlen = getAddressSize(addr);
+				DWORD addrstrsize = wmtrprop.ip.size();
+				auto result = WSAAddressToStringW(reinterpret_cast<LPSOCKADDR>(&addr), addrlen, nullptr, wmtrprop.ip.data(), &addrstrsize);
+				if (!result) {
+					wmtrprop.ip.resize(addrstrsize - 1);
 				}
+				
 				wmtrprop.comment = L"Host alive."sv;
 
 				wmtrprop.ping_avrg = (float)wmtrnet->GetAvg(nItem); 

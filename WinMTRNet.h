@@ -39,16 +39,31 @@ typedef icmp_echo_reply ICMPECHO, *PICMPECHO, FAR *LPICMPECHO;
 #define ECHO_REPLY_TIMEOUT 5000
 
 struct s_nethost {
-  std::int32_t addr;		// IP as a decimal, big endian
+  SOCKADDR_STORAGE addr;
+  std::wstring name;
   int xmit;			// number of PING packets sent
   int returned;		// number of ICMP echo replies received
   unsigned long total;	// total time
   int last;				// last time
   int best;				// best time
   int worst;			// worst time
-  char name[255];
 };
 
+inline size_t getAddressSize(const sockaddr& addr) noexcept {
+	return addr.sa_family == AF_INET ? sizeof(sockaddr_in) : sizeof(sockaddr_in6);
+}
+
+inline size_t getAddressSize(const SOCKADDR_STORAGE& addr) noexcept {
+	return addr.ss_family == AF_INET ? sizeof(sockaddr_in) : sizeof(sockaddr_in6);
+}
+
+inline bool isValidAddress(const sockaddr& addr) noexcept {
+	return addr.sa_family == AF_INET || addr.sa_family == AF_INET6;
+}
+
+inline bool isValidAddress(const SOCKADDR_STORAGE& addr) noexcept {
+	return addr.ss_family == AF_INET || addr.ss_family == AF_INET6;
+}
 struct trace_thread;
 
 void TraceThread(trace_thread& current);
@@ -69,7 +84,7 @@ public:
 	void	ResetHops();
 	void	StopTrace();
 
-	int		GetAddr(int at);
+	SOCKADDR_STORAGE GetAddr(int at);
 	std::wstring GetName(int at);
 	int		GetBest(int at);
 	int		GetWorst(int at);
@@ -80,8 +95,8 @@ public:
 	int		GetXmit(int at);
 	int		GetMax();
 
-	void	SetAddr(int at, __int32 addr);
-	void	SetName(int at, char *n);
+	void	SetAddr(int at, sockaddr& addr);
+	void	SetName(int at, std::wstring n);
 	void	SetBest(int at, int current);
 	void	SetWorst(int at, int current);
 	void	SetLast(int at, int last);
@@ -91,10 +106,10 @@ public:
 	
 private:
 	std::array<s_nethost, MaxHost>	host;
+	SOCKADDR_STORAGE last_remote_addr;
 	std::recursive_mutex	ghMutex;
 	WinMTRDialog* wmtrdlg;
 	HANDLE				hICMP;
-	std::int32_t		last_remote_addr;
 	winmtr::helper::WSAHelper wsaHelper;
 	std::atomic_bool	tracing;
 
