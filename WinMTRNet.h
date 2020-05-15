@@ -48,6 +48,10 @@ struct s_nethost {
   char name[255];
 };
 
+struct trace_thread;
+
+void TraceThread(trace_thread& current);
+
 //*****************************************************************************
 // CLASS:  WinMTRNet
 //
@@ -83,16 +87,17 @@ public:
 	void	AddReturned(int at);
 	void	AddXmit(int at);
 
-	WinMTRDialog		*wmtrdlg;
-	__int32				last_remote_addr;
-	std::atomic_bool	tracing;
-	bool				initialized;
-    HANDLE				hICMP;
+	
 private:
-
-    std::array<s_nethost, MaxHost>	host;
-	std::recursive_mutex	ghMutex; 
+	std::array<s_nethost, MaxHost>	host;
+	std::recursive_mutex	ghMutex;
+	WinMTRDialog* wmtrdlg;
+	HANDLE				hICMP;
+	__int32				last_remote_addr;
 	winmtr::helper::WSAHelper wsaHelper;
+	std::atomic_bool	tracing;
+
+	friend void TraceThread(trace_thread&);
 };
 
 #endif	// ifndef WINMTRNET_H_

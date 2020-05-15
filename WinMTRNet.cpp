@@ -30,18 +30,16 @@ struct dns_resolver_thread {
 	WinMTRNet	*winmtr;
 };
 
-void TraceThread(trace_thread current);
 void DnsResolverThread(dns_resolver_thread dnt);
 
 
 WinMTRNet::WinMTRNet(WinMTRDialog *wp)
-	:wmtrdlg(wp),
-	last_remote_addr(0),
-	tracing(false),
-	initialized(false),
+	:host(),
+	wmtrdlg(wp),
 	hICMP(INVALID_HANDLE_VALUE),
-	host(),
-	wsaHelper(MAKEWORD(2, 2)){
+	last_remote_addr(0),
+	wsaHelper(MAKEWORD(2, 2)),
+	tracing(false){
 	
 
     if(!wsaHelper) {
@@ -57,8 +55,6 @@ WinMTRNet::WinMTRNet(WinMTRDialog *wp)
         AfxMessageBox(L"Error in ICMP.DLL !");
         return;
     }
-
-	initialized = true;
 }
 
 WinMTRNet::~WinMTRNet()
@@ -74,14 +70,7 @@ WinMTRNet::~WinMTRNet()
 void WinMTRNet::ResetHops()
 {
 	for(auto & host : this->host) {
-		host.addr = 0;
-		host.xmit = 0;
-		host.returned = 0;
-		host.total = 0;
-		host.last = 0;
-		host.best = 0;
-		host.worst = 0;
-		memset(host.name,0,sizeof(host.name));
+		host = s_nethost();
 	}
 }
 
@@ -101,7 +90,9 @@ void WinMTRNet::DoTrace(int address)
 		current.address = address;
 		current.winmtr = this;
 		current.ttl = i + 1;
-		threads.emplace_back(TraceThread, current);
+		threads.emplace_back([](auto trd) {
+			TraceThread(trd);
+		}, current);
 	}
 
 	for (auto& thread : threads) {
@@ -114,7 +105,7 @@ void WinMTRNet::StopTrace()
 	tracing = false;
 }
 
-void TraceThread(trace_thread current)
+void TraceThread(trace_thread& current)
 {
 	using namespace std::chrono_literals;
 	WinMTRNet *wmtrnet = current.winmtr;
