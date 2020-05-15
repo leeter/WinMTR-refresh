@@ -126,7 +126,7 @@ void TraceThread(trace_thread current)
 
     IPINFO			stIPInfo, *lpstIPInfo;
     DWORD			dwReplyCount;
-	std::vector<char>	achReqData(wmtrnet->wmtrdlg->pingsize, 8192); //whitespaces
+	std::vector<char>	achReqData(static_cast<size_t>(wmtrnet->wmtrdlg->pingsize) + 8192); //whitespaces
 	int				nDataLen									= wmtrnet->wmtrdlg->pingsize;
 	std::vector<char> achRepData(sizeof(ICMPECHO) + 8192);
 
