@@ -37,7 +37,6 @@ void DnsResolverThread(dns_resolver_thread dnt);
 WinMTRNet::WinMTRNet(WinMTRDialog *wp)
 	:last_remote_addr(0), tracing(false) {
 	
-	ghMutex = CreateMutex(NULL, FALSE, NULL);
 	initialized = false;
 	wmtrdlg = wp;
 	WSADATA wsaData;
@@ -71,7 +70,7 @@ WinMTRNet::~WinMTRNet()
 
 		WSACleanup();
 	
-		CloseHandle(ghMutex);
+		//CloseHandle(ghMutex);
 	}
 }
 
@@ -241,18 +240,17 @@ void TraceThread(trace_thread current)
 
 int WinMTRNet::GetAddr(int at)
 {
-	WaitForSingleObject(ghMutex, INFINITE);
+	std::unique_lock lock(ghMutex);
 	int addr = ntohl(host[at].addr);
-	ReleaseMutex(ghMutex);
 	return addr;
 }
 
 std::wstring WinMTRNet::GetName(int at)
 {
-	WaitForSingleObject(ghMutex, INFINITE);
+	std::unique_lock lock(ghMutex);
 	if(!strcmp(host[at].name, "")) {
 		int addr = GetAddr(at);
-		ReleaseMutex(ghMutex);
+		lock.unlock();
 		if (addr == 0) {
 			return {};
 		}
@@ -265,69 +263,61 @@ std::wstring WinMTRNet::GetName(int at)
 	}
 	std::wostringstream out;
 	out << host[at].name;
-	ReleaseMutex(ghMutex);
 	return out.str();
 }
 
 int WinMTRNet::GetBest(int at)
 {
-	WaitForSingleObject(ghMutex, INFINITE);
+	std::unique_lock lock(ghMutex);
 	int ret = host[at].best;
-	ReleaseMutex(ghMutex);
 	return ret;
 }
 
 int WinMTRNet::GetWorst(int at)
 {
-	WaitForSingleObject(ghMutex, INFINITE);
+	std::unique_lock lock(ghMutex);
 	int ret = host[at].worst;
-	ReleaseMutex(ghMutex);
 	return ret;
 }
 
 int WinMTRNet::GetAvg(int at)
 {
-	WaitForSingleObject(ghMutex, INFINITE);
+	std::unique_lock lock(ghMutex);
 	int ret = host[at].returned == 0 ? 0 : host[at].total / host[at].returned;
-	ReleaseMutex(ghMutex);
 	return ret;
 }
 
 int WinMTRNet::GetPercent(int at)
 {
-	WaitForSingleObject(ghMutex, INFINITE);
+	std::unique_lock lock(ghMutex);
 	int ret = (host[at].xmit == 0) ? 0 : (100 - (100 * host[at].returned / host[at].xmit));
-	ReleaseMutex(ghMutex);
 	return ret;
 }
 
 int WinMTRNet::GetLast(int at)
 {
-	WaitForSingleObject(ghMutex, INFINITE);
+	std::unique_lock lock(ghMutex);
 	int ret = host[at].last;
-	ReleaseMutex(ghMutex);
 	return ret;
 }
 
 int WinMTRNet::GetReturned(int at)
 { 
-	WaitForSingleObject(ghMutex, INFINITE);
+	std::unique_lock lock(ghMutex);
 	int ret = host[at].returned;
-	ReleaseMutex(ghMutex);
 	return ret;
 }
 
 int WinMTRNet::GetXmit(int at)
 { 
-	WaitForSingleObject(ghMutex, INFINITE);
+	std::unique_lock lock(ghMutex);
 	int ret = host[at].xmit;
-	ReleaseMutex(ghMutex);
 	return ret;
 }
 
 int WinMTRNet::GetMax()
 {
-	WaitForSingleObject(ghMutex, INFINITE);
+	std::unique_lock lock(ghMutex);
 	int max = MAX_HOPS;
 
 	// first match: traced address responds on ping requests, and the address is in the hosts list
@@ -342,14 +332,12 @@ int WinMTRNet::GetMax()
 	if(max == MAX_HOPS) {
 		while((max > 1) && (host[max - 1].addr == host[max - 2].addr) && (host[max - 1].addr != 0) ) max--;
 	}
-
-	ReleaseMutex(ghMutex);
 	return max;
 }
 
 void WinMTRNet::SetAddr(int at, __int32 addr)
 {
-	WaitForSingleObject(ghMutex, INFINITE);
+	std::unique_lock lock(ghMutex);
 	if(host[at].addr == 0 && addr != 0) {
 		TRACE_MSG(L"Start DnsResolverThread for new address " << addr << L". Old addr value was " << host[at].addr);
 		host[at].addr = addr;
@@ -361,56 +349,47 @@ void WinMTRNet::SetAddr(int at, __int32 addr)
 			dnsThread.detach();
 		}
 	}
-
-	ReleaseMutex(ghMutex);
 }
 
 void WinMTRNet::SetName(int at, char *n)
 {
-	WaitForSingleObject(ghMutex, INFINITE);
+	std::unique_lock lock(ghMutex);
 	strcpy(host[at].name, n);
-	ReleaseMutex(ghMutex);
 }
 
 void WinMTRNet::SetBest(int at, int current)
 {
-	WaitForSingleObject(ghMutex, INFINITE);
+	std::unique_lock lock(ghMutex);
 	if(host[at].best > current || host[at].xmit == 1) {
 		host[at].best = current;
 	};
 	if(host[at].worst < current) {
 		host[at].worst = current;
 	}
-
-	ReleaseMutex(ghMutex);
 }
 
 void WinMTRNet::SetWorst(int at, int current)
 {
-	WaitForSingleObject(ghMutex, INFINITE);
-	ReleaseMutex(ghMutex);
+	//std::unique_lock lock(ghMutex);
 }
 
 void WinMTRNet::SetLast(int at, int last)
 {
-	WaitForSingleObject(ghMutex, INFINITE);
+	std::unique_lock lock(ghMutex);
 	host[at].last = last;
 	host[at].total += last;
-	ReleaseMutex(ghMutex);
 }
 
 void WinMTRNet::AddReturned(int at)
 {
-	WaitForSingleObject(ghMutex, INFINITE);
+	std::unique_lock lock(ghMutex);
 	host[at].returned++;
-	ReleaseMutex(ghMutex);
 }
 
 void WinMTRNet::AddXmit(int at)
 {
-	WaitForSingleObject(ghMutex, INFINITE);
+	std::unique_lock lock(ghMutex);
 	host[at].xmit++;
-	ReleaseMutex(ghMutex);
 }
 
 void DnsResolverThread(dns_resolver_thread dnt)

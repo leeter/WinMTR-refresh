@@ -14,6 +14,7 @@
 #define WINMTRNET_H_
 #include <string>
 #include <atomic>
+#include <mutex>
 
 
 class WinMTRDialog;
@@ -88,7 +89,7 @@ public:
 private:
 
     struct s_nethost	host[MaxHost];
-	HANDLE				ghMutex; 
+	std::recursive_mutex	ghMutex; 
 };
 
 #endif	// ifndef WINMTRNET_H_
