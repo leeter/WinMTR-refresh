@@ -461,8 +461,8 @@ void WinMTRDialog::OnDblclkList(NMHDR* pNMHDR, LRESULT* pResult)
 				wmtrprop.host = wmtrnet->GetName(nItem);
 				wmtrprop.ip.resize(40);
 				auto addrlen = getAddressSize(addr);
-				DWORD addrstrsize = wmtrprop.ip.size();
-				auto result = WSAAddressToStringW(reinterpret_cast<LPSOCKADDR>(&addr), addrlen, nullptr, wmtrprop.ip.data(), &addrstrsize);
+				DWORD addrstrsize = static_cast<DWORD>(wmtrprop.ip.size());
+				auto result = WSAAddressToStringW(reinterpret_cast<LPSOCKADDR>(&addr), static_cast<DWORD>(addrlen), nullptr, wmtrprop.ip.data(), &addrstrsize);
 				if (!result) {
 					wmtrprop.ip.resize(addrstrsize - 1);
 				}
@@ -660,7 +660,7 @@ void WinMTRDialog::OnOptions()
 //*****************************************************************************
 void WinMTRDialog::OnCTTC() 
 {	
-	char buf[255], t_buf[1000], f_buf[255*100];
+	char t_buf[1000], f_buf[255*100];
 	
 	int nh = wmtrnet->GetMax();
 	
@@ -717,7 +717,7 @@ void WinMTRDialog::OnCTTC()
 //*****************************************************************************
 void WinMTRDialog::OnCHTC() 
 {
-	char buf[255], t_buf[1000], f_buf[255*100];
+	char t_buf[1000], f_buf[255*100];
 	
 	int nh = wmtrnet->GetMax();
 	
@@ -999,9 +999,7 @@ void PingThread(WinMTRDialog* wmtrdlg)
 
 	wchar_t strtmp[255];
 	wchar_t *Hostname = strtmp;
-	int traddr;
-	int localaddr;
-
+	SOCKADDR_STORAGE addrstore;
 	wmtrdlg->m_comboHost.GetWindowTextW(strtmp, 255);
    	
 	if (Hostname == nullptr) Hostname = L"localhost";
@@ -1021,14 +1019,21 @@ void PingThread(WinMTRDialog* wmtrdlg)
 		ADDRINFOW hint = {};
 		hint.ai_family = AF_INET;
 		auto result = GetAddrInfoW(Hostname, nullptr, &hint, &out);
-		traddr = ((sockaddr_in*)out->ai_addr)->sin_addr.S_un.S_addr;
+		memcpy(&addrstore, out->ai_addr, out->ai_addrlen);
 		FreeAddrInfoW(out);
 	}
 	else {
 		LPCWSTR end = nullptr;
 		in_addr addr = {};
-		RtlIpv4StringToAddressW(Hostname, TRUE, &end,  &addr);
-		traddr = addr.S_un.S_addr;
+		INT addrsize = sizeof(addrstore);
+		if (auto result =
+			WSAStringToAddressW(Hostname, AF_INET, nullptr, reinterpret_cast<LPSOCKADDR>(&addrstore), &addrsize); !result)
+		{
+			
+		}
+		else {
+			WSAStringToAddressW(Hostname, AF_INET6, nullptr, reinterpret_cast<LPSOCKADDR>(&addrstore), &addrsize);
+		}
 
 	}
       
@@ -1040,7 +1045,7 @@ void PingThread(WinMTRDialog* wmtrdlg)
 	}
 	//localaddr = *(int *)lhost->h_addr;
 	
-	wmtrdlg->wmtrnet->DoTrace(traddr);
+	wmtrdlg->wmtrnet->DoTrace(*reinterpret_cast<LPSOCKADDR>(&addrstore));
 }
 
 

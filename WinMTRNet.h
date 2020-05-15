@@ -80,7 +80,7 @@ public:
 
 	WinMTRNet(WinMTRDialog *wp);
 	~WinMTRNet();
-	void	DoTrace(int address);
+	void	DoTrace(sockaddr &address);
 	void	ResetHops();
 	void	StopTrace();
 

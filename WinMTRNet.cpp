@@ -20,7 +20,7 @@
 #define MAX_HOPS				30
 
 struct trace_thread {
-	int			address;
+	SOCKADDR_STORAGE address;
 	WinMTRNet	*winmtr;
 	int			ttl;
 };
@@ -75,20 +75,19 @@ void WinMTRNet::ResetHops()
 	}
 }
 
-void WinMTRNet::DoTrace(int address)
+void WinMTRNet::DoTrace(sockaddr& address)
 {
 	std::vector<std::thread> threads;
 	threads.reserve(MAX_HOPS);
 	tracing = true;
 
 	ResetHops();
-	sockaddr_in* addr = reinterpret_cast<sockaddr_in*>((&last_remote_addr));
-	addr->sin_addr.S_un.S_addr = address;
+	memcpy(&last_remote_addr, &address, getAddressSize(address));
 
 	// one thread per TTL value
 	for(int i = 0; i < MAX_HOPS; i++) {
 		trace_thread current{};
-		current.address = address;
+		memcpy(&current.address, &address, getAddressSize(address));
 		current.winmtr = this;
 		current.ttl = i + 1;
 		threads.emplace_back([](auto trd) {
@@ -141,7 +140,8 @@ void TraceThread(trace_thread& current)
 		// - as soon as we get a hop, we start pinging directly that hop, with a greater TTL
 		// - a drawback would be that, some servers are configured to reply for TTL transit expire, but not to ping requests, so,
 		// for these servers we'll have 100% loss
-		auto dwReplyCount = IcmpSendEcho(wmtrnet->hICMP, current.address, achReqData.data(), nDataLen, &stIPInfo, achRepData.data(), achRepData.size(), ECHO_REPLY_TIMEOUT);
+		sockaddr_in* addr = reinterpret_cast<sockaddr_in*>(&current.address);
+		auto dwReplyCount = IcmpSendEcho(wmtrnet->hICMP, addr->sin_addr.S_un.S_addr, achReqData.data(), nDataLen, &stIPInfo, achRepData.data(), achRepData.size(), ECHO_REPLY_TIMEOUT);
 
 		PICMPECHO icmp_echo_reply = (PICMPECHO)achRepData.data();
 		
