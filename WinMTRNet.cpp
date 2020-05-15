@@ -35,13 +35,16 @@ void DnsResolverThread(dns_resolver_thread dnt);
 
 
 WinMTRNet::WinMTRNet(WinMTRDialog *wp)
-	:last_remote_addr(0), tracing(false) {
+	:wmtrdlg(wp),
+	last_remote_addr(0),
+	tracing(false),
+	initialized(false),
+	hICMP(INVALID_HANDLE_VALUE),
+	host(),
+	wsaHelper(MAKEWORD(2, 2)){
 	
-	initialized = false;
-	wmtrdlg = wp;
-	WSADATA wsaData;
 
-    if( WSAStartup(MAKEWORD(2, 2), &wsaData) ) {
+    if(!wsaHelper) {
         AfxMessageBox(L"Failed initializing windows sockets library!");
 		return;
     }
@@ -55,36 +58,30 @@ WinMTRNet::WinMTRNet(WinMTRDialog *wp)
         return;
     }
 
-	ResetHops();
-
 	initialized = true;
 }
 
 WinMTRNet::~WinMTRNet()
 {
-	if(initialized) {
+	if(hICMP != INVALID_HANDLE_VALUE) {
 		/*
 		 * IcmpCloseHandle - Close the ICMP handle
 		 */
 		IcmpCloseHandle(hICMP);
-
-		WSACleanup();
-	
-		//CloseHandle(ghMutex);
 	}
 }
 
 void WinMTRNet::ResetHops()
 {
-	for(int i = 0; i < MaxHost;i++) {
-		host[i].addr = 0;
-		host[i].xmit = 0;
-		host[i].returned = 0;
-		host[i].total = 0;
-		host[i].last = 0;
-		host[i].best = 0;
-		host[i].worst = 0;
-		memset(host[i].name,0,sizeof(host[i].name));
+	for(auto & host : this->host) {
+		host.addr = 0;
+		host.xmit = 0;
+		host.returned = 0;
+		host.total = 0;
+		host.last = 0;
+		host.best = 0;
+		host.worst = 0;
+		memset(host.name,0,sizeof(host.name));
 	}
 }
 

@@ -286,6 +286,7 @@
     <ClInclude Include="WinMTRNet.h" />
     <ClInclude Include="WinMTROptions.h" />
     <ClInclude Include="WinMTRProperties.h" />
+    <ClInclude Include="WinMTRWSAhelper.h" />
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="WinMTR.ico" />

@@ -15,6 +15,8 @@
 #include <string>
 #include <atomic>
 #include <mutex>
+#include <array>
+#include "WinMTRWSAhelper.h"
 
 
 class WinMTRDialog;
@@ -88,8 +90,9 @@ public:
     HANDLE				hICMP;
 private:
 
-    struct s_nethost	host[MaxHost];
+    std::array<s_nethost, MaxHost>	host;
 	std::recursive_mutex	ghMutex; 
+	winmtr::helper::WSAHelper wsaHelper;
 };
 
 #endif	// ifndef WINMTRNET_H_
