@@ -1003,28 +1003,25 @@ void PingThread(WinMTRDialog* wmtrdlg)
 	wmtrdlg->m_comboHost.GetWindowTextW(strtmp, 255);
    	
 	if (Hostname == nullptr) Hostname = L"localhost";
-   
-	bool isIP=true;
-	wchar_t *t = Hostname;
-	while(*t) {
-		if(!std::iswdigit(*t) && *t!=L'.') {
-			isIP=false;
-			break;
-		}
-		t++;
-	}
 
-	if(!isIP) {
-		PADDRINFOW out = nullptr;
-		ADDRINFOW hint = {};
-		hint.ai_family = AF_INET;
-		auto result = GetAddrInfoW(Hostname, nullptr, &hint, &out);
-		memcpy(&addrstore, out->ai_addr, out->ai_addrlen);
-		FreeAddrInfoW(out);
+	PADDRINFOW out = nullptr;
+	ADDRINFOW hint = {};
+	hint.ai_family = AF_INET;
+	if (auto result = GetAddrInfoW(Hostname, nullptr, &hint, &out); !result) {
+		if (out) {
+			FreeAddrInfoW(out);
+		}
+		AfxMessageBox(L"Unable to resolve address.");
+		return;
+	}
+	memcpy(&addrstore, out->ai_addr, out->ai_addrlen);
+	FreeAddrInfoW(out);
+
+
+	/*if(!isIP) {
+		
 	}
 	else {
-		LPCWSTR end = nullptr;
-		in_addr addr = {};
 		INT addrsize = sizeof(addrstore);
 		if (auto result =
 			WSAStringToAddressW(Hostname, AF_INET, nullptr, reinterpret_cast<LPSOCKADDR>(&addrstore), &addrsize); !result)
@@ -1035,7 +1032,7 @@ void PingThread(WinMTRDialog* wmtrdlg)
 			WSAStringToAddressW(Hostname, AF_INET6, nullptr, reinterpret_cast<LPSOCKADDR>(&addrstore), &addrsize);
 		}
 
-	}
+	}*/
       
 
 	auto lhost = gethostbyname("localhost");
