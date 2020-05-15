@@ -96,10 +96,9 @@ BOOL WinMTRMain::InitInstance()
 //*****************************************************************************
 void WinMTRMain::ParseCommandLineParams(LPTSTR cmd, WinMTRDialog *wmtrdlg)
 {
-	char value[1024];
-	std::string host_name = "";
+	wchar_t value[1024];
 
-	if(GetParamValue(cmd, "help",'h', value)) {
+	if(GetParamValue(cmd, L"help",L'h', value)) {
 		WinMTRHelp mtrHelp;
 		m_pMainWnd = &mtrHelp;
 		mtrHelp.DoModal();
@@ -109,19 +108,22 @@ void WinMTRMain::ParseCommandLineParams(LPTSTR cmd, WinMTRDialog *wmtrdlg)
 	if (auto host_name = GetHostNameParamValue(cmd); host_name) {
 		wmtrdlg->SetHostName(*host_name);
 	}
-	if(GetParamValue(cmd, "interval",'i', value)) {
-		wmtrdlg->SetInterval((float)atof(value));
+	if(GetParamValue(cmd, L"interval",L'i', value)) {
+		wchar_t* end = nullptr;
+		wmtrdlg->SetInterval((float)wcstof(value, &end));
 		wmtrdlg->hasIntervalFromCmdLine = true;
 	}
-	if(GetParamValue(cmd, "size",'s', value)) {
-		wmtrdlg->SetPingSize(atoi(value));
+	if(GetParamValue(cmd, L"size",L's', value)) {
+		wchar_t* end = nullptr;
+		wmtrdlg->SetPingSize(wcstol(value, &end, 10));
 		wmtrdlg->hasPingsizeFromCmdLine = true;
 	}
-	if(GetParamValue(cmd, "maxLRU",'m', value)) {
-		wmtrdlg->SetMaxLRU(atoi(value));
+	if(GetParamValue(cmd, L"maxLRU",L'm', value)) {
+		wchar_t* end = nullptr;
+		wmtrdlg->SetMaxLRU(wcstol(value, &end, 10));
 		wmtrdlg->hasMaxLRUFromCmdLine = true;
 	}
-	if(GetParamValue(cmd, "numeric",'n', value)) {
+	if(GetParamValue(cmd, L"numeric",L'n', value)) {
 		wmtrdlg->SetUseDNS(FALSE);
 		wmtrdlg->hasUseDNSFromCmdLine = true;
 	}
@@ -132,8 +134,9 @@ void WinMTRMain::ParseCommandLineParams(LPTSTR cmd, WinMTRDialog *wmtrdlg)
 //
 // 
 //*****************************************************************************
-int WinMTRMain::GetParamValue(LPTSTR cmd, char * param, char sparam, char *value)
+int WinMTRMain::GetParamValue(LPTSTR cmd, wchar_t * param, wchar_t sparam, wchar_t *value)
 {
+	using namespace std::string_view_literals;
 	wchar_t *p;
 	
 	wchar_t p_long[1024];
@@ -146,20 +149,20 @@ int WinMTRMain::GetParamValue(LPTSTR cmd, char * param, char sparam, char *value
 	else 
 		p=wcsstr(cmd, p_short);
 
-	if(p == NULL)
+	if(!p)
 		return 0;
 
-	if(strcmp(param,"numeric")==0) 
+	if(L"numeric"sv == param)
 		return 1;
 
-	while(*p && *p!=' ')
+	while(*p && *p!=L' ')
 		p++;
-	while(*p==' ') p++;
+	while(*p==L' ') p++;
 	
 	int i = 0;
-	while(*p && *p!=' ')
+	while(*p && *p!=L' ')
 		value[i++] = *p++;
-	value[i]='\0';
+	value[i]=L'\0';
 
 	return 1;
 }
@@ -172,7 +175,7 @@ int WinMTRMain::GetParamValue(LPTSTR cmd, char * param, char sparam, char *value
 std::optional<std::wstring> WinMTRMain::GetHostNameParamValue(LPTSTR cmd)
 {
 // WinMTR -h -i 1 -n google.com
-	int size = wcslen(cmd);
+	auto size = wcslen(cmd);
 	std::wstring name;
 	while(cmd[--size] == L' ');
 

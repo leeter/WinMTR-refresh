@@ -17,7 +17,6 @@
 	OutputDebugString(dbg_msg.str().c_str());				\
 	}
 
-#define IPFLAG_DONT_FRAGMENT	0x02
 #define MAX_HOPS				30
 
 struct trace_thread {
@@ -138,9 +137,9 @@ void TraceThread(trace_thread current)
     lpstIPInfo				= &stIPInfo;
     stIPInfo.Ttl			= current.ttl;
     stIPInfo.Tos			= 0;
-    stIPInfo.Flags			= IPFLAG_DONT_FRAGMENT;
+    stIPInfo.Flags			= IP_FLAG_DF;
     stIPInfo.OptionsSize	= 0;
-    stIPInfo.OptionsData	= NULL;
+    stIPInfo.OptionsData	= nullptr;
 
    // for (int i=0; i<nDataLen; i++) achReqData[i] = 32; 
 
