@@ -29,6 +29,13 @@ END_MESSAGE_MAP()
 // 
 //*****************************************************************************
 WinMTRProperties::WinMTRProperties(CWnd* pParent) : CDialog(WinMTRProperties::IDD, pParent)
+,ping_last()
+,ping_best()
+,ping_avrg()
+,ping_worst()
+,pck_sent()
+,pck_recv()
+,pck_loss()
 {
 }
 
@@ -70,20 +77,20 @@ BOOL WinMTRProperties::OnInitDialog()
 	m_editHost.SetWindowText(host.c_str());
 	m_editComment.SetWindowText(comment.c_str());
 
-	std::swprintf(buf, L"%d", pck_loss);
+	std::swprintf(buf, std::size(buf), L"%d", pck_loss);
 	m_editLoss.SetWindowText(buf);
-	std::swprintf(buf, L"%d", pck_sent);
+	std::swprintf(buf, std::size(buf), L"%d", pck_sent);
 	m_editSent.SetWindowText(buf);
-	std::swprintf(buf, L"%d", pck_recv);
+	std::swprintf(buf, std::size(buf), L"%d", pck_recv);
 	m_editRecv.SetWindowText(buf);
 
-	std::swprintf(buf, L"%.1f", ping_last);
+	std::swprintf(buf, std::size(buf), L"%.1f", ping_last);
 	m_editLast.SetWindowText(buf);
-	std::swprintf(buf, L"%.1f", ping_best);
+	std::swprintf(buf, std::size(buf), L"%.1f", ping_best);
 	m_editBest.SetWindowText(buf);
-	std::swprintf(buf, L"%.1f", ping_worst);
+	std::swprintf(buf, std::size(buf), L"%.1f", ping_worst);
 	m_editWorst.SetWindowText(buf);
-	std::swprintf(buf, L"%.1f", ping_avrg);
+	std::swprintf(buf, std::size(buf), L"%.1f", ping_avrg);
 	m_editAvrg.SetWindowText(buf);
 
 	return FALSE;

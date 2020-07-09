@@ -3,7 +3,7 @@
 //
 //
 //*****************************************************************************
-
+#include <winrt/Windows.ApplicationModel.DataTransfer.h>
 #include "WinMTRGlobal.h"
 #include "WinMTRDialog.h"
 #include "WinMTROptions.h"
@@ -19,6 +19,7 @@
 #include "afxlinkctrl.h"
 #include <bcrypt.h>
 #include <ip2string.h>
+
 using namespace std::string_view_literals;
 
 #define TRACE_MSG(msg)										\
@@ -303,7 +304,7 @@ BOOL WinMTRDialog::InitRegistry()
 		wchar_t str_host[255];
 		nrLRU = tmp_dword;
 		for(int i=0;i<maxLRU;i++) {
-			std::swprintf(key_name,L"Host%d", i+1);
+			std::swprintf(key_name, std::size(key_name), L"Host%d", i+1);
 			if((r = RegQueryValueExW(hKey_v, key_name, 0, NULL, NULL, &value_size)) == ERROR_SUCCESS) {
 				RegQueryValueExW(hKey_v, key_name, 0, NULL, (LPBYTE)str_host, &value_size);
 				str_host[value_size]=L'\0';
@@ -582,7 +583,7 @@ void WinMTRDialog::OnRestart()
 					nrLRU = 0;
 				
 				nrLRU++;
-				std::swprintf(key_name, L"Host%d", nrLRU);
+				std::swprintf(key_name, std::size(key_name), L"Host%d", nrLRU);
 				const auto sHostLen = sHost.GetAllocLength() * sizeof(wchar_t) + sizeof(wchar_t);
 				r = RegSetValueExW(hKey,key_name, 0, REG_SZ, (const unsigned char *)(LPCTSTR)sHost, sHostLen);
 				tmp_dword = nrLRU;
@@ -641,7 +642,7 @@ void WinMTRDialog::OnOptions()
 			r = RegOpenKeyExW(	hKey, L"LRU", 0, KEY_ALL_ACCESS, &hKey);
 
 			for(int i = maxLRU; i<=nrLRU; i++) {
-					std::swprintf(key_name, L"Host%d", i);
+					std::swprintf(key_name, std::size(key_name), L"Host%d", i);
 					r = RegDeleteValue(hKey,key_name);
 			}
 			nrLRU = maxLRU;
@@ -649,6 +650,67 @@ void WinMTRDialog::OnOptions()
 			r = RegSetValueExW(hKey,L"NrLRU", 0, REG_DWORD, (const unsigned char *)&tmp_dword, sizeof(DWORD));
 			RegCloseKey(hKey);
 		}
+	}
+}
+
+namespace {
+	std::wstring makeTextOutput(WinMTRNet& wmtrnet) {
+		using namespace std::literals;
+		std::vector<wchar_t> t_buf(1000);
+		int nh = wmtrnet.GetMax();
+		std::wstring f_buf;
+		f_buf.reserve(255 * 100);
+		f_buf += L"|-------------------------------------------------------------------------------------------|\r\n" \
+			L"|                                      WinMTR statistics                                    |\r\n" \
+			L"|                       Host              -   %%  | Sent | Recv | Best | Avrg | Wrst | Last |\r\n" \
+			L"|-------------------------------------------------|------|------|------|------|------|------|\r\n"sv;
+
+		for (int i = 0; i < nh; i++) {
+			auto name = wmtrnet.GetName(i);
+			if (name.empty()) {
+				name = L"No response from host"s;
+			}
+
+			std::swprintf(t_buf.data(), std::size(t_buf), L"|%40ws - %4d | %4d | %4d | %4d | %4d | %4d | %4d |\r\n",
+				name.c_str(), wmtrnet.GetPercent(i),
+				wmtrnet.GetXmit(i), wmtrnet.GetReturned(i), wmtrnet.GetBest(i),
+				wmtrnet.GetAvg(i), wmtrnet.GetWorst(i), wmtrnet.GetLast(i));
+			f_buf += t_buf.data();
+		}
+
+		f_buf += L"|________________________________________________|______|______|______|______|______|______|\r\n"sv;
+
+		CString cs_tmp((LPCTSTR)IDS_STRING_SB_NAME);
+		f_buf += L"   "sv;
+		f_buf += cs_tmp.GetString();
+		return f_buf;
+	}
+
+	auto makeHTMLOutput(WinMTRNet& wmtrnet) {
+		using namespace std::literals;
+		int nh = wmtrnet.GetMax();
+		std::wstring f_buf;
+		f_buf.reserve(255 * 100);
+		f_buf += L"<!DOCTYPE html><html><head><title>WinMTR Statistics</title></head><body>\r\n" \
+			L"<h1>WinMTR statistics</h1>\r\n" \
+			L"<table>\r\n" \
+			L"<thead><tr><th>Host</th> <th>%%</th> <th>Sent</th> <th>Recv</th> <th>Best</th> <th>Avrg</th> <th>Wrst</th> <th>Last</th></tr></thead><tbody>\r\n"sv;
+		std::vector<wchar_t> t_buf(1000);
+		for (int i = 0; i < nh; i++) {
+			auto name = wmtrnet.GetName(i);
+			if (name.empty()) {
+				name = L"No response from host"s;
+			}
+
+			std::swprintf(t_buf.data(), std::size(t_buf), L"<tr><td>%ws</td> <td>%4d</td> <td>%4d</td> <td>%4d</td> <td>%4d</td> <td>%4d</td> <td>%4d</td> <td>%4d</td></tr>\r\n",
+				name.c_str(), wmtrnet.GetPercent(i),
+				wmtrnet.GetXmit(i), wmtrnet.GetReturned(i), wmtrnet.GetBest(i),
+				wmtrnet.GetAvg(i), wmtrnet.GetWorst(i), wmtrnet.GetLast(i));
+			f_buf += t_buf.data();
+		}
+
+		f_buf += L"</tbody></table></body></html>\r\n"sv;
+		return f_buf;
 	}
 }
 
@@ -660,53 +722,12 @@ void WinMTRDialog::OnOptions()
 //*****************************************************************************
 void WinMTRDialog::OnCTTC() 
 {	
-	char t_buf[1000], f_buf[255*100];
-	
-	int nh = wmtrnet->GetMax();
-	
-	strcpy(f_buf,  "|------------------------------------------------------------------------------------------|\r\n");
-	sprintf(t_buf, "|                                      WinMTR statistics                                   |\r\n");
-	strcat(f_buf, t_buf);
-	sprintf(t_buf, "|                       Host              -   %%  | Sent | Recv | Best | Avrg | Wrst | Last |\r\n" ); 
-	strcat(f_buf, t_buf);
-	sprintf(t_buf, "|------------------------------------------------|------|------|------|------|------|------|\r\n" ); 
-	strcat(f_buf, t_buf);
+	using namespace winrt::Windows::ApplicationModel::DataTransfer;
+	const auto f_buf = makeTextOutput(*wmtrnet);
+	auto dataPackage = DataPackage();
+	dataPackage.SetText(f_buf);
 
-	for(int i=0;i <nh ; i++) {
-		auto name = wmtrnet->GetName(i);
-		if (name.empty()) {
-			name = L"No response from host";
-		}
-		
-		sprintf(t_buf, "|%40ws - %4d | %4d | %4d | %4d | %4d | %4d | %4d |\r\n" , 
-					name.c_str(), wmtrnet->GetPercent(i),
-					wmtrnet->GetXmit(i), wmtrnet->GetReturned(i), wmtrnet->GetBest(i),
-					wmtrnet->GetAvg(i), wmtrnet->GetWorst(i), wmtrnet->GetLast(i));
-		strcat(f_buf, t_buf);
-	}	
-	
-	sprintf(t_buf, "|________________________________________________|______|______|______|______|______|______|\r\n" ); 
-	strcat(f_buf, t_buf);
-
-	CString cs_tmp((LPCTSTR)IDS_STRING_SB_NAME);
-	strcat(f_buf, "   ");
-	//strcat(f_buf, (LPCTSTR)cs_tmp);
-
-	CString source(f_buf);
-
-	HGLOBAL clipbuffer;
-	char * buffer;
-	
-	OpenClipboard();
-	EmptyClipboard();
-	
-	clipbuffer = GlobalAlloc(GMEM_DDESHARE, source.GetLength()+1);
-	buffer = (char*)GlobalLock(clipbuffer);
-	//strcpy(buffer, LPCSTR(source));
-	GlobalUnlock(clipbuffer);
-	
-	SetClipboardData(CF_TEXT,clipbuffer);
-	CloseClipboard();
+	Clipboard::SetContentWithOptions(dataPackage, nullptr);
 }
 
 
@@ -716,52 +737,15 @@ void WinMTRDialog::OnCTTC()
 // 
 //*****************************************************************************
 void WinMTRDialog::OnCHTC() 
-{
-	char t_buf[1000], f_buf[255*100];
-	
-	int nh = wmtrnet->GetMax();
-	
-	strcpy(f_buf, "<html><head><title>WinMTR Statistics</title></head><body bgcolor=\"white\">\r\n");
-	sprintf(t_buf, "<center><h2>WinMTR statistics</h2></center>\r\n");
-	strcat(f_buf, t_buf);
-	
-	sprintf(t_buf, "<p align=\"center\"> <table border=\"1\" align=\"center\">\r\n" ); 
-	strcat(f_buf, t_buf);
-	
-	sprintf(t_buf, "<tr><td>Host</td> <td>%%</td> <td>Sent</td> <td>Recv</td> <td>Best</td> <td>Avrg</td> <td>Wrst</td> <td>Last</td></tr>\r\n" ); 
-	strcat(f_buf, t_buf);
+{	
+	using namespace winrt::Windows::ApplicationModel::DataTransfer;
 
-	for(int i=0;i <nh ; i++) {
-		auto name = wmtrnet->GetName(i);
-		if (name.empty()) {
-			name = L"No response from host";
-		}
-		
-		sprintf(t_buf, "<tr><td>%ws</td> <td>%4d</td> <td>%4d</td> <td>%4d</td> <td>%4d</td> <td>%4d</td> <td>%4d</td> <td>%4d</td></tr>\r\n" , 
-					name.c_str(), wmtrnet->GetPercent(i),
-					wmtrnet->GetXmit(i), wmtrnet->GetReturned(i), wmtrnet->GetBest(i),
-					wmtrnet->GetAvg(i), wmtrnet->GetWorst(i), wmtrnet->GetLast(i));
-		strcat(f_buf, t_buf);
-	}	
-	
-	sprintf(t_buf, "</table></body></html>\r\n"); 
-	strcat(f_buf, t_buf);
+	const auto f_buf = makeHTMLOutput(*wmtrnet);
+	const auto htmlFormat = HtmlFormatHelper::CreateHtmlFormat(f_buf);
+	auto dataPackage = DataPackage();
+	dataPackage.SetHtmlFormat(htmlFormat);
 
-	CString source(f_buf);
-
-	HGLOBAL clipbuffer;
-	char * buffer;
-	
-	OpenClipboard();
-	EmptyClipboard();
-	
-	clipbuffer = GlobalAlloc(GMEM_DDESHARE, source.GetLength()+1);
-	buffer = (char*)GlobalLock(clipbuffer);
-	//strcpy(buffer, LPCTSTR(source));
-	GlobalUnlock(clipbuffer);
-	
-	SetClipboardData(CF_TEXT,clipbuffer);
-	CloseClipboard();
+	Clipboard::SetContentWithOptions(dataPackage, nullptr);
 }
 
 
@@ -772,7 +756,7 @@ void WinMTRDialog::OnCHTC()
 //*****************************************************************************
 void WinMTRDialog::OnEXPT() 
 {	
-	TCHAR BASED_CODE szFilter[] = _T("Text Files (*.txt)|*.txt|All Files (*.*)|*.*||");
+	const TCHAR BASED_CODE szFilter[] = _T("Text Files (*.txt)|*.txt|All Files (*.*)|*.*||");
 
 	CFileDialog dlg(FALSE,
                    _T("TXT"),
@@ -781,40 +765,10 @@ void WinMTRDialog::OnEXPT()
                    szFilter,
                    this);
 	if(dlg.DoModal() == IDOK) {
+		const auto f_buf = makeTextOutput(*wmtrnet);
 
-		char buf[255];
-		wchar_t t_buf[1000];//, f_buf[255*100];
-		std::wostringstream f_buf;
-		int nh = wmtrnet->GetMax();
-	
-		f_buf << L"|------------------------------------------------------------------------------------------|\r\n"sv;
-		f_buf << L"|                                      WinMTR statistics                                   |\r\n"sv;
-		f_buf << L"|                       Host              -   %%  | Sent | Recv | Best | Avrg | Wrst | Last |\r\n"sv;
-		f_buf << L"|------------------------------------------------|------|------|------|------|------|------|\r\n"sv; 
-
-		for(int i=0;i <nh ; i++) {
-			auto name = wmtrnet->GetName(i);
-			if (name.empty()) {
-				name = L"No response from host"sv;
-			}
-		
-			std::swprintf(t_buf, L"|%40ws - %4d | %4d | %4d | %4d | %4d | %4d | %4d |\r\n" , 
-					name.c_str(), wmtrnet->GetPercent(i),
-					wmtrnet->GetXmit(i), wmtrnet->GetReturned(i), wmtrnet->GetBest(i),
-					wmtrnet->GetAvg(i), wmtrnet->GetWorst(i), wmtrnet->GetLast(i));
-			f_buf<< t_buf;
-		}	
-	
-		f_buf << L"|________________________________________________|______|______|______|______|______|______|\r\n"sv; 
-
-	
-		CString cs_tmp((LPCTSTR)IDS_STRING_SB_NAME);
-		f_buf << "   ";
-		f_buf << (LPCTSTR)cs_tmp;
-
-		std::wfstream fp(dlg.GetPathName());
-		if(fp) {
-			fp << f_buf.str() << std::endl;
+		if(std::wfstream fp(dlg.GetPathName()); fp) {
+			fp << f_buf << std::endl;
 		}
 	}
 }
@@ -827,7 +781,7 @@ void WinMTRDialog::OnEXPT()
 //*****************************************************************************
 void WinMTRDialog::OnEXPH() 
 {
-   TCHAR BASED_CODE szFilter[] = _T("HTML Files (*.htm, *.html)|*.htm;*.html|All Files (*.*)|*.*||");
+   const TCHAR szFilter[] = _T("HTML Files (*.htm, *.html)|*.htm;*.html|All Files (*.*)|*.*||");
 
    CFileDialog dlg(FALSE,
                    _T("HTML"),
@@ -837,45 +791,12 @@ void WinMTRDialog::OnEXPH()
                    this);
 
 	if(dlg.DoModal() == IDOK) {
+		const auto f_buf = makeHTMLOutput(*wmtrnet);
 
-		char buf[255], t_buf[1000], f_buf[255*100];
-	
-		int nh = wmtrnet->GetMax();
-	
-		strcpy(f_buf, "<html><head><title>WinMTR Statistics</title></head><body bgcolor=\"white\">\r\n");
-		sprintf(t_buf, "<center><h2>WinMTR statistics</h2></center>\r\n");
-		strcat(f_buf, t_buf);
-	
-		sprintf(t_buf, "<p align=\"center\"> <table border=\"1\" align=\"center\">\r\n" ); 
-		strcat(f_buf, t_buf);
-	
-		sprintf(t_buf, "<tr><td>Host</td> <td>%%</td> <td>Sent</td> <td>Recv</td> <td>Best</td> <td>Avrg</td> <td>Wrst</td> <td>Last</td></tr>\r\n" ); 
-		strcat(f_buf, t_buf);
-
-		for(int i=0;i <nh ; i++) {
-			auto name = wmtrnet->GetName(i);
-			if (name.empty()) {
-				name = L"No response from host";
-			}
-		
-			sprintf(t_buf, "<tr><td>%ws</td> <td>%4d</td> <td>%4d</td> <td>%4d</td> <td>%4d</td> <td>%4d</td> <td>%4d</td> <td>%4d</td></tr>\r\n" , 
-					name.c_str(), wmtrnet->GetPercent(i),
-					wmtrnet->GetXmit(i), wmtrnet->GetReturned(i), wmtrnet->GetBest(i),
-					wmtrnet->GetAvg(i), wmtrnet->GetWorst(i), wmtrnet->GetLast(i));
-			strcat(f_buf, t_buf);
-		}	
-
-		sprintf(t_buf, "</table></body></html>\r\n"); 
-		strcat(f_buf, t_buf);
-
-		FILE *fp = _wfopen(dlg.GetPathName(), L"wt");
-		if(fp != NULL) {
-			fprintf(fp, "%s", f_buf);
-			fclose(fp);
+		if (std::wfstream fp(dlg.GetPathName()); fp) {
+			fp << f_buf << std::endl;
 		}
 	}
-
-
 }
 
 
@@ -898,7 +819,9 @@ int WinMTRDialog::DisplayRedraw()
 {
 	wchar_t buf[255], nr_crt[255];
 	int nh = wmtrnet->GetMax();
-	while( m_listMTR.GetItemCount() > nh ) m_listMTR.DeleteItem(m_listMTR.GetItemCount() - 1);
+	while (m_listMTR.GetItemCount() > nh) {
+		m_listMTR.DeleteItem(m_listMTR.GetItemCount() - 1); 
+	}
 
 	for(int i=0;i <nh ; i++) {
 
@@ -908,7 +831,7 @@ int WinMTRDialog::DisplayRedraw()
 		}
 		wcscpy(buf, name.c_str());
 		
-		std::swprintf(nr_crt, L"%d", i+1);
+		std::swprintf(nr_crt, std::size(nr_crt), L"%d", i+1);
 		if(m_listMTR.GetItemCount() <= i )
 			m_listMTR.InsertItem(i, buf);
 		else
@@ -916,25 +839,25 @@ int WinMTRDialog::DisplayRedraw()
 		
 		m_listMTR.SetItem(i, 1, LVIF_TEXT, nr_crt, 0, 0, 0, 0); 
 
-		std::swprintf(buf, L"%d", wmtrnet->GetPercent(i));
+		std::swprintf(buf, std::size(buf), L"%d", wmtrnet->GetPercent(i));
 		m_listMTR.SetItem(i, 2, LVIF_TEXT, buf, 0, 0, 0, 0);
 
-		std::swprintf(buf, L"%d", wmtrnet->GetXmit(i));
+		std::swprintf(buf, std::size(buf), L"%d", wmtrnet->GetXmit(i));
 		m_listMTR.SetItem(i, 3, LVIF_TEXT, buf, 0, 0, 0, 0);
 
-		std::swprintf(buf, L"%d", wmtrnet->GetReturned(i));
+		std::swprintf(buf, std::size(buf), L"%d", wmtrnet->GetReturned(i));
 		m_listMTR.SetItem(i, 4, LVIF_TEXT, buf, 0, 0, 0, 0);
 
-		std::swprintf(buf, L"%d", wmtrnet->GetBest(i));
+		std::swprintf(buf, std::size(buf), L"%d", wmtrnet->GetBest(i));
 		m_listMTR.SetItem(i, 5, LVIF_TEXT, buf, 0, 0, 0, 0);
 
-		std::swprintf(buf, L"%d", wmtrnet->GetAvg(i));
+		std::swprintf(buf, std::size(buf), L"%d", wmtrnet->GetAvg(i));
 		m_listMTR.SetItem(i, 6, LVIF_TEXT, buf, 0, 0, 0, 0);
 
-		std::swprintf(buf, L"%d", wmtrnet->GetWorst(i));
+		std::swprintf(buf, std::size(buf), L"%d", wmtrnet->GetWorst(i));
 		m_listMTR.SetItem(i, 7, LVIF_TEXT, buf, 0, 0, 0, 0);
 
-		std::swprintf(buf, L"%d", wmtrnet->GetLast(i));
+		std::swprintf(buf, std::size(buf), L"%d", wmtrnet->GetLast(i));
 		m_listMTR.SetItem(i, 8, LVIF_TEXT, buf, 0, 0, 0, 0);
 
    
@@ -953,7 +876,6 @@ int WinMTRDialog::InitMTRNet()
 {
 	wchar_t strtmp[255];
 	wchar_t *Hostname = strtmp;
-	wchar_t buf[255];
 	m_comboHost.GetWindowText(strtmp, 255);
    	
 	if (Hostname == nullptr) Hostname = L"localhost";
@@ -969,12 +891,13 @@ int WinMTRDialog::InitMTRNet()
 	}
 
 	if(!isIP) {
-		std::swprintf(buf, L"Resolving host %s...", strtmp);
+		wchar_t buf[255];
+		std::swprintf(buf, std::size(buf), L"Resolving host %s...", strtmp);
 		statusBar.SetPaneText(0,buf);
 		PADDRINFOW out = nullptr;
 		ADDRINFOW hint = {};
-		hint.ai_family = AF_INET;
-		if (auto result = GetAddrInfoW(Hostname, nullptr, &hint, &out); result) {
+		hint.ai_family = AF_INET | AF_INET6;
+		if (const auto result = GetAddrInfoW(Hostname, nullptr, &hint, &out); result) {
 			FreeAddrInfoW(out);
 			statusBar.SetPaneText(0, CString((LPCTSTR)IDS_STRING_SB_NAME) );
 			AfxMessageBox(L"Unable to resolve hostname.");
@@ -999,15 +922,15 @@ void PingThread(WinMTRDialog* wmtrdlg)
 
 	wchar_t strtmp[255];
 	wchar_t *Hostname = strtmp;
-	SOCKADDR_STORAGE addrstore;
+	SOCKADDR_STORAGE addrstore = {};
 	wmtrdlg->m_comboHost.GetWindowTextW(strtmp, 255);
    	
 	if (Hostname == nullptr) Hostname = L"localhost";
 
 	PADDRINFOW out = nullptr;
 	ADDRINFOW hint = {};
-	hint.ai_family = AF_INET;
-	if (auto result = GetAddrInfoW(Hostname, nullptr, &hint, &out); !result) {
+	hint.ai_family = AF_INET | AF_INET6;
+	if (auto result = GetAddrInfoW(Hostname, nullptr, &hint, &out); result) {
 		if (out) {
 			FreeAddrInfoW(out);
 		}
@@ -1063,7 +986,7 @@ void WinMTRDialog::ClearHistory()
 	r = RegOpenKeyExW(	hKey, L"LRU", 0, KEY_ALL_ACCESS, &hKey);
 
 	for(int i = 0; i<=nrLRU; i++) {
-		std::swprintf(key_name, L"Host%d", i);
+		std::swprintf(key_name, std::size(key_name), L"Host%d", i);
 		r = RegDeleteValueW(hKey,key_name);
 	}
 	nrLRU = 0;

@@ -8,6 +8,7 @@
 #include "WinMTROptions.h"
 #include "WinMTRLicense.h"
 #include <cwchar>
+#include <span>
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -62,13 +63,13 @@ BOOL WinMTROptions::OnInitDialog()
 	
 	wchar_t strtmp[20];
 	
-	std::swprintf(strtmp, L"%.1f", interval);
+	std::swprintf(strtmp, std::size(strtmp), L"%.1f", interval);
 	m_editInterval.SetWindowText(strtmp);
 	
-	std::swprintf(strtmp, L"%d", pingsize);
+	std::swprintf(strtmp, std::size(strtmp), L"%d", pingsize);
 	m_editSize.SetWindowText(strtmp);
 	
-	std::swprintf(strtmp, L"%d", maxLRU);
+	std::swprintf(strtmp, std::size(strtmp), L"%d", maxLRU);
 	m_editMaxLRU.SetWindowText(strtmp);
 
 	m_checkDNS.SetCheck(useDNS);

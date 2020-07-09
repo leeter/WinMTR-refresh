@@ -175,7 +175,7 @@
       <FunctionLevelLinking>false</FunctionLevelLinking>
       <Optimization>Disabled</Optimization>
       <SuppressStartupBanner>true</SuppressStartupBanner>
-      <WarningLevel>Level3</WarningLevel>
+      <WarningLevel>Level4</WarningLevel>
       <MinimalRebuild>true</MinimalRebuild>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -207,11 +207,10 @@
       <SubSystem>Windows</SubSystem>
       <OutputFile>.\Debug_x32\WinMTR.exe</OutputFile>
       <AdditionalDependencies>onecore.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <UACExecutionLevel>AsInvoker</UACExecutionLevel>
-      <EnableUAC>false</EnableUAC>
-      <UACUIAccess>true</UACUIAccess>
       <LargeAddressAware>true</LargeAddressAware>
     </Link>
+    <Manifest />
+    <Manifest />
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -220,7 +219,7 @@
       <FunctionLevelLinking>false</FunctionLevelLinking>
       <Optimization>Disabled</Optimization>
       <SuppressStartupBanner>true</SuppressStartupBanner>
-      <WarningLevel>Level3</WarningLevel>
+      <WarningLevel>Level4</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AssemblerListingLocation>.\Debug\</AssemblerListingLocation>
@@ -250,11 +249,10 @@
       <SubSystem>Windows</SubSystem>
       <OutputFile>.\Debug_x64\WinMTR.exe</OutputFile>
       <AdditionalDependencies>onecore.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <UACExecutionLevel>AsInvoker</UACExecutionLevel>
-      <EnableUAC>false</EnableUAC>
-      <UACUIAccess>true</UACUIAccess>
       <LargeAddressAware>true</LargeAddressAware>
     </Link>
+    <Manifest />
+    <Manifest />
   </ItemDefinitionGroup>
   <ItemGroup>
     <ResourceCompile Include="WinMTR.rc" />
@@ -286,6 +284,9 @@
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="WinMTR.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <Manifest Include="WinMTR.exe.manifest" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

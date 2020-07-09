@@ -16,7 +16,7 @@
 #include <atomic>
 #include <mutex>
 #include <array>
-#include <cstdint>
+#include <vector>
 #include "WinMTRWSAhelper.h"
 
 
@@ -49,24 +49,22 @@ struct s_nethost {
   int worst;			// worst time
 };
 
-inline size_t getAddressSize(const sockaddr& addr) noexcept {
+inline constexpr size_t getAddressSize(const sockaddr& addr) noexcept {
 	return addr.sa_family == AF_INET ? sizeof(sockaddr_in) : sizeof(sockaddr_in6);
 }
 
-inline size_t getAddressSize(const SOCKADDR_STORAGE& addr) noexcept {
+inline constexpr size_t getAddressSize(const SOCKADDR_STORAGE& addr) noexcept {
 	return addr.ss_family == AF_INET ? sizeof(sockaddr_in) : sizeof(sockaddr_in6);
 }
 
-inline bool isValidAddress(const sockaddr& addr) noexcept {
+inline constexpr bool isValidAddress(const sockaddr& addr) noexcept {
 	return addr.sa_family == AF_INET || addr.sa_family == AF_INET6;
 }
 
-inline bool isValidAddress(const SOCKADDR_STORAGE& addr) noexcept {
+inline constexpr bool isValidAddress(const SOCKADDR_STORAGE& addr) noexcept {
 	return addr.ss_family == AF_INET || addr.ss_family == AF_INET6;
 }
 struct trace_thread;
-
-void TraceThread(trace_thread& current);
 
 //*****************************************************************************
 // CLASS:  WinMTRNet
@@ -79,7 +77,7 @@ class WinMTRNet {
 public:
 
 	WinMTRNet(WinMTRDialog *wp);
-	~WinMTRNet();
+	~WinMTRNet() noexcept;
 	void	DoTrace(sockaddr &address);
 	void	ResetHops();
 	void	StopTrace();
@@ -94,6 +92,12 @@ public:
 	int		GetReturned(int at);
 	int		GetXmit(int at);
 	int		GetMax();
+	double	GetInterval() const;
+	
+	bool	GetIsTracing() const {
+		return tracing;
+	}
+	int	GetPingSize() const;
 
 	void	SetAddr(int at, sockaddr& addr);
 	void	SetName(int at, std::wstring n);
@@ -106,14 +110,15 @@ public:
 	
 private:
 	std::array<s_nethost, MaxHost>	host;
+	std::vector<std::unique_ptr<trace_thread>> traces;
 	SOCKADDR_STORAGE last_remote_addr;
 	std::recursive_mutex	ghMutex;
 	WinMTRDialog* wmtrdlg;
-	HANDLE				hICMP;
 	winmtr::helper::WSAHelper wsaHelper;
 	std::atomic_bool	tracing;
 
-	friend void TraceThread(trace_thread&);
+	void handleICMPv4(trace_thread& current);
+	void handleICMPv6(trace_thread& current);
 };
 
 #endif	// ifndef WINMTRNET_H_

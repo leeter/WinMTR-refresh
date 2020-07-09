@@ -2,13 +2,35 @@
 // FILE:            WinMTRNet.cpp
 //
 //*****************************************************************************
+
 #include "WinMTRGlobal.h"
 #include "WinMTRNet.h"
 #include "WinMTRDialog.h"
+#include <bcrypt.h>
 #include <iostream>
 #include <sstream>
+#include <wrl/wrappers/corewrappers.h>
+
+namespace wrl = ::Microsoft::WRL;
+
+typedef struct _IO_STATUS_BLOCK {
+	union {
+		NTSTATUS Status;
+		PVOID    Pointer;
+	} DUMMYUNIONNAME;
+	ULONG_PTR Information;
+} IO_STATUS_BLOCK, * PIO_STATUS_BLOCK;
+
+typedef
+VOID
+(NTAPI* PIO_APC_ROUTINE) (
+	IN PVOID ApcContext,
+	IN PIO_STATUS_BLOCK IoStatusBlock,
+	IN ULONG Reserved
+	);
 #include <iphlpapi.h>
 #include <icmpapi.h>
+
 
 #define TRACE_MSG(msg)										\
 	{														\
@@ -19,10 +41,43 @@
 
 #define MAX_HOPS				30
 
+namespace {
+	struct ICMPHandleTraits : wrl::Wrappers::HandleTraits::HANDLETraits {
+		inline static bool Close(_In_ Type h) noexcept
+		{
+			return ::IcmpCloseHandle(h) != FALSE;
+		}
+
+		inline static Type GetInvalidValue() noexcept
+		{
+			return INVALID_HANDLE_VALUE;
+		}
+	};
+
+	using IcmpHandle = wrl::Wrappers::HandleT<ICMPHandleTraits>;
+}
+
+using namespace std::chrono_literals;
 struct trace_thread {
+	trace_thread(ADDRESS_FAMILY af, WinMTRNet * winmtr, int ttl)
+		:
+		address(),
+		winmtr(winmtr),
+		//timer(static_cast<unsigned int>((winmtr->GetInterval() * 1000ms).count()), this, nullptr, true),
+		ttl(ttl)
+	{
+		if (af == AF_INET) {
+			icmpHandle.Attach(IcmpCreateFile());
+		}
+		else if (af == AF_INET6) {
+			icmpHandle.Attach(Icmp6CreateFile());
+		}
+	}
 	SOCKADDR_STORAGE address;
+	IcmpHandle icmpHandle;
 	WinMTRNet	*winmtr;
 	int			ttl;
+	
 };
 
 struct dns_resolver_thread {
@@ -31,48 +86,275 @@ struct dns_resolver_thread {
 };
 
 
+
 void DnsResolverThread(dns_resolver_thread dnt);
+
 
 
 WinMTRNet::WinMTRNet(WinMTRDialog *wp)
 	:host(),
 	last_remote_addr(),
 	wmtrdlg(wp),
-	hICMP(INVALID_HANDLE_VALUE),
 	wsaHelper(MAKEWORD(2, 2)),
 	tracing(false){
 	
+	traces.reserve(MAX_HOPS);
 
     if(!wsaHelper) {
         AfxMessageBox(L"Failed initializing windows sockets library!");
 		return;
-    }
-
-    /*
-     * IcmpCreateFile() - Open the ping service
-     */
-    hICMP = IcmpCreateFile();
-    if (hICMP == INVALID_HANDLE_VALUE) {
-        AfxMessageBox(L"Error in ICMP.DLL !");
-        return;
-    }
+    }   
 }
 
 WinMTRNet::~WinMTRNet()
-{
-	if(hICMP != INVALID_HANDLE_VALUE) {
-		/*
-		 * IcmpCloseHandle - Close the ICMP handle
-		 */
-		IcmpCloseHandle(hICMP);
-	}
-}
+{}
 
 void WinMTRNet::ResetHops()
 {
 	for(auto & host : this->host) {
 		host = s_nethost();
 	}
+}
+
+
+void WinMTRNet::handleICMPv6(trace_thread& current) {
+	using namespace std::string_literals;
+	using namespace std::string_view_literals;
+	using namespace std::chrono_literals;
+	std::vector<char>	achReqData(static_cast<size_t>(this->wmtrdlg->pingsize) + 8192); //whitespaces
+	int				nDataLen = this->wmtrdlg->pingsize;
+	std::vector<char> achRepData(sizeof(ICMPV6_ECHO_REPLY) + 8192);
+
+	/*
+	 * Init IPInfo structure
+	 */
+	IP_OPTION_INFORMATION	stIPInfo = {};
+	stIPInfo.Ttl = current.ttl;
+	stIPInfo.Flags = IP_FLAG_DF;
+	SOCKADDR_IN6* addr = reinterpret_cast<SOCKADDR_IN6*>(&current.address);
+
+
+	while (this->GetIsTracing()) {
+
+		// For some strange reason, ICMP API is not filling the TTL for icmp echo reply
+		// Check if the current thread should be closed
+		if (current.ttl > this->GetMax()) break;
+
+		// NOTE: some servers does not respond back everytime, if TTL expires in transit; e.g. :
+		// ping -n 20 -w 5000 -l 64 -i 7 www.chinapost.com.tw  -> less that half of the replies are coming back from 219.80.240.93
+		// but if we are pinging ping -n 20 -w 5000 -l 64 219.80.240.93  we have 0% loss
+		// A resolution would be:
+		// - as soon as we get a hop, we start pinging directly that hop, with a greater TTL
+		// - a drawback would be that, some servers are configured to reply for TTL transit expire, but not to ping requests, so,
+		// for these servers we'll have 100% loss
+		SOCKADDR_IN6 local = { .sin6_family = AF_INET6 };
+		auto dwReplyCount = Icmp6SendEcho2(current.icmpHandle.Get(), nullptr, nullptr, nullptr, &local, addr, achReqData.data(), nDataLen, &stIPInfo, achRepData.data(), achRepData.size(), ECHO_REPLY_TIMEOUT);
+
+		PICMPV6_ECHO_REPLY icmp_echo_reply = (PICMPV6_ECHO_REPLY)achRepData.data();
+		this->AddXmit(current.ttl - 1);
+		if (dwReplyCount != 0) {
+			TRACE_MSG(L"TTL " << current.ttl << L" Status " << icmp_echo_reply->Status << L" Reply count " << dwReplyCount);
+			switch (icmp_echo_reply->Status) {
+			case IP_SUCCESS:
+			case IP_TTL_EXPIRED_TRANSIT:
+				this->SetLast(current.ttl - 1, icmp_echo_reply->RoundTripTime);
+				this->SetBest(current.ttl - 1, icmp_echo_reply->RoundTripTime);
+				this->SetWorst(current.ttl - 1, icmp_echo_reply->RoundTripTime);
+				this->AddReturned(current.ttl - 1);
+				{
+					sockaddr_in6 naddr = {};
+					naddr.sin6_family = AF_INET6;
+					memcpy(&naddr.sin6_addr, icmp_echo_reply->Address.sin6_addr, sizeof(naddr.sin6_addr));
+					this->SetAddr(current.ttl - 1, *reinterpret_cast<sockaddr*>(&naddr));
+				}
+				break;
+			case IP_BUF_TOO_SMALL:
+				this->SetName(current.ttl - 1, L"Reply buffer too small."s);
+				break;
+			case IP_DEST_NET_UNREACHABLE:
+				this->SetName(current.ttl - 1, L"Destination network unreachable."s);
+				break;
+			case IP_DEST_HOST_UNREACHABLE:
+				this->SetName(current.ttl - 1, L"Destination host unreachable."s);
+				break;
+			case IP_DEST_PROT_UNREACHABLE:
+				this->SetName(current.ttl - 1, L"Destination protocol unreachable."s);
+				break;
+			case IP_DEST_PORT_UNREACHABLE:
+				this->SetName(current.ttl - 1, L"Destination port unreachable."s);
+				break;
+			case IP_NO_RESOURCES:
+				this->SetName(current.ttl - 1, L"Insufficient IP resources were available."s);
+				break;
+			case IP_BAD_OPTION:
+				this->SetName(current.ttl - 1, L"Bad IP option was specified."s);
+				break;
+			case IP_HW_ERROR:
+				this->SetName(current.ttl - 1, L"Hardware error occurred."s);
+				break;
+			case IP_PACKET_TOO_BIG:
+				this->SetName(current.ttl - 1, L"Packet was too big."s);
+				break;
+			case IP_REQ_TIMED_OUT:
+				this->SetName(current.ttl - 1, L"Request timed out."s);
+				break;
+			case IP_BAD_REQ:
+				this->SetName(current.ttl - 1, L"Bad request."s);
+				break;
+			case IP_BAD_ROUTE:
+				this->SetName(current.ttl - 1, L"Bad route."s);
+				break;
+			case IP_TTL_EXPIRED_REASSEM:
+				this->SetName(current.ttl - 1, L"The time to live expired during fragment reassembly."s);
+				break;
+			case IP_PARAM_PROBLEM:
+				this->SetName(current.ttl - 1, L"Parameter problem."s);
+				break;
+			case IP_SOURCE_QUENCH:
+				this->SetName(current.ttl - 1, L"Datagrams are arriving too fast to be processed and datagrams may have been discarded."s);
+				break;
+			case IP_OPTION_TOO_BIG:
+				this->SetName(current.ttl - 1, L"An IP option was too big."s);
+				break;
+			case IP_BAD_DESTINATION:
+				this->SetName(current.ttl - 1, L"Bad destination."s);
+				break;
+			case IP_GENERAL_FAILURE:
+				this->SetName(current.ttl - 1, L"General failure."s);
+				break;
+			default:
+				this->SetName(current.ttl - 1, L"General failure."s);
+			}
+			const auto intervalInSec = this->GetInterval() * 1s;
+			const auto roundTripDuration = std::chrono::milliseconds(icmp_echo_reply->RoundTripTime);
+			if (intervalInSec > roundTripDuration) {
+				const auto sleepTime = intervalInSec - roundTripDuration;
+				std::this_thread::sleep_for(sleepTime);
+			}
+		}
+	}
+}
+
+void WinMTRNet::handleICMPv4(trace_thread& current) {
+	using namespace std::string_literals;
+	using namespace std::string_view_literals;
+	using namespace std::chrono_literals;
+	std::vector<char>	achReqData(static_cast<size_t>(this->wmtrdlg->pingsize) + 8192); //whitespaces
+	int				nDataLen = this->wmtrdlg->pingsize;
+	std::vector<char> achRepData(sizeof(ICMPECHO) + 8192);
+
+
+	/*
+	 * Init IPInfo structure
+	 */
+	IP_OPTION_INFORMATION	stIPInfo = {};
+	stIPInfo.Ttl = current.ttl;
+	stIPInfo.Flags = IP_FLAG_DF;
+
+	//for (int i = 0; i < nDataLen; i++) achReqData[i] = 32;
+
+	while (this->GetIsTracing()) {
+
+		// For some strange reason, ICMP API is not filling the TTL for icmp echo reply
+		// Check if the current thread should be closed
+		if (current.ttl > this->GetMax()) break;
+
+		// NOTE: some servers does not respond back everytime, if TTL expires in transit; e.g. :
+		// ping -n 20 -w 5000 -l 64 -i 7 www.chinapost.com.tw  -> less that half of the replies are coming back from 219.80.240.93
+		// but if we are pinging ping -n 20 -w 5000 -l 64 219.80.240.93  we have 0% loss
+		// A resolution would be:
+		// - as soon as we get a hop, we start pinging directly that hop, with a greater TTL
+		// - a drawback would be that, some servers are configured to reply for TTL transit expire, but not to ping requests, so,
+		// for these servers we'll have 100% loss
+		sockaddr_in* addr = reinterpret_cast<sockaddr_in*>(&current.address);
+		auto dwReplyCount = IcmpSendEcho(current.icmpHandle.Get(), addr->sin_addr.S_un.S_addr, achReqData.data(), nDataLen, &stIPInfo, achRepData.data(), achRepData.size(), ECHO_REPLY_TIMEOUT);
+
+		PICMPECHO icmp_echo_reply = (PICMPECHO)achRepData.data();
+
+		this->AddXmit(current.ttl - 1);
+		if (dwReplyCount != 0) {
+			TRACE_MSG(L"TTL " << current.ttl << L" reply TTL " << icmp_echo_reply->Options.Ttl << L" Status " << icmp_echo_reply->Status << L" Reply count " << dwReplyCount);
+
+			switch (icmp_echo_reply->Status) {
+			case IP_SUCCESS:
+			case IP_TTL_EXPIRED_TRANSIT:
+				this->SetLast(current.ttl - 1, icmp_echo_reply->RoundTripTime);
+				this->SetBest(current.ttl - 1, icmp_echo_reply->RoundTripTime);
+				this->SetWorst(current.ttl - 1, icmp_echo_reply->RoundTripTime);
+				this->AddReturned(current.ttl - 1);
+				{
+					sockaddr_in naddr = {};
+					naddr.sin_family = AF_INET;
+					naddr.sin_addr.S_un.S_addr = icmp_echo_reply->Address;
+					this->SetAddr(current.ttl - 1, *reinterpret_cast<sockaddr*>(&naddr));
+				}
+				break;
+			case IP_BUF_TOO_SMALL:
+				this->SetName(current.ttl - 1, L"Reply buffer too small."s);
+				break;
+			case IP_DEST_NET_UNREACHABLE:
+				this->SetName(current.ttl - 1, L"Destination network unreachable."s);
+				break;
+			case IP_DEST_HOST_UNREACHABLE:
+				this->SetName(current.ttl - 1, L"Destination host unreachable."s);
+				break;
+			case IP_DEST_PROT_UNREACHABLE:
+				this->SetName(current.ttl - 1, L"Destination protocol unreachable."s);
+				break;
+			case IP_DEST_PORT_UNREACHABLE:
+				this->SetName(current.ttl - 1, L"Destination port unreachable."s);
+				break;
+			case IP_NO_RESOURCES:
+				this->SetName(current.ttl - 1, L"Insufficient IP resources were available."s);
+				break;
+			case IP_BAD_OPTION:
+				this->SetName(current.ttl - 1, L"Bad IP option was specified."s);
+				break;
+			case IP_HW_ERROR:
+				this->SetName(current.ttl - 1, L"Hardware error occurred."s);
+				break;
+			case IP_PACKET_TOO_BIG:
+				this->SetName(current.ttl - 1, L"Packet was too big."s);
+				break;
+			case IP_REQ_TIMED_OUT:
+				this->SetName(current.ttl - 1, L"Request timed out."s);
+				break;
+			case IP_BAD_REQ:
+				this->SetName(current.ttl - 1, L"Bad request."s);
+				break;
+			case IP_BAD_ROUTE:
+				this->SetName(current.ttl - 1, L"Bad route."s);
+				break;
+			case IP_TTL_EXPIRED_REASSEM:
+				this->SetName(current.ttl - 1, L"The time to live expired during fragment reassembly."s);
+				break;
+			case IP_PARAM_PROBLEM:
+				this->SetName(current.ttl - 1, L"Parameter problem."s);
+				break;
+			case IP_SOURCE_QUENCH:
+				this->SetName(current.ttl - 1, L"Datagrams are arriving too fast to be processed and datagrams may have been discarded."s);
+				break;
+			case IP_OPTION_TOO_BIG:
+				this->SetName(current.ttl - 1, L"An IP option was too big."s);
+				break;
+			case IP_BAD_DESTINATION:
+				this->SetName(current.ttl - 1, L"Bad destination."s);
+				break;
+			case IP_GENERAL_FAILURE:
+				this->SetName(current.ttl - 1, L"General failure."s);
+				break;
+			default:
+				this->SetName(current.ttl - 1, L"General failure."s);
+			}
+			const auto intervalInSec = this->GetInterval() * 1s;
+			const auto roundTripDuration = std::chrono::milliseconds(icmp_echo_reply->RoundTripTime);
+			if (intervalInSec > roundTripDuration) {
+				const auto sleepTime = intervalInSec - roundTripDuration;
+				std::this_thread::sleep_for(sleepTime);
+			}
+		}
+
+	} /* end ping loop */
 }
 
 void WinMTRNet::DoTrace(sockaddr& address)
@@ -83,154 +365,36 @@ void WinMTRNet::DoTrace(sockaddr& address)
 
 	ResetHops();
 	memcpy(&last_remote_addr, &address, getAddressSize(address));
-
 	// one thread per TTL value
 	for(int i = 0; i < MAX_HOPS; i++) {
-		trace_thread current{};
+		trace_thread current(address.sa_family, this, i+1);
 		memcpy(&current.address, &address, getAddressSize(address));
-		current.winmtr = this;
-		current.ttl = i + 1;
-		threads.emplace_back([](auto trd) {
-			TraceThread(trd);
-		}, current);
+		threads.emplace_back([current = std::move(current)]() mutable {
+			using namespace std::chrono_literals;
+			using namespace std::string_literals;
+			WinMTRNet* wmtrnet = current.winmtr;
+			TRACE_MSG(L"Threaad with TTL=" << current.ttl << L" started.");
+
+			if (current.address.ss_family == AF_INET) {
+				wmtrnet->handleICMPv4(current);
+			}
+			else if (current.address.ss_family == AF_INET6) {
+				wmtrnet->handleICMPv6(current);
+			}
+
+			TRACE_MSG(L"Thread with TTL=" << current.ttl << L" stopped.");
+		});
 	}
 
 	for (auto& thread : threads) {
 		thread.join();
 	}
+	TRACE_MSG(L"Tracing Ended");
 }
 
 void WinMTRNet::StopTrace()
 {
 	tracing = false;
-}
-
-void TraceThread(trace_thread& current)
-{
-	using namespace std::chrono_literals;
-	using namespace std::string_literals;
-	WinMTRNet *wmtrnet = current.winmtr;
-	TRACE_MSG(L"Threaad with TTL=" << current.ttl << L" started.");
-
-    
-	std::vector<char>	achReqData(static_cast<size_t>(wmtrnet->wmtrdlg->pingsize) + 8192); //whitespaces
-	int				nDataLen									= wmtrnet->wmtrdlg->pingsize;
-	std::vector<char> achRepData(sizeof(ICMPECHO) + 8192);
-
-
-    /*
-     * Init IPInfo structure
-	 */
-	IP_OPTION_INFORMATION	stIPInfo = {};
-    stIPInfo.Ttl			= current.ttl;
-    stIPInfo.Flags			= IP_FLAG_DF;
-
-    for (int i=0; i<nDataLen; i++) achReqData[i] = 32; 
-
-    while(wmtrnet->tracing) {
-	    
-		// For some strange reason, ICMP API is not filling the TTL for icmp echo reply
-		// Check if the current thread should be closed
-		if( current.ttl > wmtrnet->GetMax() ) break;
-
-		// NOTE: some servers does not respond back everytime, if TTL expires in transit; e.g. :
-		// ping -n 20 -w 5000 -l 64 -i 7 www.chinapost.com.tw  -> less that half of the replies are coming back from 219.80.240.93
-		// but if we are pinging ping -n 20 -w 5000 -l 64 219.80.240.93  we have 0% loss
-		// A resolution would be:
-		// - as soon as we get a hop, we start pinging directly that hop, with a greater TTL
-		// - a drawback would be that, some servers are configured to reply for TTL transit expire, but not to ping requests, so,
-		// for these servers we'll have 100% loss
-		sockaddr_in* addr = reinterpret_cast<sockaddr_in*>(&current.address);
-		auto dwReplyCount = IcmpSendEcho(wmtrnet->hICMP, addr->sin_addr.S_un.S_addr, achReqData.data(), nDataLen, &stIPInfo, achRepData.data(), achRepData.size(), ECHO_REPLY_TIMEOUT);
-
-		PICMPECHO icmp_echo_reply = (PICMPECHO)achRepData.data();
-		
-		wmtrnet->AddXmit(current.ttl - 1);
-		if (dwReplyCount != 0) {
-			TRACE_MSG(L"TTL " << current.ttl << L" reply TTL " << icmp_echo_reply->Options.Ttl << L" Status " << icmp_echo_reply->Status << L" Reply count " << dwReplyCount);
-
-			switch(icmp_echo_reply->Status) {
-				case IP_SUCCESS:
-				case IP_TTL_EXPIRED_TRANSIT:
-					wmtrnet->SetLast(current.ttl - 1, icmp_echo_reply->RoundTripTime);
-					wmtrnet->SetBest(current.ttl - 1, icmp_echo_reply->RoundTripTime);
-					wmtrnet->SetWorst(current.ttl - 1, icmp_echo_reply->RoundTripTime);
-					wmtrnet->AddReturned(current.ttl - 1);
-					{
-						sockaddr_in naddr = {};
-						naddr.sin_family = AF_INET;
-						naddr.sin_addr.S_un.S_addr = icmp_echo_reply->Address;
-						wmtrnet->SetAddr(current.ttl - 1, *reinterpret_cast<sockaddr*>(&naddr));
-					}
-				break;
-				case IP_BUF_TOO_SMALL:
-					wmtrnet->SetName(current.ttl - 1, L"Reply buffer too small."s);
-				break;
-				case IP_DEST_NET_UNREACHABLE:
-					wmtrnet->SetName(current.ttl - 1, L"Destination network unreachable."s);
-				break;
-				case IP_DEST_HOST_UNREACHABLE:
-					wmtrnet->SetName(current.ttl - 1, L"Destination host unreachable."s);
-				break;
-				case IP_DEST_PROT_UNREACHABLE:
-					wmtrnet->SetName(current.ttl - 1, L"Destination protocol unreachable."s);
-				break;
-				case IP_DEST_PORT_UNREACHABLE:
-					wmtrnet->SetName(current.ttl - 1, L"Destination port unreachable."s);
-				break;
-				case IP_NO_RESOURCES:
-					wmtrnet->SetName(current.ttl - 1, L"Insufficient IP resources were available."s);
-				break;
-				case IP_BAD_OPTION:
-					wmtrnet->SetName(current.ttl - 1, L"Bad IP option was specified."s);
-				break;
-				case IP_HW_ERROR:
-					wmtrnet->SetName(current.ttl - 1, L"Hardware error occurred."s);
-				break;
-				case IP_PACKET_TOO_BIG:
-					wmtrnet->SetName(current.ttl - 1, L"Packet was too big."s);
-				break;
-				case IP_REQ_TIMED_OUT:
-					wmtrnet->SetName(current.ttl - 1, L"Request timed out."s);
-				break;
-				case IP_BAD_REQ:
-					wmtrnet->SetName(current.ttl - 1, L"Bad request."s);
-				break;
-				case IP_BAD_ROUTE:
-					wmtrnet->SetName(current.ttl - 1, L"Bad route."s);
-				break;
-				case IP_TTL_EXPIRED_REASSEM:
-					wmtrnet->SetName(current.ttl - 1, L"The time to live expired during fragment reassembly."s);
-				break;
-				case IP_PARAM_PROBLEM:
-					wmtrnet->SetName(current.ttl - 1, L"Parameter problem."s);
-				break;
-				case IP_SOURCE_QUENCH:
-					wmtrnet->SetName(current.ttl - 1, L"Datagrams are arriving too fast to be processed and datagrams may have been discarded."s);
-				break;
-				case IP_OPTION_TOO_BIG:
-					wmtrnet->SetName(current.ttl - 1, L"An IP option was too big."s);
-				break;
-				case IP_BAD_DESTINATION:
-					wmtrnet->SetName(current.ttl - 1, L"Bad destination."s);
-				break;
-				case IP_GENERAL_FAILURE:
-					wmtrnet->SetName(current.ttl - 1, L"General failure."s);
-				break;
-				default:
-					wmtrnet->SetName(current.ttl - 1, L"General failure."s);
-			}
-			const auto intervalInSec = wmtrnet->wmtrdlg->interval * 1s;
-			const auto roundTripDuration = std::chrono::milliseconds(icmp_echo_reply->RoundTripTime);
-			if (intervalInSec > roundTripDuration) {
-				const auto sleepTime = intervalInSec - roundTripDuration;
-				std::this_thread::sleep_for(sleepTime);
-			}
-		}
-
-    } /* end ping loop */
-
-	TRACE_MSG(L"Thread with TTL=" << current.ttl << L" stopped.");
 }
 
 sockaddr_storage WinMTRNet::GetAddr(int at)
@@ -252,8 +416,7 @@ std::wstring WinMTRNet::GetName(int at)
 		out.resize(40);
 		auto addrlen = getAddressSize(addr);
 		DWORD addrstrsize = out.size();
-		auto result = WSAAddressToStringW(reinterpret_cast<LPSOCKADDR>(&addr), addrlen, nullptr, out.data(), &addrstrsize);
-		if (!result) {
+		if (auto result = WSAAddressToStringW(reinterpret_cast<LPSOCKADDR>(&addr), addrlen, nullptr, out.data(), &addrstrsize); !result) {
 			out.resize(addrstrsize - 1);
 		}
 		
@@ -331,7 +494,16 @@ int WinMTRNet::GetMax()
 	return max;
 }
 
+double WinMTRNet::GetInterval() const
+{
+	return this->wmtrdlg->interval;
+}
 
+
+int WinMTRNet::GetPingSize() const
+{
+	return this->wmtrdlg->pingsize;
+}
 
 void WinMTRNet::SetAddr(int at, sockaddr& addr)
 {

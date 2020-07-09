@@ -142,8 +142,8 @@ int WinMTRMain::GetParamValue(LPTSTR cmd, wchar_t * param, wchar_t sparam, wchar
 	wchar_t p_long[1024];
 	wchar_t p_short[1024];
 	
-	std::swprintf(p_long,L"--%s ", param);
-	std::swprintf(p_short,L"-%c ", sparam);
+	std::swprintf(p_long, std::size(p_long), L"--%s ", param);
+	std::swprintf(p_short, std::size(p_short), L"-%c ", sparam);
 	
 	if( (p=wcsstr(cmd, p_long)) ) ;
 	else 
