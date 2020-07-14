@@ -101,6 +101,4 @@ const int MTR_COL_LENGTH[ MTR_NR_COLS ] = {
 		190, 30, 50, 40, 40, 50, 50, 50, 50
 };
 
-int gettimeofday(struct timeval* tv, struct timezone *tz);
-
 #endif // ifndef GLOBAL_H_

@@ -261,7 +261,6 @@
     <ClCompile Include="WinMTRLicense.cpp" />
     <ClCompile Include="WinMTRStatusBar.cpp" />
     <ClCompile Include="WinMTRDialog.cpp" />
-    <ClCompile Include="WinMTRGlobal.cpp" />
     <ClCompile Include="WinMTRHelp.cpp" />
     <ClCompile Include="WinMTRMain.cpp" />
     <ClCompile Include="WinMTRNet.cpp" />
