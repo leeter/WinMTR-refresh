@@ -10,3 +10,10 @@
 /Debug_x64
 *.user
 *.aps
+/CMakeFiles
+/out/build
+/WinMTR.dir/Debug
+/x64/Debug/ZERO_CHECK
+*.filters
+/WinMTRConfig.h
+/CMakeCache.txt

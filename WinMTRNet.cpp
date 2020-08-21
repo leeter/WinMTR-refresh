@@ -6,10 +6,8 @@
 #include "WinMTRGlobal.h"
 #include "WinMTRNet.h"
 #include "WinMTRDialog.h"
-#include <bcrypt.h>
-#include <iostream>
-#include <sstream>
 #include <wrl/wrappers/corewrappers.h>
+
 
 namespace wrl = ::Microsoft::WRL;
 
@@ -48,6 +46,7 @@ namespace {
 			return ::IcmpCloseHandle(h) != FALSE;
 		}
 
+		[[nodiscard]]
 		inline static Type GetInvalidValue() noexcept
 		{
 			return INVALID_HANDLE_VALUE;
@@ -59,7 +58,7 @@ namespace {
 
 using namespace std::chrono_literals;
 struct trace_thread {
-	trace_thread(ADDRESS_FAMILY af, WinMTRNet * winmtr, int ttl)
+	trace_thread(ADDRESS_FAMILY af, WinMTRNet * winmtr, UCHAR ttl)
 		:
 		address(),
 		winmtr(winmtr),
@@ -76,7 +75,7 @@ struct trace_thread {
 	SOCKADDR_STORAGE address;
 	IcmpHandle icmpHandle;
 	WinMTRNet	*winmtr;
-	int			ttl;
+	UCHAR		ttl;
 	
 };
 
@@ -116,11 +115,81 @@ void WinMTRNet::ResetHops()
 	}
 }
 
+void WinMTRNet::handleDefault(const trace_thread& current, ULONG status) {
+	using namespace std::string_literals;
+	switch (status) {
+	case IP_BUF_TOO_SMALL:
+		this->SetName(current.ttl - 1, L"Reply buffer too small."s);
+		break;
+	case IP_DEST_NET_UNREACHABLE:
+		this->SetName(current.ttl - 1, L"Destination network unreachable."s);
+		break;
+	case IP_DEST_HOST_UNREACHABLE:
+		this->SetName(current.ttl - 1, L"Destination host unreachable."s);
+		break;
+	case IP_DEST_PROT_UNREACHABLE:
+		this->SetName(current.ttl - 1, L"Destination protocol unreachable."s);
+		break;
+	case IP_DEST_PORT_UNREACHABLE:
+		this->SetName(current.ttl - 1, L"Destination port unreachable."s);
+		break;
+	case IP_NO_RESOURCES:
+		this->SetName(current.ttl - 1, L"Insufficient IP resources were available."s);
+		break;
+	case IP_BAD_OPTION:
+		this->SetName(current.ttl - 1, L"Bad IP option was specified."s);
+		break;
+	case IP_HW_ERROR:
+		this->SetName(current.ttl - 1, L"Hardware error occurred."s);
+		break;
+	case IP_PACKET_TOO_BIG:
+		this->SetName(current.ttl - 1, L"Packet was too big."s);
+		break;
+	case IP_REQ_TIMED_OUT:
+		this->SetName(current.ttl - 1, L"Request timed out."s);
+		break;
+	case IP_BAD_REQ:
+		this->SetName(current.ttl - 1, L"Bad request."s);
+		break;
+	case IP_BAD_ROUTE:
+		this->SetName(current.ttl - 1, L"Bad route."s);
+		break;
+	case IP_TTL_EXPIRED_REASSEM:
+		this->SetName(current.ttl - 1, L"The time to live expired during fragment reassembly."s);
+		break;
+	case IP_PARAM_PROBLEM:
+		this->SetName(current.ttl - 1, L"Parameter problem."s);
+		break;
+	case IP_SOURCE_QUENCH:
+		this->SetName(current.ttl - 1, L"Datagrams are arriving too fast to be processed and datagrams may have been discarded."s);
+		break;
+	case IP_OPTION_TOO_BIG:
+		this->SetName(current.ttl - 1, L"An IP option was too big."s);
+		break;
+	case IP_BAD_DESTINATION:
+		this->SetName(current.ttl - 1, L"Bad destination."s);
+		break;
+	case IP_GENERAL_FAILURE:
+		this->SetName(current.ttl - 1, L"General failure."s);
+		break;
+	default:
+		this->SetName(current.ttl - 1, L"General failure."s);
+	}
+}
+
+void WinMTRNet::sleepTilInterval(ULONG roundTripTime) {
+	using namespace std::chrono_literals;
+	const auto intervalInSec = this->GetInterval() * 1s;
+	const auto roundTripDuration = std::chrono::milliseconds();
+	if (intervalInSec > roundTripDuration) {
+		const auto sleepTime = intervalInSec - roundTripDuration;
+		std::this_thread::sleep_for(sleepTime);
+	}
+}
+
 
 void WinMTRNet::handleICMPv6(trace_thread& current) {
-	using namespace std::string_literals;
 	using namespace std::string_view_literals;
-	using namespace std::chrono_literals;
 	std::vector<char>	achReqData(static_cast<size_t>(this->wmtrdlg->pingsize) + 8192); //whitespaces
 	int				nDataLen = this->wmtrdlg->pingsize;
 	std::vector<char> achRepData(sizeof(ICMPV6_ECHO_REPLY) + 8192);
@@ -148,12 +217,13 @@ void WinMTRNet::handleICMPv6(trace_thread& current) {
 		// - a drawback would be that, some servers are configured to reply for TTL transit expire, but not to ping requests, so,
 		// for these servers we'll have 100% loss
 		SOCKADDR_IN6 local = { .sin6_family = AF_INET6 };
-		auto dwReplyCount = Icmp6SendEcho2(current.icmpHandle.Get(), nullptr, nullptr, nullptr, &local, addr, achReqData.data(), nDataLen, &stIPInfo, achRepData.data(), achRepData.size(), ECHO_REPLY_TIMEOUT);
+		const auto dwReplyCount = Icmp6SendEcho2(current.icmpHandle.Get(), nullptr, nullptr, nullptr, &local, addr, achReqData.data(), nDataLen, &stIPInfo, achRepData.data(), achRepData.size(), ECHO_REPLY_TIMEOUT);
 
-		PICMPV6_ECHO_REPLY icmp_echo_reply = (PICMPV6_ECHO_REPLY)achRepData.data();
 		this->AddXmit(current.ttl - 1);
 		if (dwReplyCount != 0) {
-			TRACE_MSG(L"TTL " << current.ttl << L" Status " << icmp_echo_reply->Status << L" Reply count " << dwReplyCount);
+
+			PICMPV6_ECHO_REPLY icmp_echo_reply = (PICMPV6_ECHO_REPLY)achRepData.data();
+			TRACE_MSG(L"TTL "sv << current.ttl << L" Status "sv << icmp_echo_reply->Status << L" Reply count "sv << dwReplyCount);
 			switch (icmp_echo_reply->Status) {
 			case IP_SUCCESS:
 			case IP_TTL_EXPIRED_TRANSIT:
@@ -162,86 +232,25 @@ void WinMTRNet::handleICMPv6(trace_thread& current) {
 				this->SetWorst(current.ttl - 1, icmp_echo_reply->RoundTripTime);
 				this->AddReturned(current.ttl - 1);
 				{
-					sockaddr_in6 naddr = {};
-					naddr.sin6_family = AF_INET6;
+					sockaddr_in6 naddr = { .sin6_family = AF_INET6 };
 					memcpy(&naddr.sin6_addr, icmp_echo_reply->Address.sin6_addr, sizeof(naddr.sin6_addr));
 					this->SetAddr(current.ttl - 1, *reinterpret_cast<sockaddr*>(&naddr));
 				}
 				break;
-			case IP_BUF_TOO_SMALL:
-				this->SetName(current.ttl - 1, L"Reply buffer too small."s);
-				break;
-			case IP_DEST_NET_UNREACHABLE:
-				this->SetName(current.ttl - 1, L"Destination network unreachable."s);
-				break;
-			case IP_DEST_HOST_UNREACHABLE:
-				this->SetName(current.ttl - 1, L"Destination host unreachable."s);
-				break;
-			case IP_DEST_PROT_UNREACHABLE:
-				this->SetName(current.ttl - 1, L"Destination protocol unreachable."s);
-				break;
-			case IP_DEST_PORT_UNREACHABLE:
-				this->SetName(current.ttl - 1, L"Destination port unreachable."s);
-				break;
-			case IP_NO_RESOURCES:
-				this->SetName(current.ttl - 1, L"Insufficient IP resources were available."s);
-				break;
-			case IP_BAD_OPTION:
-				this->SetName(current.ttl - 1, L"Bad IP option was specified."s);
-				break;
-			case IP_HW_ERROR:
-				this->SetName(current.ttl - 1, L"Hardware error occurred."s);
-				break;
-			case IP_PACKET_TOO_BIG:
-				this->SetName(current.ttl - 1, L"Packet was too big."s);
-				break;
-			case IP_REQ_TIMED_OUT:
-				this->SetName(current.ttl - 1, L"Request timed out."s);
-				break;
-			case IP_BAD_REQ:
-				this->SetName(current.ttl - 1, L"Bad request."s);
-				break;
-			case IP_BAD_ROUTE:
-				this->SetName(current.ttl - 1, L"Bad route."s);
-				break;
-			case IP_TTL_EXPIRED_REASSEM:
-				this->SetName(current.ttl - 1, L"The time to live expired during fragment reassembly."s);
-				break;
-			case IP_PARAM_PROBLEM:
-				this->SetName(current.ttl - 1, L"Parameter problem."s);
-				break;
-			case IP_SOURCE_QUENCH:
-				this->SetName(current.ttl - 1, L"Datagrams are arriving too fast to be processed and datagrams may have been discarded."s);
-				break;
-			case IP_OPTION_TOO_BIG:
-				this->SetName(current.ttl - 1, L"An IP option was too big."s);
-				break;
-			case IP_BAD_DESTINATION:
-				this->SetName(current.ttl - 1, L"Bad destination."s);
-				break;
-			case IP_GENERAL_FAILURE:
-				this->SetName(current.ttl - 1, L"General failure."s);
-				break;
 			default:
-				this->SetName(current.ttl - 1, L"General failure."s);
+				this->handleDefault(current, icmp_echo_reply->Status);
+				break;
 			}
-			const auto intervalInSec = this->GetInterval() * 1s;
-			const auto roundTripDuration = std::chrono::milliseconds(icmp_echo_reply->RoundTripTime);
-			if (intervalInSec > roundTripDuration) {
-				const auto sleepTime = intervalInSec - roundTripDuration;
-				std::this_thread::sleep_for(sleepTime);
-			}
+			this->sleepTilInterval(icmp_echo_reply->RoundTripTime);
 		}
 	}
 }
 
 void WinMTRNet::handleICMPv4(trace_thread& current) {
-	using namespace std::string_literals;
 	using namespace std::string_view_literals;
-	using namespace std::chrono_literals;
-	std::vector<char>	achReqData(static_cast<size_t>(this->wmtrdlg->pingsize) + 8192); //whitespaces
+	std::vector<std::byte>	achReqData(static_cast<size_t>(this->wmtrdlg->pingsize) + 8192); //whitespaces
 	int				nDataLen = this->wmtrdlg->pingsize;
-	std::vector<char> achRepData(sizeof(ICMPECHO) + 8192);
+	std::vector<std::byte> achRepData(sizeof(ICMPECHO) + 8192);
 
 
 	/*
@@ -250,7 +259,7 @@ void WinMTRNet::handleICMPv4(trace_thread& current) {
 	IP_OPTION_INFORMATION	stIPInfo = {};
 	stIPInfo.Ttl = current.ttl;
 	stIPInfo.Flags = IP_FLAG_DF;
-
+	std::fill_n(std::begin(achReqData), nDataLen, static_cast<std::byte>(32));
 	//for (int i = 0; i < nDataLen; i++) achReqData[i] = 32;
 
 	while (this->GetIsTracing()) {
@@ -267,13 +276,12 @@ void WinMTRNet::handleICMPv4(trace_thread& current) {
 		// - a drawback would be that, some servers are configured to reply for TTL transit expire, but not to ping requests, so,
 		// for these servers we'll have 100% loss
 		sockaddr_in* addr = reinterpret_cast<sockaddr_in*>(&current.address);
-		auto dwReplyCount = IcmpSendEcho(current.icmpHandle.Get(), addr->sin_addr.S_un.S_addr, achReqData.data(), nDataLen, &stIPInfo, achRepData.data(), achRepData.size(), ECHO_REPLY_TIMEOUT);
-
-		PICMPECHO icmp_echo_reply = (PICMPECHO)achRepData.data();
+		const auto dwReplyCount = IcmpSendEcho(current.icmpHandle.Get(), addr->sin_addr.S_un.S_addr, achReqData.data(), nDataLen, &stIPInfo, achRepData.data(), achRepData.size(), ECHO_REPLY_TIMEOUT);
 
 		this->AddXmit(current.ttl - 1);
 		if (dwReplyCount != 0) {
-			TRACE_MSG(L"TTL " << current.ttl << L" reply TTL " << icmp_echo_reply->Options.Ttl << L" Status " << icmp_echo_reply->Status << L" Reply count " << dwReplyCount);
+			PICMPECHO icmp_echo_reply = reinterpret_cast<PICMPECHO>(achRepData.data());
+			TRACE_MSG(L"TTL "sv << current.ttl << L" reply TTL "sv << icmp_echo_reply->Options.Ttl << L" Status "sv << icmp_echo_reply->Status << L" Reply count "sv << dwReplyCount);
 
 			switch (icmp_echo_reply->Status) {
 			case IP_SUCCESS:
@@ -289,69 +297,11 @@ void WinMTRNet::handleICMPv4(trace_thread& current) {
 					this->SetAddr(current.ttl - 1, *reinterpret_cast<sockaddr*>(&naddr));
 				}
 				break;
-			case IP_BUF_TOO_SMALL:
-				this->SetName(current.ttl - 1, L"Reply buffer too small."s);
-				break;
-			case IP_DEST_NET_UNREACHABLE:
-				this->SetName(current.ttl - 1, L"Destination network unreachable."s);
-				break;
-			case IP_DEST_HOST_UNREACHABLE:
-				this->SetName(current.ttl - 1, L"Destination host unreachable."s);
-				break;
-			case IP_DEST_PROT_UNREACHABLE:
-				this->SetName(current.ttl - 1, L"Destination protocol unreachable."s);
-				break;
-			case IP_DEST_PORT_UNREACHABLE:
-				this->SetName(current.ttl - 1, L"Destination port unreachable."s);
-				break;
-			case IP_NO_RESOURCES:
-				this->SetName(current.ttl - 1, L"Insufficient IP resources were available."s);
-				break;
-			case IP_BAD_OPTION:
-				this->SetName(current.ttl - 1, L"Bad IP option was specified."s);
-				break;
-			case IP_HW_ERROR:
-				this->SetName(current.ttl - 1, L"Hardware error occurred."s);
-				break;
-			case IP_PACKET_TOO_BIG:
-				this->SetName(current.ttl - 1, L"Packet was too big."s);
-				break;
-			case IP_REQ_TIMED_OUT:
-				this->SetName(current.ttl - 1, L"Request timed out."s);
-				break;
-			case IP_BAD_REQ:
-				this->SetName(current.ttl - 1, L"Bad request."s);
-				break;
-			case IP_BAD_ROUTE:
-				this->SetName(current.ttl - 1, L"Bad route."s);
-				break;
-			case IP_TTL_EXPIRED_REASSEM:
-				this->SetName(current.ttl - 1, L"The time to live expired during fragment reassembly."s);
-				break;
-			case IP_PARAM_PROBLEM:
-				this->SetName(current.ttl - 1, L"Parameter problem."s);
-				break;
-			case IP_SOURCE_QUENCH:
-				this->SetName(current.ttl - 1, L"Datagrams are arriving too fast to be processed and datagrams may have been discarded."s);
-				break;
-			case IP_OPTION_TOO_BIG:
-				this->SetName(current.ttl - 1, L"An IP option was too big."s);
-				break;
-			case IP_BAD_DESTINATION:
-				this->SetName(current.ttl - 1, L"Bad destination."s);
-				break;
-			case IP_GENERAL_FAILURE:
-				this->SetName(current.ttl - 1, L"General failure."s);
-				break;
 			default:
-				this->SetName(current.ttl - 1, L"General failure."s);
+				this->handleDefault(current, icmp_echo_reply->Status);
+				break;
 			}
-			const auto intervalInSec = this->GetInterval() * 1s;
-			const auto roundTripDuration = std::chrono::milliseconds(icmp_echo_reply->RoundTripTime);
-			if (intervalInSec > roundTripDuration) {
-				const auto sleepTime = intervalInSec - roundTripDuration;
-				std::this_thread::sleep_for(sleepTime);
-			}
+			this->sleepTilInterval(icmp_echo_reply->RoundTripTime);
 		}
 
 	} /* end ping loop */
@@ -392,7 +342,7 @@ void WinMTRNet::DoTrace(sockaddr& address)
 	TRACE_MSG(L"Tracing Ended");
 }
 
-void WinMTRNet::StopTrace()
+void WinMTRNet::StopTrace() noexcept
 {
 	tracing = false;
 }
@@ -494,13 +444,13 @@ int WinMTRNet::GetMax()
 	return max;
 }
 
-double WinMTRNet::GetInterval() const
+double WinMTRNet::GetInterval() const noexcept
 {
 	return this->wmtrdlg->interval;
 }
 
 
-int WinMTRNet::GetPingSize() const
+int WinMTRNet::GetPingSize() const noexcept
 {
 	return this->wmtrdlg->pingsize;
 }
@@ -540,6 +490,8 @@ void WinMTRNet::SetBest(int at, int current)
 
 void WinMTRNet::SetWorst(int at, int current)
 {
+	UNREFERENCED_PARAMETER(at);
+	UNREFERENCED_PARAMETER(current);
 	//std::unique_lock lock(ghMutex);
 }
 
@@ -570,7 +522,7 @@ void DnsResolverThread(dns_resolver_thread dnt)
 	wchar_t buf[NI_MAXHOST];
 	sockaddr_storage addr = wn->GetAddr(dnt.index);
 	
-	auto nresult = GetNameInfoW(reinterpret_cast<sockaddr*>(&addr), getAddressSize(addr), buf, sizeof(buf), nullptr, 0, 0);
+	auto nresult = GetNameInfoW(reinterpret_cast<sockaddr*>(&addr), getAddressSize(addr), buf, std::size(buf), nullptr, 0, 0);
 
 	if(!nresult) {
 		wn->SetName(dnt.index, buf);

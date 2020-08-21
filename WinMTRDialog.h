@@ -20,6 +20,8 @@
 #include <string>
 #include <memory>
 #include <mutex>
+#include "resource.h"
+
 
 //*****************************************************************************
 // CLASS:  WinMTRDialog
@@ -33,6 +35,10 @@ public:
 	WinMTRDialog(CWnd* pParent = NULL);
 
 	enum { IDD = IDD_WINMTR_DIALOG };
+	enum class options_source : bool {
+		none,
+		cmd_line
+	};
 
 	afx_msg BOOL InitRegistry();
 
@@ -84,15 +90,15 @@ public:
 	int					maxLRU;
 	bool				hasMaxLRUFromCmdLine;
 	int					nrLRU;
-	BOOL				useDNS;
+	bool				useDNS;
 	bool				hasUseDNSFromCmdLine;
 	std::unique_ptr<WinMTRNet>			wmtrnet;
 
 	void SetHostName(std::wstring host);
-	void SetInterval(float i);
-	void SetPingSize(int ps);
-	void SetMaxLRU(int mlru);
-	void SetUseDNS(BOOL udns);
+	void SetInterval(float i, options_source fromCmdLine = options_source::none) noexcept;
+	void SetPingSize(int ps, options_source fromCmdLine = options_source::none) noexcept;
+	void SetMaxLRU(int mlru, options_source fromCmdLine = options_source::none) noexcept;
+	void SetUseDNS(bool udns, options_source fromCmdLine = options_source::none) noexcept;
 
 protected:
 	virtual void DoDataExchange(CDataExchange* pDX);

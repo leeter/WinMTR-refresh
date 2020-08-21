@@ -9,16 +9,35 @@
 //    
 //
 //*****************************************************************************
-
+#pragma once
 #ifndef GLOBAL_H_
 #define GLOBAL_H_
 
 #ifndef  _WIN64
 #define  _USE_32BIT_TIME_T
 #endif
+#include "targetver.h"
 
 #define VC_EXTRALEAN
+#define WIN32_LEAN_AND_MEAN
 
+#include <array>
+#include <iostream>
+#include <cwctype>
+#include <memory>
+#include <string>
+#include <string_view>
+#include <cwchar>
+#include <fstream>
+#include <sstream>
+#include <thread>
+#include <vector>
+#include <compare>
+#include <gsl/gsl>
+#include <iostream>
+
+
+#include <winrt/Windows.ApplicationModel.DataTransfer.h>
 #include <afxwin.h>
 #include <afxext.h>
 #include <afxdisp.h>
@@ -28,21 +47,9 @@
   #include <afxcmn.h>
 #endif 
 #include <afxsock.h>
+#include <bcrypt.h>
+#include <ip2string.h>
 
-#include <process.h>
-#include <stdio.h>
-#include <io.h> 
-#include <time.h>
-#include <fcntl.h>
-#include <ctype.h>
-#include <string.h>
-#include <stdlib.h>
-#include <errno.h>
-#include <memory.h>
-#include <math.h>
-#include <sys/types.h>
-#include <sys/timeb.h>
-#include <sys/stat.h>
 
 #include "resource.h"
 

@@ -3,22 +3,15 @@
 //
 //
 //*****************************************************************************
-#include <winrt/Windows.ApplicationModel.DataTransfer.h>
 #include "WinMTRGlobal.h"
+
 #include "WinMTRDialog.h"
 #include "WinMTROptions.h"
 #include "WinMTRProperties.h"
 #include "WinMTRNet.h"
-#include <iostream>
-#include <cwctype>
-#include <string>
-#include <string_view>
-#include <fstream>
-#include <sstream>
-#include <thread>
+
 #include "afxlinkctrl.h"
-#include <bcrypt.h>
-#include <ip2string.h>
+
 
 using namespace std::string_view_literals;
 
@@ -240,10 +233,15 @@ BOOL WinMTRDialog::InitRegistry()
 					&res);
 	if( r != ERROR_SUCCESS) 
 		return FALSE;
-
-	RegSetValueExW(hKey,L"Version", 0, REG_SZ, (const unsigned char *)WINMTR_VERSION, sizeof(WINMTR_VERSION)+1);
-	RegSetValueExW(hKey,L"License", 0, REG_SZ, (const unsigned char *)WINMTR_LICENSE, sizeof(WINMTR_LICENSE)+1);
-	RegSetValueExW(hKey,L"HomePage", 0, REG_SZ, (const unsigned char *)WINMTR_HOMEPAGE, sizeof(WINMTR_HOMEPAGE)+1);
+	CRegKey versionKey;
+	versionKey.Attach(hKey);
+	versionKey.SetStringValue(L"Version", WINMTR_VERSION);
+	versionKey.SetStringValue(L"License", WINMTR_LICENSE);
+	versionKey.SetStringValue(L"HomePage", WINMTR_HOMEPAGE);
+	versionKey.Detach();
+	/*RegSetValueExW(hKey,L"Version", 0, REG_SZ, (const unsigned char *)WINMTR_VERSION, sizeof(WINMTR_VERSION));
+	RegSetValueExW(hKey,L"License", 0, REG_SZ, (const unsigned char *)WINMTR_LICENSE, sizeof(WINMTR_LICENSE));
+	RegSetValueExW(hKey,L"HomePage", 0, REG_SZ, (const unsigned char *)WINMTR_HOMEPAGE, sizeof(WINMTR_HOMEPAGE));*/
 
 	r = RegCreateKeyExW(	hKey, 
 					L"Config", 
@@ -470,10 +468,10 @@ void WinMTRDialog::OnDblclkList(NMHDR* pNMHDR, LRESULT* pResult)
 				
 				wmtrprop.comment = L"Host alive."sv;
 
-				wmtrprop.ping_avrg = (float)wmtrnet->GetAvg(nItem); 
-				wmtrprop.ping_last = (float)wmtrnet->GetLast(nItem); 
-				wmtrprop.ping_best = (float)wmtrnet->GetBest(nItem);
-				wmtrprop.ping_worst = (float)wmtrnet->GetWorst(nItem); 
+				wmtrprop.ping_avrg = static_cast<float>(wmtrnet->GetAvg(nItem)); 
+				wmtrprop.ping_last = static_cast<float>(wmtrnet->GetLast(nItem)); 
+				wmtrprop.ping_best = static_cast<float>(wmtrnet->GetBest(nItem));
+				wmtrprop.ping_worst = static_cast<float>(wmtrnet->GetWorst(nItem)); 
 
 				wmtrprop.pck_loss = wmtrnet->GetPercent(nItem);
 				wmtrprop.pck_recv = wmtrnet->GetReturned(nItem);
@@ -501,18 +499,20 @@ void WinMTRDialog::SetHostName(std::wstring host)
 // WinMTRDialog::SetPingSize
 //
 //*****************************************************************************
-void WinMTRDialog::SetPingSize(int ps)
+void WinMTRDialog::SetPingSize(int ps, options_source fromCmdLine) noexcept
 {
 	pingsize = ps;
+	hasPingsizeFromCmdLine = static_cast<bool>(fromCmdLine);
 }
 
 //*****************************************************************************
 // WinMTRDialog::SetMaxLRU
 //
 //*****************************************************************************
-void WinMTRDialog::SetMaxLRU(int mlru)
+void WinMTRDialog::SetMaxLRU(int mlru, options_source fromCmdLine) noexcept
 {
 	maxLRU = mlru;
+	hasMaxLRUFromCmdLine = static_cast<bool>(fromCmdLine);
 }
 
 
@@ -520,18 +520,20 @@ void WinMTRDialog::SetMaxLRU(int mlru)
 // WinMTRDialog::SetInterval
 //
 //*****************************************************************************
-void WinMTRDialog::SetInterval(float i)
+void WinMTRDialog::SetInterval(float i, options_source fromCmdLine) noexcept
 {
 	interval = i;
+	hasMaxLRUFromCmdLine = static_cast<bool>(fromCmdLine);
 }
 
 //*****************************************************************************
 // WinMTRDialog::SetUseDNS
 //
 //*****************************************************************************
-void WinMTRDialog::SetUseDNS(BOOL udns)
+void WinMTRDialog::SetUseDNS(bool udns, options_source fromCmdLine) noexcept
 {
 	useDNS = udns;
+	hasUseDNSFromCmdLine = static_cast<bool>(fromCmdLine);
 }
 
 
@@ -829,13 +831,12 @@ int WinMTRDialog::DisplayRedraw()
 		if (name.empty()) {
 			name = L"No response from host"sv;
 		}
-		wcscpy(buf, name.c_str());
 		
 		std::swprintf(nr_crt, std::size(nr_crt), L"%d", i+1);
 		if(m_listMTR.GetItemCount() <= i )
-			m_listMTR.InsertItem(i, buf);
+			m_listMTR.InsertItem(i, name.c_str());
 		else
-			m_listMTR.SetItem(i, 0, LVIF_TEXT, buf, 0, 0, 0, 0); 
+			m_listMTR.SetItem(i, 0, LVIF_TEXT, name.c_str(), 0, 0, 0, 0); 
 		
 		m_listMTR.SetItem(i, 1, LVIF_TEXT, nr_crt, 0, 0, 0, 0); 
 
@@ -875,16 +876,16 @@ int WinMTRDialog::DisplayRedraw()
 int WinMTRDialog::InitMTRNet()
 {
 	wchar_t strtmp[255];
-	wchar_t *Hostname = strtmp;
+	const wchar_t *Hostname = strtmp;
 	m_comboHost.GetWindowText(strtmp, 255);
    	
 	if (Hostname == nullptr) Hostname = L"localhost";
    
-	int isIP=1;
-	wchar_t *t = Hostname;
+	bool isIP=true;
+	const wchar_t *t = Hostname;
 	while(*t) {
 		if(!std::iswdigit(*t) && *t!=L'.') {
-			isIP=0;
+			isIP = false;
 			break;
 		}
 		t++;
@@ -921,9 +922,9 @@ void PingThread(WinMTRDialog* wmtrdlg)
 	std::unique_lock lock(wmtrdlg->traceThreadMutex);
 
 	wchar_t strtmp[255];
-	wchar_t *Hostname = strtmp;
+	const wchar_t *Hostname = strtmp;
 	SOCKADDR_STORAGE addrstore = {};
-	wmtrdlg->m_comboHost.GetWindowTextW(strtmp, 255);
+	wmtrdlg->m_comboHost.GetWindowTextW(strtmp, std::size(strtmp));
    	
 	if (Hostname == nullptr) Hostname = L"localhost";
 
@@ -958,11 +959,11 @@ void PingThread(WinMTRDialog* wmtrdlg)
 	}*/
       
 
-	auto lhost = gethostbyname("localhost");
+	/*auto lhost = gethostbyname("localhost");
 	if(lhost == NULL) {
       AfxMessageBox(L"Unable to get local IP address.");
       return;
-	}
+	}*/
 	//localaddr = *(int *)lhost->h_addr;
 	
 	wmtrdlg->wmtrnet->DoTrace(*reinterpret_cast<LPSOCKADDR>(&addrstore));

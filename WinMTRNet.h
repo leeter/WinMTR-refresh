@@ -49,20 +49,26 @@ struct s_nethost {
   int worst;			// worst time
 };
 
-inline constexpr size_t getAddressSize(const sockaddr& addr) noexcept {
-	return addr.sa_family == AF_INET ? sizeof(sockaddr_in) : sizeof(sockaddr_in6);
+template<typename T>
+inline constexpr auto getAddressFamily(const T& addr) noexcept {
+	if constexpr (std::is_same_v<sockaddr, T>) {
+		return addr.sa_family;
+	}
+	else if (std::is_same_v<SOCKADDR_STORAGE, T>) {
+		return addr.ss_family;
+	}
 }
 
-inline constexpr size_t getAddressSize(const SOCKADDR_STORAGE& addr) noexcept {
-	return addr.ss_family == AF_INET ? sizeof(sockaddr_in) : sizeof(sockaddr_in6);
+template<typename T>
+inline constexpr size_t getAddressSize(const T& addr) noexcept {
+	return getAddressFamily(addr) == AF_INET ? sizeof(sockaddr_in) : sizeof(sockaddr_in6);
 }
 
-inline constexpr bool isValidAddress(const sockaddr& addr) noexcept {
-	return addr.sa_family == AF_INET || addr.sa_family == AF_INET6;
-}
-
-inline constexpr bool isValidAddress(const SOCKADDR_STORAGE& addr) noexcept {
-	return addr.ss_family == AF_INET || addr.ss_family == AF_INET6;
+template<typename T>
+inline constexpr bool isValidAddress(const T& addr) noexcept {
+	const ADDRESS_FAMILY family = getAddressFamily(addr);
+	
+	return (family == AF_INET || family == AF_INET6);
 }
 struct trace_thread;
 
@@ -80,7 +86,7 @@ public:
 	~WinMTRNet() noexcept;
 	void	DoTrace(sockaddr &address);
 	void	ResetHops();
-	void	StopTrace();
+	void	StopTrace() noexcept;
 
 	SOCKADDR_STORAGE GetAddr(int at);
 	std::wstring GetName(int at);
@@ -92,12 +98,12 @@ public:
 	int		GetReturned(int at);
 	int		GetXmit(int at);
 	int		GetMax();
-	double	GetInterval() const;
+	double	GetInterval() const noexcept;
 	
-	bool	GetIsTracing() const {
+	bool	GetIsTracing() const noexcept {
 		return tracing;
 	}
-	int	GetPingSize() const;
+	int	GetPingSize() const noexcept;
 
 	void	SetAddr(int at, sockaddr& addr);
 	void	SetName(int at, std::wstring n);
@@ -119,6 +125,8 @@ private:
 
 	void handleICMPv4(trace_thread& current);
 	void handleICMPv6(trace_thread& current);
+	void handleDefault(const trace_thread& current, ULONG status);
+	void sleepTilInterval(ULONG roundTripTime);
 };
 
 #endif	// ifndef WINMTRNET_H_
