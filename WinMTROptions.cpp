@@ -7,8 +7,7 @@
 #include "WinMTRGlobal.h"
 #include "WinMTROptions.h"
 #include "WinMTRLicense.h"
-#include <cwchar>
-#include <span>
+
 
 #ifdef _DEBUG
 #define new DEBUG_NEW

@@ -35,6 +35,7 @@
 #include <compare>
 #include <gsl/gsl>
 #include <iostream>
+#include <span>
 
 
 #include <winrt/Windows.ApplicationModel.DataTransfer.h>
@@ -49,6 +50,8 @@
 #include <afxsock.h>
 #include <bcrypt.h>
 #include <ip2string.h>
+#include <ppl.h>
+#include <ppltasks.h>
 
 
 #include "resource.h"

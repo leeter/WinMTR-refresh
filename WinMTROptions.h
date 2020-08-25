@@ -53,10 +53,10 @@ protected:
 	DECLARE_MESSAGE_MAP()
 	
 private:
-	double   interval;
-	int      pingsize;
-	int		 maxLRU;
-	BOOL     useDNS;
+	double   interval = 0.0;
+	int      pingsize = 0;
+	int		 maxLRU = 0;
+	BOOL     useDNS = FALSE;
 };
 
 #endif // ifndef WINMTROPTIONS_H_

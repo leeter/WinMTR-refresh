@@ -58,7 +58,7 @@ namespace {
 
 using namespace std::chrono_literals;
 struct trace_thread {
-	trace_thread(ADDRESS_FAMILY af, WinMTRNet * winmtr, UCHAR ttl)
+	trace_thread(ADDRESS_FAMILY af, WinMTRNet* winmtr, UCHAR ttl)
 		:
 		address(),
 		winmtr(winmtr),
@@ -74,35 +74,25 @@ struct trace_thread {
 	}
 	SOCKADDR_STORAGE address;
 	IcmpHandle icmpHandle;
-	WinMTRNet	*winmtr;
+	WinMTRNet* winmtr;
 	UCHAR		ttl;
-	
-};
 
-struct dns_resolver_thread {
-	int			index;
-	WinMTRNet	*winmtr;
 };
 
 
-
-void DnsResolverThread(dns_resolver_thread dnt);
-
-
-
-WinMTRNet::WinMTRNet(WinMTRDialog *wp)
+WinMTRNet::WinMTRNet(WinMTRDialog* wp)
 	:host(),
 	last_remote_addr(),
 	wmtrdlg(wp),
 	wsaHelper(MAKEWORD(2, 2)),
-	tracing(false){
-	
+	tracing(false) {
+
 	traces.reserve(MAX_HOPS);
 
-    if(!wsaHelper) {
-        AfxMessageBox(L"Failed initializing windows sockets library!");
+	if (!wsaHelper) {
+		AfxMessageBox(L"Failed initializing windows sockets library!");
 		return;
-    }   
+	}
 }
 
 WinMTRNet::~WinMTRNet()
@@ -110,7 +100,7 @@ WinMTRNet::~WinMTRNet()
 
 void WinMTRNet::ResetHops()
 {
-	for(auto & host : this->host) {
+	for (auto& host : this->host) {
 		host = s_nethost();
 	}
 }
@@ -316,8 +306,8 @@ void WinMTRNet::DoTrace(sockaddr& address)
 	ResetHops();
 	memcpy(&last_remote_addr, &address, getAddressSize(address));
 	// one thread per TTL value
-	for(int i = 0; i < MAX_HOPS; i++) {
-		trace_thread current(address.sa_family, this, i+1);
+	for (int i = 0; i < MAX_HOPS; i++) {
+		trace_thread current(address.sa_family, this, i + 1);
 		memcpy(&current.address, &address, getAddressSize(address));
 		threads.emplace_back([current = std::move(current)]() mutable {
 			using namespace std::chrono_literals;
@@ -369,7 +359,7 @@ std::wstring WinMTRNet::GetName(int at)
 		if (auto result = WSAAddressToStringW(reinterpret_cast<LPSOCKADDR>(&addr), gsl::narrow_cast<DWORD>(addrlen), nullptr, out.data(), &addrstrsize); !result) {
 			out.resize(addrstrsize - 1);
 		}
-		
+
 		return out;
 	}
 	return host[at].name;
@@ -411,14 +401,14 @@ int WinMTRNet::GetLast(int at)
 }
 
 int WinMTRNet::GetReturned(int at)
-{ 
+{
 	std::unique_lock lock(ghMutex);
 	int ret = host[at].returned;
 	return ret;
 }
 
 int WinMTRNet::GetXmit(int at)
-{ 
+{
 	std::unique_lock lock(ghMutex);
 	int ret = host[at].xmit;
 	return ret;
@@ -430,16 +420,16 @@ int WinMTRNet::GetMax()
 	int max = MAX_HOPS;
 
 	// first match: traced address responds on ping requests, and the address is in the hosts list
-	for(int i = 0; i < MAX_HOPS; i++) {
-		if(memcmp(&host[i].addr, &last_remote_addr, sizeof(SOCKADDR_STORAGE)) == 0) {
+	for (int i = 0; i < MAX_HOPS; i++) {
+		if (memcmp(&host[i].addr, &last_remote_addr, sizeof(SOCKADDR_STORAGE)) == 0) {
 			max = i + 1;
 			break;
 		}
 	}
 
 	// second match:  traced address doesn't responds on ping requests
-	if(max == MAX_HOPS) {
-		while((max > 1) && (memcmp(&host[max - 1].addr, &host[max - 2].addr, sizeof(SOCKADDR_STORAGE)) == 0 && isValidAddress(host[max - 1].addr)) ) max--;
+	if (max == MAX_HOPS) {
+		while ((max > 1) && (memcmp(&host[max - 1].addr, &host[max - 2].addr, sizeof(SOCKADDR_STORAGE)) == 0 && isValidAddress(host[max - 1].addr))) max--;
 	}
 	return max;
 }
@@ -458,15 +448,54 @@ int WinMTRNet::GetPingSize() const noexcept
 void WinMTRNet::SetAddr(int at, sockaddr& addr)
 {
 	std::unique_lock lock(ghMutex);
-	if(!isValidAddress(host[at].addr) && isValidAddress(addr)) {
+	if (!isValidAddress(host[at].addr) && isValidAddress(addr)) {
 		//TRACE_MSG(L"Start DnsResolverThread for new address " << addr << L". Old addr value was " << host[at].addr);
 		memcpy(&host[at].addr, &addr, getAddressSize(addr));
-		dns_resolver_thread dnt;
-		dnt.index = at;
-		dnt.winmtr = this;
+		struct dns_resolver_thread {
+			int			index;
+			WinMTRNet* winmtr;
+		} dnt{ .index = at, .winmtr = this };
+
 		if (wmtrdlg->useDNS) {
-			auto dnsThread = std::thread(DnsResolverThread, dnt);
-			dnsThread.detach();
+			Concurrency::create_task([dnt = std::move(dnt)] {
+					TRACE_MSG(L"DNS resolver thread started.");
+					WinMTRNet * wn = dnt.winmtr;
+
+					wchar_t buf[NI_MAXHOST];
+					sockaddr_storage addr = wn->GetAddr(dnt.index);
+
+					if (const auto nresult = GetNameInfoW(
+						reinterpret_cast<sockaddr*>(&addr)
+						, gsl::narrow_cast<socklen_t>(getAddressSize(addr))
+						, buf
+						, gsl::narrow_cast<DWORD>(std::size(buf))
+						, nullptr
+						, 0
+						, 0);
+						// zero on success
+						!nresult) {
+						wn->SetName(dnt.index, buf);
+					}
+					else {
+						std::wstring out;
+						out.resize(40);
+						auto addrlen = gsl::narrow_cast<DWORD>(getAddressSize(addr));
+						DWORD addrstrsize = gsl::narrow_cast<DWORD>(out.size());
+						if (const auto result = WSAAddressToStringW(
+							reinterpret_cast<LPSOCKADDR>(&addr)
+							,addrlen
+							,nullptr
+							,out.data()
+							,&addrstrsize);
+							// zero on success
+							!result) {
+							out.resize(addrstrsize - 1);
+						}
+						wn->SetName(dnt.index, std::move(out));
+					}
+
+					TRACE_MSG(L"DNS resolver thread stopped.");
+				});
 		}
 	}
 }
@@ -480,10 +509,10 @@ void WinMTRNet::SetName(int at, std::wstring n)
 void WinMTRNet::SetBest(int at, int current)
 {
 	std::unique_lock lock(ghMutex);
-	if(host[at].best > current || host[at].xmit == 1) {
+	if (host[at].best > current || host[at].xmit == 1) {
 		host[at].best = current;
 	};
-	if(host[at].worst < current) {
+	if (host[at].worst < current) {
 		host[at].worst = current;
 	}
 }
@@ -514,31 +543,5 @@ void WinMTRNet::AddXmit(int at)
 	host[at].xmit++;
 }
 
-void DnsResolverThread(dns_resolver_thread dnt)
-{
-	TRACE_MSG(L"DNS resolver thread started.");
-	WinMTRNet* wn = dnt.winmtr;
-
-	wchar_t buf[NI_MAXHOST];
-	sockaddr_storage addr = wn->GetAddr(dnt.index);
-	
-	auto nresult = GetNameInfoW(reinterpret_cast<sockaddr*>(&addr), getAddressSize(addr), buf, std::size(buf), nullptr, 0, 0);
-
-	if(!nresult) {
-		wn->SetName(dnt.index, buf);
-	} else {
-		std::wstring out;
-		out.resize(40);
-		auto addrlen = getAddressSize(addr);
-		DWORD addrstrsize = out.size();
-		auto result = WSAAddressToStringW(reinterpret_cast<LPSOCKADDR>(&addr), addrlen, nullptr, out.data(), &addrstrsize);
-		if (!result) {
-			out.resize(addrstrsize - 1);
-		}
-		wn->SetName(dnt.index, std::move(out));
-	}
-	
-	TRACE_MSG(L"DNS resolver thread stopped.");
-}
 
 

@@ -62,6 +62,7 @@ WinMTRMain::WinMTRMain()
 //*****************************************************************************
 BOOL WinMTRMain::InitInstance()
 {
+	winrt::init_apartment(winrt::apartment_type::single_threaded);
 	if (!AfxSocketInit())
 	{
 		AfxMessageBox(IDP_SOCKETS_INIT_FAILED);
