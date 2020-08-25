@@ -7,6 +7,7 @@
 #define IDS_STRING_SB_NAME              104
 #define IDS_STRING_SB_PING              105
 #define IDS_STRING_CLEAR_HISTORY        106
+#define IDS_STRING_UNABLE_TO_RESOLVE_HOSTNAME 107
 #define IDR_MAINFRAME                   128
 #define IDD_DIALOG_OPTIONS              129
 #define IDD_DIALOG_LICENSE              130

@@ -217,7 +217,7 @@ void WinMTRNet::handleICMPv6(trace_thread& current) {
 		// - a drawback would be that, some servers are configured to reply for TTL transit expire, but not to ping requests, so,
 		// for these servers we'll have 100% loss
 		SOCKADDR_IN6 local = { .sin6_family = AF_INET6 };
-		const auto dwReplyCount = Icmp6SendEcho2(current.icmpHandle.Get(), nullptr, nullptr, nullptr, &local, addr, achReqData.data(), nDataLen, &stIPInfo, achRepData.data(), achRepData.size(), ECHO_REPLY_TIMEOUT);
+		const auto dwReplyCount = Icmp6SendEcho2(current.icmpHandle.Get(), nullptr, nullptr, nullptr, &local, addr, achReqData.data(), nDataLen, &stIPInfo, achRepData.data(), gsl::narrow_cast<DWORD>(achRepData.size()), ECHO_REPLY_TIMEOUT);
 
 		this->AddXmit(current.ttl - 1);
 		if (dwReplyCount != 0) {
@@ -276,7 +276,7 @@ void WinMTRNet::handleICMPv4(trace_thread& current) {
 		// - a drawback would be that, some servers are configured to reply for TTL transit expire, but not to ping requests, so,
 		// for these servers we'll have 100% loss
 		sockaddr_in* addr = reinterpret_cast<sockaddr_in*>(&current.address);
-		const auto dwReplyCount = IcmpSendEcho(current.icmpHandle.Get(), addr->sin_addr.S_un.S_addr, achReqData.data(), nDataLen, &stIPInfo, achRepData.data(), achRepData.size(), ECHO_REPLY_TIMEOUT);
+		const auto dwReplyCount = IcmpSendEcho(current.icmpHandle.Get(), addr->sin_addr.S_un.S_addr, achReqData.data(), nDataLen, &stIPInfo, achRepData.data(), gsl::narrow_cast<DWORD>(achRepData.size()), ECHO_REPLY_TIMEOUT);
 
 		this->AddXmit(current.ttl - 1);
 		if (dwReplyCount != 0) {
@@ -365,8 +365,8 @@ std::wstring WinMTRNet::GetName(int at)
 		std::wstring out;
 		out.resize(40);
 		auto addrlen = getAddressSize(addr);
-		DWORD addrstrsize = out.size();
-		if (auto result = WSAAddressToStringW(reinterpret_cast<LPSOCKADDR>(&addr), addrlen, nullptr, out.data(), &addrstrsize); !result) {
+		DWORD addrstrsize = gsl::narrow_cast<DWORD>(out.size());
+		if (auto result = WSAAddressToStringW(reinterpret_cast<LPSOCKADDR>(&addr), gsl::narrow_cast<DWORD>(addrlen), nullptr, out.data(), &addrstrsize); !result) {
 			out.resize(addrstrsize - 1);
 		}
 		

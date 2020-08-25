@@ -90,7 +90,7 @@ BOOL WinMTRMain::InitInstance()
 		ParseCommandLineParams(m_lpCmdLine, &mtrDialog);
 	}*/
 
-	int nResponse = mtrDialog.DoModal();
+	auto nResponse = mtrDialog.DoModal();
 
 
 	return FALSE;

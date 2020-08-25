@@ -43,7 +43,7 @@ LRESULT WinMTRStatusBar::WindowProc(UINT message, WPARAM wParam, LPARAM lParam)
 
 void WinMTRStatusBar::RepositionControls()
 {
-	HDWP _hDWP = ::BeginDeferWindowPos( m_arrPaneControls.size() );
+	HDWP _hDWP = ::BeginDeferWindowPos( gsl::narrow_cast<int>(m_arrPaneControls.size()) );
 	
 	CRect rcClient;
 	GetClientRect(&rcClient);
@@ -156,7 +156,7 @@ BOOL WinMTRStatusBar::AddPane(
 	}
 	
 	// set the indicators 
-	SetIndicators(IDArray.data(), IDArray.size());
+	SetIndicators(IDArray.data(), gsl::narrow_cast<int>(IDArray.size()));
 	// free memory
 	auto nPanesCount = arrPanesTmp.size();
 	for (size_t iIndex = 0; iIndex < nPanesCount; iIndex++){
@@ -204,7 +204,7 @@ BOOL WinMTRStatusBar::RemovePane(
 	// free memory
 	int nIndex = 0;
 	for (const auto& pane : arrPanesTmp) {
-		PaneInfoSet(nIndex, pane);
+		this->PaneInfoSet(nIndex, pane);
 		++nIndex;
 	}
 	m_arrPaneControls.erase(std::remove_if(m_arrPaneControls.begin(), m_arrPaneControls.end(), [nID](const auto& cntl) {
@@ -252,7 +252,7 @@ bool WinMTRStatusBar::PaneInfoSet(int nIndex, const _STATUSBAR_PANE_& pPane)
 {
 	if( nIndex < m_nCount  && nIndex >= 0 ){
 		SetPaneInfo( nIndex, pPane.nID, pPane.nStyle, pPane.cxText );
-		SetPaneText( nIndex, LPCTSTR( pPane.strText) );
+		SetPaneText( nIndex, static_cast<LPCTSTR>( pPane.strText) );
 		return true;
 	}
 	return false;

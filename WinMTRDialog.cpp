@@ -30,6 +30,11 @@ static	 char THIS_FILE[] = __FILE__;
 
 void PingThread(WinMTRDialog* wmtrdlg);
 
+namespace {
+	const auto config_key_name = LR"(Software\WinMTR\Config)";
+	const auto lru_key_name = LR"(Software\WinMTR\LRU)";
+}
+
 //*****************************************************************************
 // BEGIN_MESSAGE_MAP
 //
@@ -206,113 +211,78 @@ BOOL WinMTRDialog::OnInitDialog()
 //*****************************************************************************
 BOOL WinMTRDialog::InitRegistry()
 {
-	HKEY hKey, hKey_v;
-	DWORD res, tmp_dword, value_size;
-	LONG r;
-
-	r = RegCreateKeyExW(	HKEY_CURRENT_USER, 
-					L"Software", 
-					0, 
-					NULL,
-					REG_OPTION_NON_VOLATILE,
-					KEY_ALL_ACCESS,
-					NULL,
-					&hKey,
-					&res);
-	if( r != ERROR_SUCCESS) 
-		return FALSE;
-
-	r = RegCreateKeyExW(	hKey, 
-					L"WinMTR", 
-					0, 
-					NULL,
-					REG_OPTION_NON_VOLATILE,
-					KEY_ALL_ACCESS,
-					NULL,
-					&hKey,
-					&res);
-	if( r != ERROR_SUCCESS) 
-		return FALSE;
 	CRegKey versionKey;
-	versionKey.Attach(hKey);
+	if (versionKey.Create(HKEY_CURRENT_USER,
+		LR"(Software\WinMTR)",
+		NULL,
+		REG_OPTION_NON_VOLATILE,
+		KEY_ALL_ACCESS) != ERROR_SUCCESS){
+		return FALSE;
+
+	}
 	versionKey.SetStringValue(L"Version", WINMTR_VERSION);
 	versionKey.SetStringValue(L"License", WINMTR_LICENSE);
 	versionKey.SetStringValue(L"HomePage", WINMTR_HOMEPAGE);
-	versionKey.Detach();
-	/*RegSetValueExW(hKey,L"Version", 0, REG_SZ, (const unsigned char *)WINMTR_VERSION, sizeof(WINMTR_VERSION));
-	RegSetValueExW(hKey,L"License", 0, REG_SZ, (const unsigned char *)WINMTR_LICENSE, sizeof(WINMTR_LICENSE));
-	RegSetValueExW(hKey,L"HomePage", 0, REG_SZ, (const unsigned char *)WINMTR_HOMEPAGE, sizeof(WINMTR_HOMEPAGE));*/
-
-	r = RegCreateKeyExW(	hKey, 
-					L"Config", 
-					0, 
-					NULL,
-					REG_OPTION_NON_VOLATILE,
-					KEY_ALL_ACCESS,
-					NULL,
-					&hKey_v,
-					&res);
-	if( r != ERROR_SUCCESS) 
+	CRegKey config_key;
+	if (config_key.Create(versionKey,
+		L"Config",
+		NULL,
+		REG_OPTION_NON_VOLATILE,
+		KEY_ALL_ACCESS) != ERROR_SUCCESS) {
 		return FALSE;
-
-	if(RegQueryValueExW(hKey_v, L"PingSize", 0, NULL, (unsigned char *)&tmp_dword, &value_size) != ERROR_SUCCESS) {
+	}
+	DWORD tmp_dword;
+	if(config_key.QueryDWORDValue(L"PingSize", tmp_dword) != ERROR_SUCCESS) {
 		tmp_dword = pingsize;
-		RegSetValueExW(hKey_v,L"PingSize", 0, REG_DWORD, (const unsigned char *)&tmp_dword, sizeof(DWORD));
+		config_key.SetDWORDValue(L"PingSize", tmp_dword);
 	} else {
 		if(!hasPingsizeFromCmdLine) pingsize = tmp_dword;
 	}
 	
-	if(RegQueryValueExW(hKey_v, L"MaxLRU", 0, NULL, (unsigned char *)&tmp_dword, &value_size) != ERROR_SUCCESS) {
+	if(config_key.QueryDWORDValue(L"MaxLRU", tmp_dword) != ERROR_SUCCESS) {
 		tmp_dword = maxLRU;
-		RegSetValueExW(hKey_v,L"MaxLRU", 0, REG_DWORD, (const unsigned char *)&tmp_dword, sizeof(DWORD));
+		config_key.SetDWORDValue(L"MaxLRU", tmp_dword);
 	} else {
 		if(!hasMaxLRUFromCmdLine) maxLRU = tmp_dword;
 	}
 	
-	if(RegQueryValueExW(hKey_v, L"UseDNS", 0, NULL, (unsigned char *)&tmp_dword, &value_size) != ERROR_SUCCESS) {
+	if(config_key.QueryDWORDValue(L"UseDNS", tmp_dword) != ERROR_SUCCESS) {
 		tmp_dword = useDNS ? 1 : 0;
-		RegSetValueExW(hKey_v,L"UseDNS", 0, REG_DWORD, (const unsigned char *)&tmp_dword, sizeof(DWORD));
+		config_key.SetDWORDValue(L"UseDNS", tmp_dword);
 	} else {
 		if(!hasUseDNSFromCmdLine) useDNS = (BOOL)tmp_dword;
 	}
 
-	if(RegQueryValueExW(hKey_v, L"Interval", 0, NULL, (unsigned char *)&tmp_dword, &value_size) != ERROR_SUCCESS) {
-		tmp_dword = (DWORD)(interval * 1000);
-		RegSetValueExW(hKey_v,L"Interval", 0, REG_DWORD, (const unsigned char *)&tmp_dword, sizeof(DWORD));
+	if(config_key.QueryDWORDValue(L"Interval", tmp_dword) != ERROR_SUCCESS) {
+		tmp_dword = static_cast<DWORD>(interval * 1000);
+		config_key.SetDWORDValue(L"Interval", tmp_dword);
 	} else {
 		if(!hasIntervalFromCmdLine) interval = (float)tmp_dword / 1000.0;
 	}
-
-	r = RegCreateKeyExW(	hKey, 
-					L"LRU", 
-					0, 
-					NULL,
-					REG_OPTION_NON_VOLATILE,
-					KEY_ALL_ACCESS,
-					NULL,
-					&hKey_v,
-					&res);
-	if( r != ERROR_SUCCESS) 
+	CRegKey lru_key;
+	if(lru_key.Create(versionKey,
+		L"LRU",
+		NULL,
+		REG_OPTION_NON_VOLATILE,
+		KEY_ALL_ACCESS) != ERROR_SUCCESS)
 		return FALSE;
-	if(RegQueryValueExW(hKey_v, L"NrLRU", 0, NULL, (unsigned char *)&tmp_dword, &value_size) != ERROR_SUCCESS) {
+	if(lru_key.QueryDWORDValue(L"NrLRU", tmp_dword) != ERROR_SUCCESS) {
 		tmp_dword = nrLRU;
-		RegSetValueExW(hKey_v,L"NrLRU", 0, REG_DWORD, (const unsigned char *)&tmp_dword, sizeof(DWORD));
+		lru_key.SetDWORDValue(L"NrLRU", tmp_dword);
 	} else {
 		wchar_t key_name[20];
-		wchar_t str_host[255];
+		wchar_t str_host[NI_MAXHOST];
 		nrLRU = tmp_dword;
 		for(int i=0;i<maxLRU;i++) {
 			std::swprintf(key_name, std::size(key_name), L"Host%d", i+1);
-			if((r = RegQueryValueExW(hKey_v, key_name, 0, NULL, NULL, &value_size)) == ERROR_SUCCESS) {
-				RegQueryValueExW(hKey_v, key_name, 0, NULL, (LPBYTE)str_host, &value_size);
+			auto value_size = gsl::narrow_cast<DWORD>(std::size(str_host));
+			if (lru_key.QueryStringValue(key_name, str_host, &value_size) == ERROR_SUCCESS) {
 				str_host[value_size]=L'\0';
 				m_comboHost.AddString((CString)str_host);
 			}
 		}
 	}
 	m_comboHost.AddString(CString((LPCTSTR)IDS_STRING_CLEAR_HISTORY));
-	RegCloseKey(hKey_v);
-	RegCloseKey(hKey);
 	return TRUE;
 }
 
@@ -572,14 +542,9 @@ void WinMTRDialog::OnRestart()
 			if(m_comboHost.FindString(-1, sHost) == CB_ERR) {
 				m_comboHost.InsertString(m_comboHost.GetCount() - 1,sHost);
 
-				HKEY hKey;
-				DWORD tmp_dword;
-				LONG r;
 				wchar_t key_name[20];
-
-				r = RegOpenKeyExW(	HKEY_CURRENT_USER, L"Software", 0, KEY_ALL_ACCESS,&hKey);
-				r = RegOpenKeyExW(	hKey, L"WinMTR", 0, KEY_ALL_ACCESS, &hKey);
-				r = RegOpenKeyExW(	hKey, L"LRU", 0, KEY_ALL_ACCESS, &hKey);
+				CRegKey lru_key;
+				lru_key.Open(HKEY_CURRENT_USER, lru_key_name, KEY_ALL_ACCESS);
 
 				if(nrLRU >= maxLRU)
 					nrLRU = 0;
@@ -587,10 +552,9 @@ void WinMTRDialog::OnRestart()
 				nrLRU++;
 				std::swprintf(key_name, std::size(key_name), L"Host%d", nrLRU);
 				const auto sHostLen = sHost.GetAllocLength() * sizeof(wchar_t) + sizeof(wchar_t);
-				r = RegSetValueExW(hKey,key_name, 0, REG_SZ, (const unsigned char *)(LPCTSTR)sHost, sHostLen);
-				tmp_dword = nrLRU;
-				r = RegSetValueExW(hKey,L"NrLRU", 0, REG_DWORD, (const unsigned char *)&tmp_dword, sizeof(DWORD));
-				RegCloseKey(hKey);
+				lru_key.SetStringValue(key_name, static_cast<LPCWSTR>(sHost));
+				auto tmp_dword =  static_cast<DWORD>(nrLRU);
+				lru_key.SetDWORDValue(L"NrLRU", tmp_dword);
 			}
 			Transit(STATES::TRACING);
 		}
@@ -621,36 +585,32 @@ void WinMTRDialog::OnOptions()
 		maxLRU = optDlg.GetMaxLRU();
 		useDNS = optDlg.GetUseDNS();
 
-		HKEY hKey;
+		/*HKEY hKey;*/
 		DWORD tmp_dword;
-		LONG r;
 		wchar_t key_name[20];
-
-		r = RegOpenKeyExW(	HKEY_CURRENT_USER, L"Software", 0, KEY_ALL_ACCESS,&hKey);
-		r = RegOpenKeyExW(	hKey, L"WinMTR", 0, KEY_ALL_ACCESS, &hKey);
-		r = RegOpenKeyExW(	hKey, L"Config", 0, KEY_ALL_ACCESS, &hKey);
-		tmp_dword = pingsize;
-		RegSetValueExW(hKey,L"PingSize", 0, REG_DWORD, (const unsigned char *)&tmp_dword, sizeof(DWORD));
-		tmp_dword = maxLRU;
-		RegSetValueExW(hKey,L"MaxLRU", 0, REG_DWORD, (const unsigned char *)&tmp_dword, sizeof(DWORD));
-		tmp_dword = useDNS ? 1 : 0;
-		RegSetValueExW(hKey,L"UseDNS", 0, REG_DWORD, (const unsigned char *)&tmp_dword, sizeof(DWORD));
-		tmp_dword = (DWORD)(interval * 1000);
-		RegSetValueExW(hKey,L"Interval", 0, REG_DWORD, (const unsigned char *)&tmp_dword, sizeof(DWORD));
-		RegCloseKey(hKey);
+		{
+			CRegKey config_key;
+			config_key.Open(HKEY_CURRENT_USER, config_key_name, KEY_ALL_ACCESS);
+			tmp_dword = pingsize;
+			config_key.SetDWORDValue(L"PingSize", tmp_dword);
+			tmp_dword = maxLRU;
+			config_key.SetDWORDValue(L"MaxLRU", tmp_dword);
+			tmp_dword = useDNS ? 1 : 0;
+			config_key.SetDWORDValue(L"UseDNS", tmp_dword);
+			tmp_dword = static_cast<DWORD>(interval * 1000);
+			config_key.SetDWORDValue(L"Interval", tmp_dword);
+		}
 		if(maxLRU<nrLRU) {
-			r = RegOpenKeyExW(	HKEY_CURRENT_USER, L"Software", 0, KEY_ALL_ACCESS,&hKey);
-			r = RegOpenKeyExW(	hKey, L"WinMTR", 0, KEY_ALL_ACCESS, &hKey);
-			r = RegOpenKeyExW(	hKey, L"LRU", 0, KEY_ALL_ACCESS, &hKey);
+			CRegKey lru_key;
+			lru_key.Open(HKEY_CURRENT_USER, lru_key_name, KEY_ALL_ACCESS);
 
 			for(int i = maxLRU; i<=nrLRU; i++) {
-					std::swprintf(key_name, std::size(key_name), L"Host%d", i);
-					r = RegDeleteValue(hKey,key_name);
+				std::swprintf(key_name, std::size(key_name), L"Host%d", i);
+				lru_key.DeleteValue(key_name);
 			}
 			nrLRU = maxLRU;
 			tmp_dword = nrLRU;
-			r = RegSetValueExW(hKey,L"NrLRU", 0, REG_DWORD, (const unsigned char *)&tmp_dword, sizeof(DWORD));
-			RegCloseKey(hKey);
+			lru_key.SetDWORDValue(L"NrLRU", tmp_dword);
 		}
 	}
 }
@@ -901,7 +861,7 @@ int WinMTRDialog::InitMTRNet()
 		if (const auto result = GetAddrInfoW(Hostname, nullptr, &hint, &out); result) {
 			FreeAddrInfoW(out);
 			statusBar.SetPaneText(0, CString((LPCTSTR)IDS_STRING_SB_NAME) );
-			AfxMessageBox(L"Unable to resolve hostname.");
+			AfxMessageBox(IDS_STRING_UNABLE_TO_RESOLVE_HOSTNAME);
 			return 0;
 		}
 		FreeAddrInfoW(out);
@@ -924,7 +884,7 @@ void PingThread(WinMTRDialog* wmtrdlg)
 	wchar_t strtmp[255];
 	const wchar_t *Hostname = strtmp;
 	SOCKADDR_STORAGE addrstore = {};
-	wmtrdlg->m_comboHost.GetWindowTextW(strtmp, std::size(strtmp));
+	wmtrdlg->m_comboHost.GetWindowTextW(strtmp, gsl::narrow_cast<int>(std::size(strtmp)));
    	
 	if (Hostname == nullptr) Hostname = L"localhost";
 
@@ -977,23 +937,18 @@ void WinMTRDialog::OnCbnSelchangeComboHost()
 
 void WinMTRDialog::ClearHistory()
 {
-	HKEY hKey;
 	DWORD tmp_dword;
-	LONG r;
 	wchar_t key_name[20];
-
-	r = RegOpenKeyExW(	HKEY_CURRENT_USER, L"Software", 0, KEY_ALL_ACCESS,&hKey);
-	r = RegOpenKeyExW(	hKey, L"WinMTR", 0, KEY_ALL_ACCESS, &hKey);
-	r = RegOpenKeyExW(	hKey, L"LRU", 0, KEY_ALL_ACCESS, &hKey);
+	CRegKey lru_key;
+	lru_key.Open(HKEY_CURRENT_USER, LR"(Software\WinMTR\LRU)", KEY_ALL_ACCESS);
 
 	for(int i = 0; i<=nrLRU; i++) {
 		std::swprintf(key_name, std::size(key_name), L"Host%d", i);
-		r = RegDeleteValueW(hKey,key_name);
+		lru_key.DeleteValue(key_name);
 	}
 	nrLRU = 0;
 	tmp_dword = nrLRU;
-	r = RegSetValueExW(hKey,L"NrLRU", 0, REG_DWORD, (const unsigned char *)&tmp_dword, sizeof(DWORD));
-	RegCloseKey(hKey);
+	lru_key.SetDWORDValue(L"NrLRU", tmp_dword);
 
 	m_comboHost.Clear();
 	m_comboHost.ResetContent();

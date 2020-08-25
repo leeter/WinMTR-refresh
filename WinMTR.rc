@@ -65,6 +65,7 @@ END
 // remains consistent on all systems.
 IDR_MAINFRAME           ICON                    "WinMTR.ico"
 
+
 /////////////////////////////////////////////////////////////////////////////
 //
 // Dialog
@@ -340,6 +341,7 @@ BEGIN
     IDS_STRING_SB_NAME      "WinMTR v0.92 GPL V2 by Appnor MSP - Fully Managed Hosting & Cloud Provider"
     IDS_STRING_SB_PING      "0000000"
     IDS_STRING_CLEAR_HISTORY "Clear History"
+    IDS_STRING_UNABLE_TO_RESOLVE_HOSTNAME "Unable to resolve hostname."
 END
 
 #endif    // English (United States) resources
