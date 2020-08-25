@@ -7,6 +7,8 @@
 #include "WinMTRGlobal.h"
 #include "WinMTRProperties.h"
 
+#include "resource.h"
+
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #undef THIS_FILE

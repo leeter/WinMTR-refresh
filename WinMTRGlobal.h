@@ -53,9 +53,6 @@
 #include <ppl.h>
 #include <ppltasks.h>
 
-
-#include "resource.h"
-
 #define WINMTR_VERSION	L"0.9"
 #define WINMTR_LICENSE	L"GPL - GNU Public License"
 #define WINMTR_COPYRIGHT L"WinMTR 0.9 (c) 2010-2011 Appnor MSP - Fully Managed Hosting & Cloud Provider www.appnor.com"

@@ -1,5 +1,7 @@
 #pragma once
 
+
+#include "resource.h"
 // WinMTRHelp dialog
 
 class WinMTRHelp : public CDialog

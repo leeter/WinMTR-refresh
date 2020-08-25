@@ -14,6 +14,7 @@
 #define WINMTRLICENSE_H_
 
 
+#include "resource.h"
 
 //*****************************************************************************
 // CLASS:  WinMTRLicense

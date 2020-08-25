@@ -14,6 +14,7 @@
 #define WINMTROPTIONS_H_
 
 
+#include "resource.h"
 
 //*****************************************************************************
 // CLASS:  WinMTROptions
@@ -41,6 +42,8 @@ public:
 	CEdit	m_editInterval;
 	CEdit	m_editMaxLRU;
 	CButton	m_checkDNS;
+	CButton m_useIPv4;
+	CButton m_useIPv6;
 
 protected:
 	virtual void DoDataExchange(CDataExchange* pDX);
@@ -49,7 +52,6 @@ protected:
 	virtual void OnOK();
 
 	afx_msg void OnLicense();
-
 	DECLARE_MESSAGE_MAP()
 	
 private:
@@ -57,6 +59,12 @@ private:
 	int      pingsize = 0;
 	int		 maxLRU = 0;
 	BOOL     useDNS = FALSE;
+	bool	 useIPv4 = true;
+	bool	 useIPv6 = true;
+	
+public:
+	afx_msg void OnBnClickedIpv4Check();
+	afx_msg void OnBnClickedUseipv6Check();
 };
 
 #endif // ifndef WINMTROPTIONS_H_

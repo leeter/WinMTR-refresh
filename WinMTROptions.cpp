@@ -8,6 +8,8 @@
 #include "WinMTROptions.h"
 #include "WinMTRLicense.h"
 
+#include "resource.h"
+
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -23,6 +25,8 @@ static char THIS_FILE[] = __FILE__;
 //*****************************************************************************
 BEGIN_MESSAGE_MAP(WinMTROptions, CDialog)
 	ON_BN_CLICKED(ID_LICENSE, OnLicense)
+	ON_BN_CLICKED(IDC_IPV4_CHECK, &WinMTROptions::OnBnClickedIpv4Check)
+	ON_BN_CLICKED(IDC_USEIPV6_CHECK, &WinMTROptions::OnBnClickedUseipv6Check)
 END_MESSAGE_MAP()
 
 
@@ -48,6 +52,8 @@ void WinMTROptions::DoDataExchange(CDataExchange* pDX)
 	DDX_Control(pDX, IDC_EDIT_INTERVAL, m_editInterval);
 	DDX_Control(pDX, IDC_EDIT_MAX_LRU, m_editMaxLRU);
 	DDX_Control(pDX, IDC_CHECK_DNS, m_checkDNS);
+	DDX_Control(pDX, IDC_USEIPV6_CHECK, m_useIPv6);
+	DDX_Control(pDX, IDC_IPV4_CHECK, m_useIPv4);
 }
 
 
@@ -72,6 +78,8 @@ BOOL WinMTROptions::OnInitDialog()
 	m_editMaxLRU.SetWindowText(strtmp);
 
 	m_checkDNS.SetCheck(useDNS);
+	m_useIPv4.SetCheck(useIPv4);
+	m_useIPv6.SetCheck(useIPv6);
 	
 	m_editInterval.SetFocus();
 	return FALSE;
@@ -101,6 +109,9 @@ void WinMTROptions::OnOK()
 	end = nullptr;
 	maxLRU = wcstol(tmpstr, &end, 10);
 
+	useIPv4 = m_useIPv4.GetCheck();
+	useIPv6 = m_useIPv6.GetCheck();
+
 	CDialog::OnOK();
 }
 
@@ -113,4 +124,23 @@ void WinMTROptions::OnLicense()
 {
 	WinMTRLicense mtrlicense;
 	mtrlicense.DoModal();
+}
+
+
+
+void WinMTROptions::OnBnClickedIpv4Check()
+{
+	
+	if (!m_useIPv4.GetCheck()) {
+		m_useIPv6.SetCheck(true);
+	}
+}
+
+
+void WinMTROptions::OnBnClickedUseipv6Check()
+{
+	
+	if (!m_useIPv6.GetCheck()) {
+		m_useIPv4.SetCheck(true);
+	}
 }

@@ -303,7 +303,7 @@
     <CustomBuild Include="WinMTR.ico" />
   </ItemGroup>
   <ItemGroup>
-    <Manifest Include="WinMTR.exe.manifest" />
+    <Manifest Include="app.manifest" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

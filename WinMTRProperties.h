@@ -15,6 +15,8 @@
 
 #include <string>
 
+#include "resource.h"
+
 //*****************************************************************************
 // CLASS:  WinMTRLicense
 //
