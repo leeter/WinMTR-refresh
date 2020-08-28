@@ -185,9 +185,9 @@ void WinMTRNet::sleepTilInterval(ULONG roundTripTime) {
 
 void WinMTRNet::handleICMPv6(trace_thread& current) {
 	using namespace std::string_view_literals;
-	std::vector<char>	achReqData(static_cast<size_t>(this->wmtrdlg->pingsize) + 8192); //whitespaces
-	int				nDataLen = this->wmtrdlg->pingsize;
-	std::vector<char> achRepData(sizeof(ICMPV6_ECHO_REPLY) + 8192);
+	const int				nDataLen = this->wmtrdlg->pingsize;
+	std::vector<std::byte>	achReqData(nDataLen, static_cast<std::byte>(32)); //whitespaces
+	std::vector<std::byte> achRepData(sizeof(ICMPV6_ECHO_REPLY) + nDataLen + 8 + sizeof(IO_STATUS_BLOCK));
 
 	/*
 	 * Init IPInfo structure
@@ -212,7 +212,19 @@ void WinMTRNet::handleICMPv6(trace_thread& current) {
 		// - a drawback would be that, some servers are configured to reply for TTL transit expire, but not to ping requests, so,
 		// for these servers we'll have 100% loss
 		SOCKADDR_IN6 local = { .sin6_family = AF_INET6 };
-		const auto dwReplyCount = Icmp6SendEcho2(current.icmpHandle.Get(), nullptr, nullptr, nullptr, &local, addr, achReqData.data(), nDataLen, &stIPInfo, achRepData.data(), gsl::narrow_cast<DWORD>(achRepData.size()), ECHO_REPLY_TIMEOUT);
+		const auto dwReplyCount = Icmp6SendEcho2(
+			current.icmpHandle.Get()
+			,nullptr
+			,nullptr
+			,nullptr
+			,&local
+			,addr
+			,achReqData.data()
+			,nDataLen
+			,&stIPInfo
+			,achRepData.data()
+			,gsl::narrow_cast<DWORD>(achRepData.size())
+			,ECHO_REPLY_TIMEOUT);
 
 		this->AddXmit(current.ttl - 1);
 		if (dwReplyCount != 0) {
@@ -243,9 +255,9 @@ void WinMTRNet::handleICMPv6(trace_thread& current) {
 
 void WinMTRNet::handleICMPv4(trace_thread& current) {
 	using namespace std::string_view_literals;
-	std::vector<std::byte>	achReqData(static_cast<size_t>(this->wmtrdlg->pingsize) + 8192); //whitespaces
-	int				nDataLen = this->wmtrdlg->pingsize;
-	std::vector<std::byte> achRepData(sizeof(ICMPECHO) + 8192);
+	const int				nDataLen = this->wmtrdlg->pingsize;
+	std::vector<std::byte>	achReqData(nDataLen, static_cast<std::byte>(32)); //whitespaces
+	std::vector<std::byte> achRepData(sizeof(ICMP_ECHO_REPLY) + nDataLen + 8 + sizeof(IO_STATUS_BLOCK));
 
 
 	/*
@@ -254,7 +266,7 @@ void WinMTRNet::handleICMPv4(trace_thread& current) {
 	IP_OPTION_INFORMATION	stIPInfo = {};
 	stIPInfo.Ttl = current.ttl;
 	stIPInfo.Flags = IP_FLAG_DF;
-	std::fill_n(std::begin(achReqData), nDataLen, static_cast<std::byte>(32));
+	/*std::fill_n(std::begin(achReqData), nDataLen, static_cast<std::byte>(32));*/
 	//for (int i = 0; i < nDataLen; i++) achReqData[i] = 32;
 
 	while (this->GetIsTracing()) {
@@ -271,11 +283,22 @@ void WinMTRNet::handleICMPv4(trace_thread& current) {
 		// - a drawback would be that, some servers are configured to reply for TTL transit expire, but not to ping requests, so,
 		// for these servers we'll have 100% loss
 		sockaddr_in* addr = reinterpret_cast<sockaddr_in*>(&current.address);
-		const auto dwReplyCount = IcmpSendEcho(current.icmpHandle.Get(), addr->sin_addr.S_un.S_addr, achReqData.data(), nDataLen, &stIPInfo, achRepData.data(), gsl::narrow_cast<DWORD>(achRepData.size()), ECHO_REPLY_TIMEOUT);
-
+		const auto dwReplyCount = IcmpSendEcho2(
+			current.icmpHandle.Get()
+			,nullptr
+			,nullptr
+			,nullptr
+			,addr->sin_addr.S_un.S_addr
+			,achReqData.data()
+			,nDataLen
+			,&stIPInfo
+			,achRepData.data()
+			,gsl::narrow_cast<DWORD>(achRepData.size())
+			,ECHO_REPLY_TIMEOUT);
+		
 		this->AddXmit(current.ttl - 1);
 		if (dwReplyCount != 0) {
-			PICMPECHO icmp_echo_reply = reinterpret_cast<PICMPECHO>(achRepData.data());
+			PICMP_ECHO_REPLY icmp_echo_reply = reinterpret_cast<PICMP_ECHO_REPLY>(achRepData.data());
 			TRACE_MSG(L"TTL "sv << current.ttl << L" reply TTL "sv << icmp_echo_reply->Options.Ttl << L" Status "sv << icmp_echo_reply->Status << L" Reply count "sv << dwReplyCount);
 
 			switch (icmp_echo_reply->Status) {
