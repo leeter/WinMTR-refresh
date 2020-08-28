@@ -22,20 +22,6 @@
 
 class WinMTRDialog;
 
-#ifdef _WIN64
-typedef IP_OPTION_INFORMATION32 IPINFO, * PIPINFO;
-#else
-typedef IP_OPTION_INFORMATION IPINFO, * PIPINFO;
-#endif
-
-
-
-#ifdef _WIN64
-typedef icmp_echo_reply32 ICMPECHO, *PICMPECHO;
-#else
-typedef icmp_echo_reply ICMPECHO, *PICMPECHO;
-#endif
-
 struct s_nethost {
   SOCKADDR_STORAGE addr = {};
   std::wstring name;
