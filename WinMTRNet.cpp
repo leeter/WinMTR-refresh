@@ -7,6 +7,7 @@
 #include "WinMTRNet.h"
 #include "WinMTRDialog.h"
 #include <wrl/wrappers/corewrappers.h>
+#include "resource.h"
 
 
 namespace wrl = ::Microsoft::WRL;
@@ -40,7 +41,11 @@ VOID
 #define MAX_HOPS				30
 
 namespace {
-	struct ICMPHandleTraits : wrl::Wrappers::HandleTraits::HANDLETraits {
+
+constexpr auto ECHO_REPLY_TIMEOUT = 5000;
+
+	struct ICMPHandleTraits {
+		using Type = HANDLE;
 		inline static bool Close(_In_ Type h) noexcept
 		{
 			return ::IcmpCloseHandle(h) != FALSE;
@@ -90,18 +95,18 @@ WinMTRNet::WinMTRNet(WinMTRDialog* wp)
 	traces.reserve(MAX_HOPS);
 
 	if (!wsaHelper) {
-		AfxMessageBox(L"Failed initializing windows sockets library!");
+		AfxMessageBox(IDP_SOCKETS_INIT_FAILED);
 		return;
 	}
 }
 
-WinMTRNet::~WinMTRNet()
+WinMTRNet::~WinMTRNet() noexcept
 {}
 
 void WinMTRNet::ResetHops()
 {
-	for (auto& host : this->host) {
-		host = s_nethost();
+	for (auto& h : this->host) {
+		h = s_nethost();
 	}
 }
 
@@ -170,7 +175,7 @@ void WinMTRNet::handleDefault(const trace_thread& current, ULONG status) {
 void WinMTRNet::sleepTilInterval(ULONG roundTripTime) {
 	using namespace std::chrono_literals;
 	const auto intervalInSec = this->GetInterval() * 1s;
-	const auto roundTripDuration = std::chrono::milliseconds();
+	const auto roundTripDuration = std::chrono::milliseconds(roundTripTime);
 	if (intervalInSec > roundTripDuration) {
 		const auto sleepTime = intervalInSec - roundTripDuration;
 		std::this_thread::sleep_for(sleepTime);
@@ -212,7 +217,7 @@ void WinMTRNet::handleICMPv6(trace_thread& current) {
 		this->AddXmit(current.ttl - 1);
 		if (dwReplyCount != 0) {
 
-			PICMPV6_ECHO_REPLY icmp_echo_reply = (PICMPV6_ECHO_REPLY)achRepData.data();
+			PICMPV6_ECHO_REPLY icmp_echo_reply = reinterpret_cast<PICMPV6_ECHO_REPLY>(achRepData.data());
 			TRACE_MSG(L"TTL "sv << current.ttl << L" Status "sv << icmp_echo_reply->Status << L" Reply count "sv << dwReplyCount);
 			switch (icmp_echo_reply->Status) {
 			case IP_SUCCESS:

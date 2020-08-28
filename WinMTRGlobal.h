@@ -10,17 +10,18 @@
 //
 //*****************************************************************************
 #pragma once
-#ifndef GLOBAL_H_
-#define GLOBAL_H_
+#ifndef WINMTR_GLOBAL_H_
+#define WINMTR_GLOBAL_H_
 
-#ifndef  _WIN64
-#define  _USE_32BIT_TIME_T
-#endif
+//#ifndef  _WIN64
+//#define  _USE_32BIT_TIME_T
+//#endif
 #include "targetver.h"
 
 #define VC_EXTRALEAN
 #define WIN32_LEAN_AND_MEAN
 
+#include <algorithm>
 #include <array>
 #include <iostream>
 #include <cwctype>
@@ -36,6 +37,8 @@
 #include <gsl/gsl>
 #include <iostream>
 #include <span>
+#include <cstdint>
+#include <ranges>
 
 
 #include <winrt/Windows.ApplicationModel.DataTransfer.h>
@@ -64,7 +67,7 @@
 #define DEFAULT_DNS			TRUE
 
 #define SAVED_PINGS 100
-#define MaxHost 256
+constexpr auto MaxHost = 256;
 //#define MaxSequence 65536
 #define MaxSequence 32767
 //#define MaxSequence 5
@@ -108,4 +111,4 @@ const int MTR_COL_LENGTH[ MTR_NR_COLS ] = {
 		190, 30, 50, 40, 40, 50, 50, 50, 50
 };
 
-#endif // ifndef GLOBAL_H_
+#endif // ifndef WINMTR_GLOBAL_H_

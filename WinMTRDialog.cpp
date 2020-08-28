@@ -134,7 +134,7 @@ BOOL WinMTRDialog::OnInitDialog()
 		
 	UINT sbi[1];
 	sbi[0] = IDS_STRING_SB_NAME;	
-	statusBar.SetIndicators( sbi,1);
+	statusBar.SetIndicators(sbi);
 	statusBar.SetPaneInfo(0, statusBar.GetItemID(0),SBPS_STRETCH, NULL );
 	{ // Add appnor URL
 		CMFCLinkCtrl* m_pWndButton = new CMFCLinkCtrl;
@@ -887,6 +887,23 @@ void PingThread(WinMTRDialog* wmtrdlg)
 	wmtrdlg->m_comboHost.GetWindowTextW(strtmp, gsl::narrow_cast<int>(std::size(strtmp)));
    	
 	if (Hostname == nullptr) Hostname = L"localhost";
+	SOCKADDR_IN addrv4 = {};
+	INT addr4Size = sizeof(addrv4);
+	
+	if (auto fourRes = WSAStringToAddressW(strtmp, AF_INET, nullptr, (LPSOCKADDR)&addrv4, &addr4Size); !fourRes) {
+		memcpy(&addrstore, &addrv4, addr4Size);
+		wmtrdlg->wmtrnet->DoTrace(*reinterpret_cast<LPSOCKADDR>(&addrstore));
+		return;
+	}
+
+	SOCKADDR_IN6 addrv6 = {};
+	INT addr6Size = sizeof(addrv6);
+	
+	if (auto sixRes = WSAStringToAddressW(strtmp, AF_INET6, nullptr, (LPSOCKADDR)&addrv6, &addr6Size); !sixRes) {
+		memcpy(&addrstore, &addrv6, addr6Size);
+		wmtrdlg->wmtrnet->DoTrace(*reinterpret_cast<LPSOCKADDR>(&addrstore));
+		return;
+	}
 
 	PADDRINFOW out = nullptr;
 	ADDRINFOW hint = {};

@@ -11,7 +11,7 @@ namespace utils {
             :dlg(dlg){}
     private:
 
-        void ParseParam(const TCHAR* pszParam, BOOL bFlag, BOOL bLast) override final;
+        void ParseParam(const WCHAR* pszParam, BOOL bFlag, BOOL bLast) override final;
 #ifdef _UNICODE
         void ParseParam(const char* pszParam, BOOL bFlag, BOOL bLast) override final;
 #endif

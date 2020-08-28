@@ -23,30 +23,28 @@
 class WinMTRDialog;
 
 #ifdef _WIN64
-typedef IP_OPTION_INFORMATION32 IPINFO, * PIPINFO, FAR* LPIPINFO;
+typedef IP_OPTION_INFORMATION32 IPINFO, * PIPINFO;
 #else
-typedef IP_OPTION_INFORMATION IPINFO, * PIPINFO, FAR* LPIPINFO;
+typedef IP_OPTION_INFORMATION IPINFO, * PIPINFO;
 #endif
 
 
 
 #ifdef _WIN64
-typedef icmp_echo_reply32 ICMPECHO, *PICMPECHO, FAR *LPICMPECHO;
+typedef icmp_echo_reply32 ICMPECHO, *PICMPECHO;
 #else
-typedef icmp_echo_reply ICMPECHO, *PICMPECHO, FAR *LPICMPECHO;
+typedef icmp_echo_reply ICMPECHO, *PICMPECHO;
 #endif
 
-#define ECHO_REPLY_TIMEOUT 5000
-
 struct s_nethost {
-  SOCKADDR_STORAGE addr;
+  SOCKADDR_STORAGE addr = {};
   std::wstring name;
-  int xmit;			// number of PING packets sent
-  int returned;		// number of ICMP echo replies received
-  unsigned long total;	// total time
-  int last;				// last time
-  int best;				// best time
-  int worst;			// worst time
+  int xmit = 0;			// number of PING packets sent
+  int returned = 0;		// number of ICMP echo replies received
+  unsigned long total = 0;	// total time
+  int last = 0;				// last time
+  int best = 0;				// best time
+  int worst = 0;			// worst time
 };
 
 template<typename T>
@@ -122,7 +120,6 @@ private:
 	WinMTRDialog* wmtrdlg;
 	winmtr::helper::WSAHelper wsaHelper;
 	std::atomic_bool	tracing;
-
 	void handleICMPv4(trace_thread& current);
 	void handleICMPv6(trace_thread& current);
 	void handleDefault(const trace_thread& current, ULONG status);

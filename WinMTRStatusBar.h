@@ -68,6 +68,9 @@ public:
 		DisableControl(nIndex, bDisabled);
 	}
 	
+	BOOL SetIndicators(std::span<UINT> indicators) {
+		return static_cast<CStatusBar*>(this)->SetIndicators(indicators.data(), gsl::narrow_cast<int>(indicators.size()));
+	}
 // Overrides
 	// ClassWizard generated virtual function overrides
 	//{{AFX_VIRTUAL(WinMTRStatusBar)

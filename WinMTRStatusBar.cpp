@@ -156,12 +156,13 @@ BOOL WinMTRStatusBar::AddPane(
 	}
 	
 	// set the indicators 
-	SetIndicators(IDArray.data(), gsl::narrow_cast<int>(IDArray.size()));
-	// free memory
-	auto nPanesCount = arrPanesTmp.size();
-	for (size_t iIndex = 0; iIndex < nPanesCount; iIndex++){
-		if (iIndex != nIndex)
-			PaneInfoSet(iIndex, arrPanesTmp[iIndex]);
+	SetIndicators(IDArray);
+	for (int iIndex = 0; const auto & pane : arrPanesTmp){
+		if (iIndex != nIndex) {
+			PaneInfoSet(iIndex, pane);
+		}
+			
+		++iIndex;
 	}
 	
 	
@@ -200,10 +201,10 @@ BOOL WinMTRStatusBar::RemovePane(
 	}
 	
 	// set the indicators
-	SetIndicators(IDArray.data(), IDArray.size());
+	SetIndicators(IDArray);
 	// free memory
-	int nIndex = 0;
-	for (const auto& pane : arrPanesTmp) {
+	
+	for (int nIndex = 0; const auto& pane : arrPanesTmp) {
 		this->PaneInfoSet(nIndex, pane);
 		++nIndex;
 	}

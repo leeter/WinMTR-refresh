@@ -5,7 +5,7 @@
 
 namespace utils {
 
-	void CWinMTRCommandLineParser::ParseParam(const TCHAR* pszParam, BOOL bFlag, BOOL bLast)
+	void CWinMTRCommandLineParser::ParseParam(const WCHAR* pszParam, BOOL bFlag, BOOL bLast)
 	{
 		UNREFERENCED_PARAMETER(bLast);
 		using namespace std::literals;
@@ -29,23 +29,19 @@ namespace utils {
 		}
 		wchar_t* end = nullptr;
 		switch (this->next) {
-			[[fallthrough]];
 		case expect_next::lru:
 			this->dlg.SetMaxLRU(std::wcstol(pszParam, &end, 10), WinMTRDialog::options_source::cmd_line);
-			goto reset;
-			[[fallthrough]];
+			break;
 		case expect_next::interval:
 			this->dlg.SetInterval(static_cast<float>(std::wcstof(pszParam, &end)), WinMTRDialog::options_source::cmd_line);
-			goto reset;
-		[[fallthrough]];
+			break;
 		case expect_next::ping_size:
 			this->dlg.SetPingSize(std::wcstol(pszParam, &end, 10), WinMTRDialog::options_source::cmd_line);
+			break;
 		default:
-reset:
-			this->next = expect_next::none;
 			break;
 		}
-
+		this->next = expect_next::none;
 	}
 
 	void CWinMTRCommandLineParser::ParseParam(const char* pszParam, BOOL bFlag, BOOL bLast)
