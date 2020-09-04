@@ -3,7 +3,7 @@
 class WinMTRDialog;
 
 namespace utils {
-    class CWinMTRCommandLineParser :
+    class CWinMTRCommandLineParser final :
         public CCommandLineInfo
     {
     public:

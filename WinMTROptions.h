@@ -22,20 +22,24 @@
 //
 //*****************************************************************************
 
-class WinMTROptions : public CDialog
+class WinMTROptions final : public CDialog
 {
 public:
 	WinMTROptions(CWnd* pParent = NULL);
 
-	void SetUseDNS(BOOL udns)		{ useDNS = udns;  };
-	void SetInterval(double i)		{ interval = i;   };
-	void SetPingSize(int ps)		{ pingsize = ps;  };
-	void SetMaxLRU(int mlru)		{ maxLRU = mlru;  };
+	inline void SetUseDNS(bool udns) noexcept { useDNS = udns;  };
+	inline void SetInterval(double i) noexcept { interval = i;   };
+	inline void SetPingSize(int ps) noexcept { pingsize = ps;  };
+	inline void SetMaxLRU(int mlru) noexcept { maxLRU = mlru;  };
+	inline void SetUseIPv4(bool uip4) noexcept { useIPv4 = uip4; }
+	inline void SetUseIPv6(bool uip6) noexcept { useIPv6 = uip6; }
 
-	double GetInterval()			{ return interval;   };
-	int GetPingSize()				{ return pingsize;   };
-	int GetMaxLRU()					{ return maxLRU;   };
-	BOOL GetUseDNS()				{ return useDNS;     };
+	inline auto GetInterval() const noexcept { return interval;   };
+	inline auto GetPingSize() const noexcept { return pingsize;   };
+	inline auto GetMaxLRU()	const noexcept { return maxLRU;   };
+	inline auto GetUseDNS() const noexcept { return useDNS; }
+	inline auto GetUseIPv4() const noexcept { return useIPv4; }
+	inline auto GetUseIPv6() const noexcept { return useIPv6; }
 
 	enum { IDD = IDD_DIALOG_OPTIONS };
 	CEdit	m_editSize;
@@ -58,7 +62,7 @@ private:
 	double   interval = 0.0;
 	int      pingsize = 0;
 	int		 maxLRU = 0;
-	BOOL     useDNS = FALSE;
+	bool     useDNS = false;
 	bool	 useIPv4 = true;
 	bool	 useIPv6 = true;
 	
