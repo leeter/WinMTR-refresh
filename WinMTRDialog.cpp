@@ -28,7 +28,7 @@ using namespace std::string_view_literals;
 static	 char THIS_FILE[] = __FILE__;
 #endif
 
-void PingThread(WinMTRDialog* wmtrdlg);
+
 
 namespace {
 	const auto config_key_name = LR"(Software\WinMTR\Config)";
@@ -68,21 +68,15 @@ END_MESSAGE_MAP()
 //*****************************************************************************
 WinMTRDialog::WinMTRDialog(CWnd* pParent)
 	: CDialog(WinMTRDialog::IDD, pParent),
+	interval(DEFAULT_INTERVAL),
 	state(STATES::IDLE),
-	transition(IDLE_TO_IDLE)
+	transition(STATE_TRANSITIONS::IDLE_TO_IDLE),
+	pingsize(DEFAULT_PING_SIZE),
+	maxLRU(DEFAULT_MAX_LRU),
+	useDNS(DEFAULT_DNS)
+
 {
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
-	m_autostart = 0;
-	useDNS = DEFAULT_DNS;
-	interval = DEFAULT_INTERVAL;
-	pingsize = DEFAULT_PING_SIZE;
-	maxLRU = DEFAULT_MAX_LRU;
-	nrLRU = 0;
-
-	hasIntervalFromCmdLine = false;
-	hasPingsizeFromCmdLine = false;
-	hasMaxLRUFromCmdLine = false;
-	hasUseDNSFromCmdLine = false;
 
 	wmtrnet = std::make_unique<WinMTRNet>(this);
 }
@@ -460,7 +454,7 @@ void WinMTRDialog::OnDblclkList(NMHDR* pNMHDR, LRESULT* pResult)
 //*****************************************************************************
 void WinMTRDialog::SetHostName(std::wstring host)
 {
-	m_autostart = 1;
+	m_autostart = true;
 	msz_defaulthostname = std::move(host);
 }
 
@@ -577,6 +571,8 @@ void WinMTRDialog::OnOptions()
 	optDlg.SetInterval(interval);
 	optDlg.SetMaxLRU(maxLRU);
 	optDlg.SetUseDNS(useDNS);
+	optDlg.SetUseIPv4(useIPv4);
+	optDlg.SetUseIPv6(useIPv6);
 
 	if(IDOK == optDlg.DoModal()) {
 
@@ -584,6 +580,8 @@ void WinMTRDialog::OnOptions()
 		interval = optDlg.GetInterval();
 		maxLRU = optDlg.GetMaxLRU();
 		useDNS = optDlg.GetUseDNS();
+		useIPv4 = optDlg.GetUseIPv4();
+		useIPv6 = optDlg.GetUseIPv6();
 
 		/*HKEY hKey;*/
 		DWORD tmp_dword;
@@ -870,84 +868,6 @@ int WinMTRDialog::InitMTRNet()
 	return 1;
 }
 
-
-//*****************************************************************************
-// PingThread
-//
-// 
-//*****************************************************************************
-void PingThread(WinMTRDialog* wmtrdlg)
-{
-
-	std::unique_lock lock(wmtrdlg->traceThreadMutex);
-
-	wchar_t strtmp[255];
-	const wchar_t *Hostname = strtmp;
-	SOCKADDR_STORAGE addrstore = {};
-	wmtrdlg->m_comboHost.GetWindowTextW(strtmp, gsl::narrow_cast<int>(std::size(strtmp)));
-   	
-	if (Hostname == nullptr) Hostname = L"localhost";
-	SOCKADDR_IN addrv4 = {};
-	INT addr4Size = sizeof(addrv4);
-	
-	if (auto fourRes = WSAStringToAddressW(strtmp, AF_INET, nullptr, (LPSOCKADDR)&addrv4, &addr4Size); !fourRes) {
-		memcpy(&addrstore, &addrv4, addr4Size);
-		wmtrdlg->wmtrnet->DoTrace(*reinterpret_cast<LPSOCKADDR>(&addrstore));
-		return;
-	}
-
-	SOCKADDR_IN6 addrv6 = {};
-	INT addr6Size = sizeof(addrv6);
-	
-	if (auto sixRes = WSAStringToAddressW(strtmp, AF_INET6, nullptr, (LPSOCKADDR)&addrv6, &addr6Size); !sixRes) {
-		memcpy(&addrstore, &addrv6, addr6Size);
-		wmtrdlg->wmtrnet->DoTrace(*reinterpret_cast<LPSOCKADDR>(&addrstore));
-		return;
-	}
-
-	PADDRINFOW out = nullptr;
-	ADDRINFOW hint = {};
-	hint.ai_family = AF_INET | AF_INET6;
-	if (auto result = GetAddrInfoW(Hostname, nullptr, &hint, &out); result) {
-		if (out) {
-			FreeAddrInfoW(out);
-		}
-		AfxMessageBox(L"Unable to resolve address.");
-		return;
-	}
-	memcpy(&addrstore, out->ai_addr, out->ai_addrlen);
-	FreeAddrInfoW(out);
-
-
-	/*if(!isIP) {
-		
-	}
-	else {
-		INT addrsize = sizeof(addrstore);
-		if (auto result =
-			WSAStringToAddressW(Hostname, AF_INET, nullptr, reinterpret_cast<LPSOCKADDR>(&addrstore), &addrsize); !result)
-		{
-			
-		}
-		else {
-			WSAStringToAddressW(Hostname, AF_INET6, nullptr, reinterpret_cast<LPSOCKADDR>(&addrstore), &addrsize);
-		}
-
-	}*/
-      
-
-	/*auto lhost = gethostbyname("localhost");
-	if(lhost == NULL) {
-      AfxMessageBox(L"Unable to get local IP address.");
-      return;
-	}*/
-	//localaddr = *(int *)lhost->h_addr;
-	
-	wmtrdlg->wmtrnet->DoTrace(*reinterpret_cast<LPSOCKADDR>(&addrstore));
-}
-
-
-
 void WinMTRDialog::OnCbnSelchangeComboHost()
 {
 }
@@ -972,6 +892,64 @@ void WinMTRDialog::ClearHistory()
 	m_comboHost.AddString(CString((LPCSTR)IDS_STRING_CLEAR_HISTORY));
 }
 
+winrt::Windows::Foundation::IAsyncAction WinMTRDialog::pingThread()
+{
+	if (tracing.exchange(true)) {
+		throw new std::runtime_error("Tracing started twice!");
+	}
+	auto finally = gsl::finally([this] {
+		this->tracing = false;
+	});
+
+	wchar_t strtmp[255];
+	const wchar_t* Hostname = strtmp;
+	SOCKADDR_STORAGE addrstore = {};
+	this->m_comboHost.GetWindowTextW(strtmp, gsl::narrow_cast<int>(std::size(strtmp)));
+
+	if (Hostname == nullptr) {
+		Hostname = L"localhost";
+	}
+
+	auto cancellation = co_await winrt::get_cancellation_token();
+
+	for (auto af : { AF_INET, AF_INET6 }) {
+		INT addrSize = sizeof(addrstore);
+		if (auto res = WSAStringToAddressW(
+			strtmp
+			, af
+			, nullptr
+			, reinterpret_cast<LPSOCKADDR>(&addrstore)
+			, &addrSize);
+			!res) {
+			co_await MakeCancellable(this->wmtrnet->DoTrace(*reinterpret_cast<LPSOCKADDR>(&addrstore)), cancellation);
+			co_return;
+		}
+	}
+
+	PADDRINFOW out = nullptr;
+	ADDRINFOW hint = { .ai_family = (this->useIPv4 ? AF_INET : 0) | (this->useIPv6 ? AF_INET6 : 0) };
+	assert(hint.ai_family != 0);
+	
+	if (const auto result = GetAddrInfoW(Hostname, nullptr, &hint, &out); result) {
+		if (out) {
+			FreeAddrInfoW(out);
+		}
+		AfxMessageBox(L"Unable to resolve address.");
+		co_return;
+	}
+	std::memcpy(&addrstore, out->ai_addr, out->ai_addrlen);
+	FreeAddrInfoW(out);
+	co_await MakeCancellable(this->wmtrnet->DoTrace(*reinterpret_cast<LPSOCKADDR>(&addrstore)), cancellation);
+}
+
+winrt::fire_and_forget WinMTRDialog::stopTrace()
+{
+	if (this->tracer) {
+		co_await *context;
+		tracer->Cancel();
+	}
+}
+
 void WinMTRDialog::OnCbnSelendokComboHost()
 {
 }
@@ -990,10 +968,10 @@ void WinMTRDialog::Transit(STATES new_state)
 	case STATES::IDLE:
 			switch (state) {
 			case STATES::STOPPING:
-					transition = STOPPING_TO_IDLE;
+					transition = STATE_TRANSITIONS::STOPPING_TO_IDLE;
 				break;
 			case STATES::IDLE:
-					transition = IDLE_TO_IDLE;
+					transition = STATE_TRANSITIONS::IDLE_TO_IDLE;
 				break;
 				default:
 					TRACE_MSG( L"Received state IDLE after " << static_cast<int>(state));
@@ -1004,10 +982,10 @@ void WinMTRDialog::Transit(STATES new_state)
 	case STATES::TRACING:
 			switch (state) {
 				case STATES::IDLE:
-					transition = IDLE_TO_TRACING;
+					transition = STATE_TRANSITIONS::IDLE_TO_TRACING;
 				break;
 				case STATES::TRACING:
-					transition = TRACING_TO_TRACING;
+					transition = STATE_TRANSITIONS::TRACING_TO_TRACING;
 				break;
 				default:
 					TRACE_MSG(L"Received state TRACING after " << static_cast<int>(state));
@@ -1018,10 +996,10 @@ void WinMTRDialog::Transit(STATES new_state)
 		case STATES::STOPPING:
 			switch (state) {
 				case STATES::STOPPING:
-					transition = STOPPING_TO_STOPPING;
+					transition = STATE_TRANSITIONS::STOPPING_TO_STOPPING;
 				break;
 				case STATES::TRACING:
-					transition = TRACING_TO_STOPPING;
+					transition = STATE_TRANSITIONS::TRACING_TO_STOPPING;
 				break;
 				default:
 					TRACE_MSG(L"Received state STOPPING after " << static_cast<int>(state));
@@ -1032,13 +1010,13 @@ void WinMTRDialog::Transit(STATES new_state)
 		case STATES::EXIT:
 			switch (state) {
 				case STATES::IDLE:
-					transition = IDLE_TO_EXIT;
+					transition = STATE_TRANSITIONS::IDLE_TO_EXIT;
 				break;
 				case STATES::STOPPING:
-					transition = STOPPING_TO_EXIT;
+					transition = STATE_TRANSITIONS::STOPPING_TO_EXIT;
 				break;
 				case STATES::TRACING:
-					transition = TRACING_TO_EXIT;
+					transition = STATE_TRANSITIONS::TRACING_TO_EXIT;
 				break;
 				case STATES::EXIT:
 				break;
@@ -1049,27 +1027,45 @@ void WinMTRDialog::Transit(STATES new_state)
 			state = STATES::EXIT;
 		break;
 		default:
-			TRACE_MSG(L"Received state " << static_cast<int>(state));
+			TRACE_MSG(L"Received state " << static_cast<std::underlying_type_t<STATES>>(state));
 	}
 
 	// modify controls according to new state
 	switch(transition) {
-		case IDLE_TO_TRACING:
+		case STATE_TRANSITIONS::IDLE_TO_TRACING:
 			m_buttonStart.EnableWindow(FALSE);
 			m_buttonStart.SetWindowText(L"Stop");
 			m_comboHost.EnableWindow(FALSE);
 			m_buttonOptions.EnableWindow(FALSE);
 			statusBar.SetPaneText(0, L"Double click on host name for more information.");
 			{
-				std::thread pingThread(PingThread, this);
-				pingThread.detach();
+				// using a different thread to create an MTA so we don't have explosion issues with the
+				// thread pool
+				auto thread = std::thread([this] {
+					winrt::init_apartment(winrt::apartment_type::multi_threaded);
+					try {
+						this->context = winrt::apartment_context();
+						this->tracer = this->pingThread();
+						// keep the thread alive
+						tracer->get();
+					}
+					catch (winrt::hresult_canceled const&) {
+						// don't care this happens
+					}
+					catch (winrt::hresult_illegal_method_call const&){
+						// don't care this happens
+					}
+					this->tracer.reset();
+					this->context.reset();
+					});
+				thread.detach();
 			}
 			m_buttonStart.EnableWindow(TRUE);
 		break;
-		case IDLE_TO_IDLE:
+		case STATE_TRANSITIONS::IDLE_TO_IDLE:
 			// nothing to be done
 		break;
-		case STOPPING_TO_IDLE:
+		case STATE_TRANSITIONS::STOPPING_TO_IDLE:
 			m_buttonStart.EnableWindow(TRUE);
 			statusBar.SetPaneText(0, CString((LPCSTR)IDS_STRING_SB_NAME) );
 			m_buttonStart.SetWindowText(L"Start");
@@ -1077,39 +1073,40 @@ void WinMTRDialog::Transit(STATES new_state)
 			m_buttonOptions.EnableWindow(TRUE);
 			m_comboHost.SetFocus();
 		break;
-		case STOPPING_TO_STOPPING:
+		case STATE_TRANSITIONS::STOPPING_TO_STOPPING:
 			DisplayRedraw();
 		break;
-		case TRACING_TO_TRACING:
+		case STATE_TRANSITIONS::TRACING_TO_TRACING:
 			DisplayRedraw();
 		break;
-		case TRACING_TO_STOPPING:
+		case STATE_TRANSITIONS::TRACING_TO_STOPPING:
 			m_buttonStart.EnableWindow(FALSE);
 			m_comboHost.EnableWindow(FALSE);
 			m_buttonOptions.EnableWindow(FALSE);
-			wmtrnet->StopTrace();
+			this->stopTrace();
+			//wmtrnet->StopTrace();
 			statusBar.SetPaneText(0, L"Waiting for last packets in order to stop trace ...");
 			DisplayRedraw();
 		break;
-		case IDLE_TO_EXIT:
+		case STATE_TRANSITIONS::IDLE_TO_EXIT:
 			m_buttonStart.EnableWindow(FALSE);
 			m_comboHost.EnableWindow(FALSE);
 			m_buttonOptions.EnableWindow(FALSE);
 		break;
-		case TRACING_TO_EXIT:
+		case STATE_TRANSITIONS::TRACING_TO_EXIT:
 			m_buttonStart.EnableWindow(FALSE);
 			m_comboHost.EnableWindow(FALSE);
 			m_buttonOptions.EnableWindow(FALSE);
-			wmtrnet->StopTrace();
+			this->stopTrace();
 			statusBar.SetPaneText(0, L"Waiting for last packets in order to stop trace ...");
 		break;
-		case STOPPING_TO_EXIT:
+		case STATE_TRANSITIONS::STOPPING_TO_EXIT:
 			m_buttonStart.EnableWindow(FALSE);
 			m_comboHost.EnableWindow(FALSE);
 			m_buttonOptions.EnableWindow(FALSE);
 		break;
 		default:
-			TRACE_MSG("Unknown transition " << transition);
+			TRACE_MSG("Unknown transition " << static_cast<std::underlying_type_t<STATE_TRANSITIONS>>(transition));
 	}
 }
 
@@ -1118,14 +1115,15 @@ void WinMTRDialog::OnTimer(UINT_PTR nIDEvent)
 {
 	static unsigned int call_count = 0;
 	call_count += 1;
-	std::unique_lock lock(traceThreadMutex, std::try_to_lock);
-	if(state == STATES::EXIT && lock) {
+	//std::unique_lock lock(traceThreadMutex, std::try_to_lock);
+	const bool is_tracing = tracing;
+	if(state == STATES::EXIT && !is_tracing) {
 		OnOK();
 	}
 
-	if(lock) {
+	if(!is_tracing) {
 		Transit(STATES::IDLE);
-	} else if( (call_count % 10 == 0) && !lock) {
+	} else if( (call_count % 10 == 0)) {
 		if( state == STATES::TRACING) Transit(STATES::TRACING);
 		else if( state == STATES::STOPPING) Transit(STATES::STOPPING);
 	}

@@ -62,15 +62,15 @@ struct trace_thread;
 //
 //*****************************************************************************
 
-class WinMTRNet {
+class WinMTRNet final{
 
 public:
 
-	WinMTRNet(WinMTRDialog *wp);
+	WinMTRNet(const WinMTRDialog *wp);
 	~WinMTRNet() noexcept;
-	void	DoTrace(sockaddr &address);
-	void	ResetHops();
-	void	StopTrace() noexcept;
+	winrt::Windows::Foundation::IAsyncAction	DoTrace(sockaddr& address);
+	void	ResetHops() noexcept;
+	//winrt::fire_and_forget	StopTrace() noexcept;
 
 	SOCKADDR_STORAGE GetAddr(int at);
 	std::wstring GetName(int at);
@@ -82,12 +82,21 @@ public:
 	int		GetReturned(int at);
 	int		GetXmit(int at);
 	int		GetMax();
-	double	GetInterval() const noexcept;
-	
-	bool	GetIsTracing() const noexcept {
-		return tracing;
-	}
-	int	GetPingSize() const noexcept;
+
+private:
+	std::array<s_nethost, MaxHost>	host;
+	SOCKADDR_STORAGE last_remote_addr;
+	std::recursive_mutex	ghMutex;
+	const WinMTRDialog* wmtrdlg;
+	winmtr::helper::WSAHelper wsaHelper;
+	std::atomic_bool	tracing;
+	std::optional<winrt::Windows::Foundation::IAsyncAction> tracer;
+	std::optional<winrt::apartment_context> context;
+	winrt::Windows::Foundation::IAsyncAction handleICMPv4(trace_thread& current);
+	winrt::Windows::Foundation::IAsyncAction handleICMPv6(trace_thread& current);
+	//winrt::Windows::Foundation::IAsyncAction DoTraceInternal(sockaddr& address);
+	void handleDefault(const trace_thread& current, ULONG status);
+	concurrency::task<void> sleepTilInterval(ULONG roundTripTime);
 
 	void	SetAddr(int at, sockaddr& addr);
 	void	SetName(int at, std::wstring n);
@@ -96,20 +105,6 @@ public:
 	void	SetLast(int at, int last);
 	void	AddReturned(int at);
 	void	AddXmit(int at);
-
-	
-private:
-	std::array<s_nethost, MaxHost>	host;
-	std::vector<std::unique_ptr<trace_thread>> traces;
-	SOCKADDR_STORAGE last_remote_addr;
-	std::recursive_mutex	ghMutex;
-	WinMTRDialog* wmtrdlg;
-	winmtr::helper::WSAHelper wsaHelper;
-	std::atomic_bool	tracing;
-	void handleICMPv4(trace_thread& current);
-	void handleICMPv6(trace_thread& current);
-	void handleDefault(const trace_thread& current, ULONG status);
-	void sleepTilInterval(ULONG roundTripTime);
 };
 
 #endif	// ifndef WINMTRNET_H_

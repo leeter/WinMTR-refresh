@@ -21,6 +21,7 @@
 #define VC_EXTRALEAN
 #define WIN32_LEAN_AND_MEAN
 
+#include <version>
 #include <algorithm>
 #include <array>
 #include <iostream>
@@ -38,7 +39,15 @@
 #include <iostream>
 #include <span>
 #include <cstdint>
+#include <concepts>
 #include <ranges>
+#ifdef __has_include                           // Check if __has_include is present
+#  if __has_include(<coroutine>)                // Check for a standard library
+#include <coroutine>
+#  else
+#include <experimental/coroutine>
+#  endif
+#endif
 
 
 #include <winrt/Windows.ApplicationModel.DataTransfer.h>
@@ -55,6 +64,7 @@
 #include <ip2string.h>
 #include <ppl.h>
 #include <ppltasks.h>
+#include <pplawait.h>
 
 #define WINMTR_VERSION	L"0.9"
 #define WINMTR_LICENSE	L"GPL - GNU Public License"
@@ -110,5 +120,12 @@ const wchar_t MTR_COLS[ MTR_NR_COLS ][10] = {
 const int MTR_COL_LENGTH[ MTR_NR_COLS ] = {
 		190, 30, 50, 40, 40, 50, 50, 50, 50
 };
+
+template<typename Async, typename Token>
+std::decay_t<Async> MakeCancellable(Async&& async, Token&& token)
+{
+	token.callback([async] { async.Cancel(); });
+	return std::forward<Async>(async);
+}
 
 #endif // ifndef WINMTR_GLOBAL_H_

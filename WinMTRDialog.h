@@ -29,7 +29,7 @@
 //
 //*****************************************************************************
 
-class WinMTRDialog : public CDialog
+class WinMTRDialog final: public CDialog
 {
 public:
 	WinMTRDialog(CWnd* pParent = NULL);
@@ -45,14 +45,14 @@ public:
 	WinMTRStatusBar	statusBar;
 
 	enum class STATES {
-		IDLE,
+		IDLE = 0,
 		TRACING,
 		STOPPING,
 		EXIT
 	};
 
-	enum STATE_TRANSITIONS {
-		IDLE_TO_IDLE,
+	enum class STATE_TRANSITIONS {
+		IDLE_TO_IDLE = 0,
 		IDLE_TO_TRACING,
 		IDLE_TO_EXIT,
 		TRACING_TO_TRACING,
@@ -63,6 +63,14 @@ public:
 		STOPPING_TO_EXIT
 	};
 
+	
+	
+	int InitMTRNet();
+
+	int DisplayRedraw();
+	void Transit(STATES new_state);
+
+private:
 	CButton	m_buttonOptions;
 	CButton	m_buttonExit;
 	CButton	m_buttonStart;
@@ -74,25 +82,32 @@ public:
 
 	CButton	m_buttonExpT;
 	CButton	m_buttonExpH;
-	
-	int InitMTRNet();
-
-	int DisplayRedraw();
-	void Transit(STATES new_state);
-
+	std::wstring msz_defaulthostname;
+	//std::recursive_mutex			traceThreadMutex;
+	std::unique_ptr<WinMTRNet>			wmtrnet;
+	std::optional<winrt::Windows::Foundation::IAsyncAction> tracer;
+	std::optional<winrt::apartment_context> context;
+	HICON m_hIcon;
+	double				interval;
 	STATES				state;
 	STATE_TRANSITIONS	transition;
-	std::recursive_mutex			traceThreadMutex; 
-	double				interval;
-	bool				hasIntervalFromCmdLine;
 	int					pingsize;
-	bool				hasPingsizeFromCmdLine;
 	int					maxLRU;
-	bool				hasMaxLRUFromCmdLine;
-	int					nrLRU;
+	int					nrLRU = 0;
+	bool				m_autostart = false;
+	bool				hasPingsizeFromCmdLine = false;
+	bool				hasMaxLRUFromCmdLine = false;
+	bool				hasIntervalFromCmdLine = false;
 	bool				useDNS;
-	bool				hasUseDNSFromCmdLine;
-	std::unique_ptr<WinMTRNet>			wmtrnet;
+	bool				hasUseDNSFromCmdLine = false;
+	bool				useIPv4 = true;
+	bool				useIPv6 = true;
+	std::atomic_bool	tracing = false;
+
+	void ClearHistory();
+	winrt::Windows::Foundation::IAsyncAction pingThread();
+	winrt::fire_and_forget stopTrace();
+public:
 
 	void SetHostName(std::wstring host);
 	void SetInterval(float i, options_source fromCmdLine = options_source::none) noexcept;
@@ -100,13 +115,12 @@ public:
 	void SetMaxLRU(int mlru, options_source fromCmdLine = options_source::none) noexcept;
 	void SetUseDNS(bool udns, options_source fromCmdLine = options_source::none) noexcept;
 
+	inline auto getInterval() const noexcept { return interval; }
+	inline auto getPingSize() const noexcept { return pingsize; }
+	inline auto getUseDNS() const noexcept { return useDNS; }
+
 protected:
 	virtual void DoDataExchange(CDataExchange* pDX);
-
-	int m_autostart;
-	std::wstring msz_defaulthostname;
-	
-	HICON m_hIcon;
 
 	virtual BOOL OnInitDialog();
 	afx_msg void OnPaint();
@@ -128,9 +142,6 @@ protected:
 public:
 	afx_msg void OnCbnSelchangeComboHost();
 	afx_msg void OnCbnSelendokComboHost();
-private:
-	void ClearHistory();
-public:
 	afx_msg void OnCbnCloseupComboHost();
 	afx_msg void OnTimer(UINT_PTR nIDEvent);
 	afx_msg void OnClose();
