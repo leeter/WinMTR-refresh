@@ -105,6 +105,7 @@
       <AdditionalOptions>/Zc:noexceptTypes /Zc:throwingNew /await %(AdditionalOptions)</AdditionalOptions>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <EnableEnhancedInstructionSet>AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
     </ClCompile>
     <Midl>
       <SuppressStartupBanner>true</SuppressStartupBanner>
@@ -152,6 +153,7 @@
       <AdditionalOptions>/Zc:noexceptTypes /Zc:throwingNew /await %(AdditionalOptions)</AdditionalOptions>
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
       <IntrinsicFunctions>true</IntrinsicFunctions>
+      <EnableEnhancedInstructionSet>AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
     </ClCompile>
     <Midl>
       <SuppressStartupBanner>true</SuppressStartupBanner>
@@ -198,6 +200,7 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>WinMTRGlobal.h</PrecompiledHeaderFile>
       <AdditionalOptions>/Zc:noexceptTypes /Zc:throwingNew /await %(AdditionalOptions)</AdditionalOptions>
+      <EnableEnhancedInstructionSet>AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
     </ClCompile>
     <Midl>
       <SuppressStartupBanner>true</SuppressStartupBanner>
@@ -244,6 +247,7 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>WinMTRGlobal.h</PrecompiledHeaderFile>
       <AdditionalOptions>/Zc:noexceptTypes /Zc:throwingNew /await %(AdditionalOptions)</AdditionalOptions>
+      <EnableEnhancedInstructionSet>AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
     </ClCompile>
     <Midl>
       <SuppressStartupBanner>true</SuppressStartupBanner>
@@ -282,6 +286,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="WinMTRLicense.cpp" />
+    <ClCompile Include="WinMTRLogging.cpp" />
     <ClCompile Include="WinMTRStatusBar.cpp" />
     <ClCompile Include="WinMTRDialog.cpp" />
     <ClCompile Include="WinMTRHelp.cpp" />
@@ -294,6 +299,7 @@
     <ClInclude Include="CWinMTRCommandLineParser.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="WinMTRLicense.h" />
+    <ClInclude Include="WinMTRLogging.h" />
     <ClInclude Include="WinMTRStatusBar.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="WinMTRDialog.h" />

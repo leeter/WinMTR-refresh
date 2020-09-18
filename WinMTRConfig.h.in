@@ -1,0 +1,4 @@
+#pragma once
+// the configured options and settings for Tutorial
+#define WinMTR_VERSION_MAJOR @WinMTR_VERSION_MAJOR@
+#define WinMTR_VERSION_MINOR @WinMTR_VERSION_MINOR@

@@ -32,7 +32,6 @@
 #include <cwchar>
 #include <fstream>
 #include <sstream>
-#include <thread>
 #include <vector>
 #include <compare>
 #include <gsl/gsl>
@@ -41,6 +40,7 @@
 #include <cstdint>
 #include <concepts>
 #include <ranges>
+
 #ifdef __has_include                           // Check if __has_include is present
 #  if __has_include(<coroutine>)                // Check for a standard library
 #include <coroutine>
@@ -51,6 +51,7 @@
 
 
 #include <winrt/Windows.ApplicationModel.DataTransfer.h>
+#include <winrt/Windows.Foundation.Diagnostics.h>
 #include <afxwin.h>
 #include <afxext.h>
 #include <afxdisp.h>

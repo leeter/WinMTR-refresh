@@ -53,7 +53,7 @@ constexpr auto ECHO_REPLY_TIMEOUT = 5000;
 		}
 
 		[[nodiscard]]
-		inline static Type GetInvalidValue() noexcept
+		inline static constexpr Type GetInvalidValue() noexcept
 		{
 			return INVALID_HANDLE_VALUE;
 		}
@@ -78,16 +78,25 @@ constexpr auto ECHO_REPLY_TIMEOUT = 5000;
 
 		}
 
+		bool await_ready() const noexcept
+		{
+			return false;
+		}
+
 		static void NTAPI callback(IN PVOID ApcContext,
 			IN PIO_STATUS_BLOCK IoStatusBlock,
-			IN ULONG Reserved) {
+			IN ULONG Reserved) noexcept {
 			UNREFERENCED_PARAMETER(Reserved);
 			auto context = static_cast<awaitable_base*>(ApcContext);
-			context->m_result = IoStatusBlock;
-			context->m_resume();
+			concurrency::create_task([=] {
+				context->m_result = IoStatusBlock;
+				context->m_resume();
+			}, context->m_context);
+			
 		}
 
 	protected:
+		concurrency::task_continuation_context m_context = concurrency::task_continuation_context::get_current_winrt_context();
 		PIO_STATUS_BLOCK m_result = nullptr;
 		coro_handle m_resume{ nullptr };
 		std::span<std::byte> m_reqData;
@@ -97,33 +106,33 @@ constexpr auto ECHO_REPLY_TIMEOUT = 5000;
 
 	};
 
-	struct icmp_ping4 : awaitable_base
+	struct icmp_ping4 final : awaitable_base
 	{
-#ifdef __has_include                           // Check if __has_include is present
-#  if __has_include(<coroutine>)                // Check for a standard library
-		using coro_handle = std::coroutine_handle<>;
-#  else
-		using coro_handle = std::experimental::coroutine_handle<>;
-#  endif
-#endif
+		static constexpr auto reply_reply_buffer_size(unsigned requestSize) {
+			return sizeof(ICMP_ECHO_REPLY) + 8 + sizeof(IO_STATUS_BLOCK) + requestSize;
+		}
+
 		icmp_ping4(HANDLE icmpHandle, IPAddr addr, UCHAR ttl, std::span<std::byte> requestData, std::span<std::byte> replyData)
 			:awaitable_base(icmpHandle, ttl, requestData, replyData)
 			, m_addr(addr)
 		{
 		}
 
-		bool await_ready() const noexcept
-		{
-			return false;
-		}
-
-		void await_suspend(coro_handle resume_handle)
+		void await_suspend(awaitable_base::coro_handle resume_handle)
 		{
 			m_resume = resume_handle;
 			IP_OPTION_INFORMATION	stIPInfo = {
 				.Ttl = m_ttl,
 				.Flags = IP_FLAG_DF
 			};
+
+			// NOTE: some servers does not respond back everytime, if TTL expires in transit; e.g. :
+			// ping -n 20 -w 5000 -l 64 -i 7 www.chinapost.com.tw  -> less that half of the replies are coming back from 219.80.240.93
+			// but if we are pinging ping -n 20 -w 5000 -l 64 219.80.240.93  we have 0% loss
+			// A resolution would be:
+			// - as soon as we get a hop, we start pinging directly that hop, with a greater TTL
+			// - a drawback would be that, some servers are configured to reply for TTL transit expire, but not to ping requests, so,
+			// for these servers we'll have 100% loss
 			const auto io_res = IcmpSendEcho2(
 				m_handle
 				, nullptr
@@ -131,18 +140,18 @@ constexpr auto ECHO_REPLY_TIMEOUT = 5000;
 				, this
 				, m_addr
 				, m_reqData.data()
-				, gsl::narrow_cast<DWORD>(m_reqData.size())
+				, gsl::narrow<WORD>(m_reqData.size())
 				, &stIPInfo
 				, m_replyData.data()
 				, gsl::narrow_cast<DWORD>(m_replyData.size())
 				, ECHO_REPLY_TIMEOUT);
 
-			if (auto err = GetLastError(); err != ERROR_IO_PENDING) {
+			if (const auto err = GetLastError(); err != ERROR_IO_PENDING) {
 				throw std::system_error(err, std::system_category());
 			}
 		}
 
-		int await_resume() const noexcept
+		auto await_resume() const noexcept
 		{
 			const auto replySize = gsl::narrow_cast<DWORD>(m_result->Information);
 			return IcmpParseReplies(m_replyData.data(), replySize);
@@ -151,15 +160,75 @@ constexpr auto ECHO_REPLY_TIMEOUT = 5000;
 	private:
 		IPAddr m_addr;
 	};
+
+	struct icmp_ping6 final : awaitable_base
+	{
+
+		static constexpr auto reply_reply_buffer_size(unsigned requestSize) {
+			return sizeof(ICMPV6_ECHO_REPLY) + 8 + sizeof(IO_STATUS_BLOCK) + requestSize;
+		}
+
+		icmp_ping6(HANDLE icmpHandle, sockaddr_in6* addr, UCHAR ttl, std::span<std::byte> requestData, std::span<std::byte> replyData)
+			:awaitable_base(icmpHandle, ttl, requestData, replyData)
+			, m_addr(addr)
+		{
+		}
+
+		void await_suspend(awaitable_base::coro_handle resume_handle)
+		{
+			m_resume = resume_handle;
+			IP_OPTION_INFORMATION	stIPInfo = {
+				.Ttl = m_ttl,
+				.Flags = IP_FLAG_DF
+			};
+			SOCKADDR_IN6 local = { .sin6_family = AF_INET6, .sin6_addr = in6addr_any };
+
+			// NOTE: some servers does not respond back everytime, if TTL expires in transit; e.g. :
+			// ping -n 20 -w 5000 -l 64 -i 7 www.chinapost.com.tw  -> less that half of the replies are coming back from 219.80.240.93
+			// but if we are pinging ping -n 20 -w 5000 -l 64 219.80.240.93  we have 0% loss
+			// A resolution would be:
+			// - as soon as we get a hop, we start pinging directly that hop, with a greater TTL
+			// - a drawback would be that, some servers are configured to reply for TTL transit expire, but not to ping requests, so,
+			// for these servers we'll have 100% loss
+			const auto io_res = Icmp6SendEcho2(
+				m_handle
+				, nullptr
+				, &awaitable_base::callback
+				, this
+				, &local
+				, m_addr
+				, m_reqData.data()
+				, gsl::narrow<WORD>(m_reqData.size())
+				, &stIPInfo
+				, m_replyData.data()
+				, gsl::narrow_cast<DWORD>(m_replyData.size())
+				, ECHO_REPLY_TIMEOUT);
+
+			if (const auto err = GetLastError(); err != ERROR_IO_PENDING) {
+				throw std::system_error(err, std::system_category());
+			}
+		}
+
+		auto await_resume() const noexcept
+		{
+			const auto replySize = gsl::narrow_cast<DWORD>(m_result->Information);
+			return Icmp6ParseReplies(m_replyData.data(), replySize);
+		}
+
+	private:
+		sockaddr_in6* m_addr;
+	};
 }
 
 using namespace std::chrono_literals;
 struct trace_thread {
+	trace_thread(const trace_thread&) = delete;
+	trace_thread(trace_thread&&) = default;
+
 	trace_thread(ADDRESS_FAMILY af, WinMTRNet* winmtr, UCHAR ttl)
 		:
 		address(),
 		winmtr(winmtr),
-		//timer(static_cast<unsigned int>((winmtr->GetInterval() * 1000ms).count()), this, nullptr, true),
 		ttl(ttl)
 	{
 		if (af == AF_INET) {
@@ -184,7 +253,7 @@ WinMTRNet::WinMTRNet(const WinMTRDialog* wp)
 	wsaHelper(MAKEWORD(2, 2)),
 	tracing(false) {
 
-	if (!wsaHelper) {
+	if (!wsaHelper) [[unlikely]] {
 		AfxMessageBox(IDP_SOCKETS_INIT_FAILED);
 		return;
 	}
@@ -274,35 +343,21 @@ concurrency::task<void> WinMTRNet::sleepTilInterval(ULONG roundTripTime) {
 }
 
 
-winrt::Windows::Foundation::IAsyncAction WinMTRNet::handleICMPv6(trace_thread& current) {
+winrt::Windows::Foundation::IAsyncAction WinMTRNet::handleICMPv6(trace_thread current) {
 	trace_thread mine = std::move(current);
 	co_await winrt::resume_background();
 	using namespace std::string_view_literals;
-	const int				nDataLen = this->wmtrdlg->getPingSize();
+	const auto				nDataLen = this->wmtrdlg->getPingSize();
 	std::vector<std::byte>	achReqData(nDataLen, static_cast<std::byte>(32)); //whitespaces
-	std::vector<std::byte> achRepData(sizeof(ICMPV6_ECHO_REPLY) + nDataLen + 8 + sizeof(IO_STATUS_BLOCK));
+	std::vector<std::byte> achRepData(icmp_ping6::reply_reply_buffer_size(nDataLen));
 
-	/*
-	 * Init IPInfo structure
-	 */
-	IP_OPTION_INFORMATION	stIPInfo = {};
-	stIPInfo.Ttl = mine.ttl;
-	stIPInfo.Flags = IP_FLAG_DF;
 	SOCKADDR_IN6* addr = reinterpret_cast<SOCKADDR_IN6*>(&mine.address);
-	wrl::Wrappers::Event wait_event(CreateEventW(nullptr, FALSE, FALSE, nullptr));
-	if (!wait_event.IsValid()) {
-		AfxMessageBox(L"Unable to Create wait event");
-		co_return;
-	}
 
 	
 	auto cancellation = co_await winrt::get_cancellation_token();
-	cancellation.callback([wait_event = wait_event.Get()] {
-		SetEvent(wait_event);
-	});
 
 	while (this->tracing) {
-		if (cancellation())
+		if (cancellation()) [[unlikely]]
 		{
 			co_return;
 		}
@@ -317,41 +372,16 @@ winrt::Windows::Foundation::IAsyncAction WinMTRNet::handleICMPv6(trace_thread& c
 		// - as soon as we get a hop, we start pinging directly that hop, with a greater TTL
 		// - a drawback would be that, some servers are configured to reply for TTL transit expire, but not to ping requests, so,
 		// for these servers we'll have 100% loss
-		SOCKADDR_IN6 local = { .sin6_family = AF_INET6, .sin6_addr = in6addr_any };
-		const auto io_res = Icmp6SendEcho2(
-			mine.icmpHandle.Get()
-			,wait_event.Get()
-			,nullptr
-			,nullptr
-			,&local
-			,addr
-			,achReqData.data()
-			,nDataLen
-			,&stIPInfo
-			,achRepData.data()
-			,gsl::narrow_cast<DWORD>(achRepData.size())
-			,ECHO_REPLY_TIMEOUT);
-		if (auto err = GetLastError(); err != ERROR_IO_PENDING) {
-			co_return;
-		}
-		bool res = false;
-		while (!res) {
-			res = co_await winrt::resume_on_signal(wait_event.Get(), 1s);
-			if (cancellation()) {
-				co_return;
-			}
-		}
 
-		
+		const auto dwReplyCount = co_await icmp_ping6(mine.icmpHandle.Get(), addr, mine.ttl, achReqData, achRepData);
 		this->AddXmit(mine.ttl - 1);
-		if (const auto dwReplyCount = Icmp6ParseReplies(achRepData.data()
-			, gsl::narrow_cast<DWORD>(achRepData.size())); dwReplyCount != 0) {
+		if(dwReplyCount){
 
 			PICMPV6_ECHO_REPLY icmp_echo_reply = reinterpret_cast<PICMPV6_ECHO_REPLY>(achRepData.data());
 			TRACE_MSG(L"TTL "sv << mine.ttl << L" Status "sv << icmp_echo_reply->Status << L" Reply count "sv << dwReplyCount);
 			switch (icmp_echo_reply->Status) {
 			case IP_SUCCESS:
-			case IP_TTL_EXPIRED_TRANSIT:
+			[[likely]] case IP_TTL_EXPIRED_TRANSIT:
 				this->SetLast(mine.ttl - 1, icmp_echo_reply->RoundTripTime);
 				this->SetBest(mine.ttl - 1, icmp_echo_reply->RoundTripTime);
 				this->SetWorst(mine.ttl - 1, icmp_echo_reply->RoundTripTime);
@@ -371,36 +401,18 @@ winrt::Windows::Foundation::IAsyncAction WinMTRNet::handleICMPv6(trace_thread& c
 	}
 }
 
-winrt::Windows::Foundation::IAsyncAction WinMTRNet::handleICMPv4(trace_thread& current) {
+winrt::Windows::Foundation::IAsyncAction WinMTRNet::handleICMPv4(trace_thread current) {
 	trace_thread mine = std::move(current);
 	co_await winrt::resume_background();
 	using namespace std::string_view_literals;
-	const int				nDataLen = this->wmtrdlg->getPingSize();
+	const auto				nDataLen = this->wmtrdlg->getPingSize();
 	std::vector<std::byte>	achReqData(nDataLen, static_cast<std::byte>(32)); //whitespaces
-	std::vector<std::byte> achRepData(sizeof(ICMP_ECHO_REPLY) + nDataLen + 8 + sizeof(IO_STATUS_BLOCK));
-
-
-	/*
-	 * Init IPInfo structure
-	 */
-	IP_OPTION_INFORMATION	stIPInfo = {};
-	stIPInfo.Ttl = mine.ttl;
-	stIPInfo.Flags = IP_FLAG_DF;
-
-	wrl::Wrappers::Event wait_event(CreateEventW(nullptr, FALSE, FALSE, nullptr));
-	if (!wait_event.IsValid()) {
-		AfxMessageBox(L"Unable to Create wait event");
-		co_return;
-	}
-
+	std::vector<std::byte> achRepData(icmp_ping4::reply_reply_buffer_size(nDataLen));
 
 	auto cancellation = co_await winrt::get_cancellation_token();
-	cancellation.callback([wait_event = wait_event.Get()] {
-		SetEvent(wait_event);
-		});
-
+	
 	while (this->tracing) {
-		if (cancellation())
+		if (cancellation()) [[unlikely]]
 		{
 			co_return;
 		}
@@ -416,39 +428,16 @@ winrt::Windows::Foundation::IAsyncAction WinMTRNet::handleICMPv4(trace_thread& c
 		// - a drawback would be that, some servers are configured to reply for TTL transit expire, but not to ping requests, so,
 		// for these servers we'll have 100% loss
 		sockaddr_in* addr = reinterpret_cast<sockaddr_in*>(&mine.address);
-		const auto io_res = IcmpSendEcho2(
-			mine.icmpHandle.Get()
-			,wait_event.Get()
-			,nullptr
-			,nullptr
-			,addr->sin_addr.S_un.S_addr
-			,achReqData.data()
-			,nDataLen
-			,&stIPInfo
-			,achRepData.data()
-			,gsl::narrow_cast<DWORD>(achRepData.size())
-			,ECHO_REPLY_TIMEOUT);
-
-		if (auto err = GetLastError(); err != ERROR_IO_PENDING) {
-			co_return;
-		}
-		bool res = false;
-		while (!res) {
-			res = co_await winrt::resume_on_signal(wait_event.Get(), 1s);
-			if (cancellation()) {
-				co_return;
-			}
-		}
 		
+		const auto dwReplyCount = co_await icmp_ping4(mine.icmpHandle.Get(), addr->sin_addr.S_un.S_addr, mine.ttl, achReqData, achRepData);
 		this->AddXmit(mine.ttl - 1);
-		if (const auto dwReplyCount = IcmpParseReplies(achRepData.data()
-			, gsl::narrow_cast<DWORD>(achRepData.size())); dwReplyCount != 0) {
+		if(dwReplyCount){
 			PICMP_ECHO_REPLY icmp_echo_reply = reinterpret_cast<PICMP_ECHO_REPLY>(achRepData.data());
 			TRACE_MSG(L"TTL "sv << mine.ttl << L" reply TTL "sv << icmp_echo_reply->Options.Ttl << L" Status "sv << icmp_echo_reply->Status << L" Reply count "sv << dwReplyCount);
 
 			switch (icmp_echo_reply->Status) {
 			case IP_SUCCESS:
-			case IP_TTL_EXPIRED_TRANSIT:
+			[[likely]] case IP_TTL_EXPIRED_TRANSIT:
 				this->SetLast(mine.ttl - 1, icmp_echo_reply->RoundTripTime);
 				this->SetBest(mine.ttl - 1, icmp_echo_reply->RoundTripTime);
 				this->SetWorst(mine.ttl - 1, icmp_echo_reply->RoundTripTime);
@@ -486,10 +475,10 @@ winrt::Windows::Foundation::IAsyncAction WinMTRNet::DoTrace(sockaddr& address)
 		TRACE_MSG(L"Threaad with TTL=" << current.ttl << L" started.");
 		memcpy(&current.address, &address, getAddressSize(address));
 		if (current.address.ss_family == AF_INET) {
-			threads.emplace_back(MakeCancellable(this->handleICMPv4(current), cancellation));
+			threads.emplace_back(MakeCancellable(this->handleICMPv4(std::move(current)), cancellation));
 		}
 		else if (current.address.ss_family == AF_INET6) {
-			threads.emplace_back(MakeCancellable(this->handleICMPv6(current), cancellation));
+			threads.emplace_back(MakeCancellable(this->handleICMPv6(std::move(current)), cancellation));
 		}
 	}
 	
@@ -506,17 +495,6 @@ winrt::Windows::Foundation::IAsyncAction WinMTRNet::DoTrace(sockaddr& address)
 
 	TRACE_MSG(L"Tracing Ended");
 }
-
-//winrt::fire_and_forget WinMTRNet::StopTrace() noexcept
-//{
-//	tracing = false;
-//	if (this->tracer) {
-//		co_await *context;
-//		tracer->Cancel();
-//		tracer.reset();
-//		context.reset();
-//	}
-//}
 
 sockaddr_storage WinMTRNet::GetAddr(int at)
 {
@@ -621,18 +599,13 @@ void WinMTRNet::SetAddr(int at, sockaddr& addr)
 	if (!isValidAddress(host[at].addr) && isValidAddress(addr)) {
 		//TRACE_MSG(L"Start DnsResolverThread for new address " << addr << L". Old addr value was " << host[at].addr);
 		memcpy(&host[at].addr, &addr, getAddressSize(addr));
-		struct dns_resolver_thread {
-			int			index;
-			WinMTRNet* winmtr;
-		} dnt{ .index = at, .winmtr = this };
 
 		if (wmtrdlg->getUseDNS()) {
-			Concurrency::create_task([dnt = std::move(dnt)] {
+			Concurrency::create_task([at, this] {
 					TRACE_MSG(L"DNS resolver thread started.");
-					WinMTRNet * wn = dnt.winmtr;
 
 					wchar_t buf[NI_MAXHOST];
-					sockaddr_storage addr = wn->GetAddr(dnt.index);
+					sockaddr_storage addr = this->GetAddr(at);
 
 					if (const auto nresult = GetNameInfoW(
 						reinterpret_cast<sockaddr*>(&addr)
@@ -644,7 +617,7 @@ void WinMTRNet::SetAddr(int at, sockaddr& addr)
 						, 0);
 						// zero on success
 						!nresult) {
-						wn->SetName(dnt.index, buf);
+						this->SetName(at, buf);
 					}
 					else {
 						std::wstring out;
@@ -661,7 +634,7 @@ void WinMTRNet::SetAddr(int at, sockaddr& addr)
 							!result) {
 							out.resize(addrstrsize - 1);
 						}
-						wn->SetName(dnt.index, std::move(out));
+						this->SetName(at, std::move(out));
 					}
 
 					TRACE_MSG(L"DNS resolver thread stopped.");

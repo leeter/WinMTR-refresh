@@ -92,9 +92,10 @@ private:
 	std::atomic_bool	tracing;
 	std::optional<winrt::Windows::Foundation::IAsyncAction> tracer;
 	std::optional<winrt::apartment_context> context;
-	winrt::Windows::Foundation::IAsyncAction handleICMPv4(trace_thread& current);
-	winrt::Windows::Foundation::IAsyncAction handleICMPv6(trace_thread& current);
-	//winrt::Windows::Foundation::IAsyncAction DoTraceInternal(sockaddr& address);
+
+
+	winrt::Windows::Foundation::IAsyncAction handleICMPv4(trace_thread current);
+	winrt::Windows::Foundation::IAsyncAction handleICMPv6(trace_thread current);
 	void handleDefault(const trace_thread& current, ULONG status);
 	concurrency::task<void> sleepTilInterval(ULONG roundTripTime);
 
