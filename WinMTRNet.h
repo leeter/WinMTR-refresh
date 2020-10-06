@@ -21,6 +21,7 @@
 
 
 class WinMTRDialog;
+constexpr auto MAX_HOPS = 30;
 
 struct s_nethost {
   SOCKADDR_STORAGE addr = {};
@@ -62,7 +63,7 @@ struct trace_thread;
 //
 //*****************************************************************************
 
-class WinMTRNet final{
+class WinMTRNet final: public std::enable_shared_from_this<WinMTRNet>{
 
 public:
 
@@ -72,21 +73,21 @@ public:
 	void	ResetHops() noexcept;
 	//winrt::fire_and_forget	StopTrace() noexcept;
 
-	SOCKADDR_STORAGE GetAddr(int at);
+	SOCKADDR_STORAGE GetAddr(int at) const;
 	std::wstring GetName(int at);
-	int		GetBest(int at);
-	int		GetWorst(int at);
-	int		GetAvg(int at);
-	int		GetPercent(int at);
-	int		GetLast(int at);
-	int		GetReturned(int at);
-	int		GetXmit(int at);
-	int		GetMax();
+	int		GetBest(int at) const;
+	int		GetWorst(int at) const;
+	int		GetAvg(int at) const;
+	int		GetPercent(int at) const;
+	int		GetLast(int at) const;
+	int		GetReturned(int at) const;
+	int		GetXmit(int at) const;
+	int		GetMax() const;
 
 private:
-	std::array<s_nethost, MaxHost>	host;
+	std::array<s_nethost, MAX_HOPS>	host;
 	SOCKADDR_STORAGE last_remote_addr;
-	std::recursive_mutex	ghMutex;
+	mutable std::recursive_mutex	ghMutex;
 	const WinMTRDialog* wmtrdlg;
 	winmtr::helper::WSAHelper wsaHelper;
 	std::atomic_bool	tracing;

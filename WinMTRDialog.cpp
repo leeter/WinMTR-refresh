@@ -78,7 +78,7 @@ WinMTRDialog::WinMTRDialog(CWnd* pParent)
 {
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
 
-	wmtrnet = std::make_unique<WinMTRNet>(this);
+	wmtrnet = std::make_shared<WinMTRNet>(this);
 }
 
 //*****************************************************************************
@@ -111,9 +111,9 @@ BOOL WinMTRDialog::OnInitDialog()
 	CDialog::OnInitDialog();
 
 	#ifndef  _WIN64
-	wchar_t caption[] = {L"WinMTR v0.92 32 bit by Appnor MSP - www.winmtr.net"};
+	const wchar_t caption[] = {L"WinMTR v0.92 32 bit by Appnor MSP - www.winmtr.net"};
 	#else
-	wchar_t caption[] = {L"WinMTR v0.92 64 bit by Appnor MSP - www.winmtr.net"};
+	const wchar_t caption[] = {L"WinMTR v0.92 64 bit by Appnor MSP - www.winmtr.net"};
 	#endif
 
 	SetTimer(1, WINMTR_DIALOG_TIMER, NULL);
@@ -778,7 +778,7 @@ void WinMTRDialog::OnCancel()
 int WinMTRDialog::DisplayRedraw()
 {
 	wchar_t buf[255], nr_crt[255];
-	int nh = wmtrnet->GetMax();
+	const int nh = wmtrnet->GetMax();
 	while (m_listMTR.GetItemCount() > nh) {
 		m_listMTR.DeleteItem(m_listMTR.GetItemCount() - 1); 
 	}

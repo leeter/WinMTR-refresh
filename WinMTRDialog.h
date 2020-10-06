@@ -84,7 +84,7 @@ private:
 	CButton	m_buttonExpH;
 	std::wstring msz_defaulthostname;
 	//std::recursive_mutex			traceThreadMutex;
-	std::unique_ptr<WinMTRNet>			wmtrnet;
+	std::shared_ptr<WinMTRNet>			wmtrnet;
 	std::optional<winrt::Windows::Foundation::IAsyncAction> tracer;
 	std::optional<winrt::apartment_context> context;
 	HICON m_hIcon;

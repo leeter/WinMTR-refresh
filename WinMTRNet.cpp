@@ -42,7 +42,7 @@ VOID
 
 
 namespace {
-	constexpr auto MAX_HOPS = 30;
+	
 constexpr auto ECHO_REPLY_TIMEOUT = 5000;
 
 	struct ICMPHandleTraits {
@@ -218,6 +218,10 @@ constexpr auto ECHO_REPLY_TIMEOUT = 5000;
 	private:
 		sockaddr_in6* m_addr;
 	};
+
+	inline bool operator==(const SOCKADDR_STORAGE& lhs, const SOCKADDR_STORAGE& rhs) noexcept {
+		return memcmp(&lhs, &rhs, sizeof(SOCKADDR_STORAGE)) == 0;
+	}
 }
 
 using namespace std::chrono_literals;
@@ -496,7 +500,7 @@ winrt::Windows::Foundation::IAsyncAction WinMTRNet::DoTrace(sockaddr& address)
 	TRACE_MSG(L"Tracing Ended");
 }
 
-sockaddr_storage WinMTRNet::GetAddr(int at)
+sockaddr_storage WinMTRNet::GetAddr(int at) const
 {
 	std::unique_lock lock(ghMutex);
 	return host[at].addr;
@@ -524,71 +528,72 @@ std::wstring WinMTRNet::GetName(int at)
 	return host[at].name;
 }
 
-int WinMTRNet::GetBest(int at)
+int WinMTRNet::GetBest(int at) const
 {
 	std::unique_lock lock(ghMutex);
 	int ret = host[at].best;
 	return ret;
 }
 
-int WinMTRNet::GetWorst(int at)
+int WinMTRNet::GetWorst(int at) const
 {
 	std::unique_lock lock(ghMutex);
 	int ret = host[at].worst;
 	return ret;
 }
 
-int WinMTRNet::GetAvg(int at)
+int WinMTRNet::GetAvg(int at) const
 {
 	std::unique_lock lock(ghMutex);
 	int ret = host[at].returned == 0 ? 0 : host[at].total / host[at].returned;
 	return ret;
 }
 
-int WinMTRNet::GetPercent(int at)
+int WinMTRNet::GetPercent(int at) const
 {
 	std::unique_lock lock(ghMutex);
 	int ret = (host[at].xmit == 0) ? 0 : (100 - (100 * host[at].returned / host[at].xmit));
 	return ret;
 }
 
-int WinMTRNet::GetLast(int at)
+int WinMTRNet::GetLast(int at) const
 {
 	std::unique_lock lock(ghMutex);
 	int ret = host[at].last;
 	return ret;
 }
 
-int WinMTRNet::GetReturned(int at)
+int WinMTRNet::GetReturned(int at) const
 {
 	std::unique_lock lock(ghMutex);
 	int ret = host[at].returned;
 	return ret;
 }
 
-int WinMTRNet::GetXmit(int at)
+int WinMTRNet::GetXmit(int at) const
 {
 	std::unique_lock lock(ghMutex);
 	int ret = host[at].xmit;
 	return ret;
 }
 
-int WinMTRNet::GetMax()
+int WinMTRNet::GetMax() const
 {
 	std::unique_lock lock(ghMutex);
 	int max = MAX_HOPS;
 
 	// first match: traced address responds on ping requests, and the address is in the hosts list
-	for (int i = 0; i < MAX_HOPS; i++) {
-		if (memcmp(&host[i].addr, &last_remote_addr, sizeof(SOCKADDR_STORAGE)) == 0) {
-			max = i + 1;
+	for (int i = 1; const auto & h : host) {
+		if (h.addr == last_remote_addr) {
+			max = i;
 			break;
 		}
+		++i;
 	}
 
 	// second match:  traced address doesn't responds on ping requests
 	if (max == MAX_HOPS) {
-		while ((max > 1) && (memcmp(&host[max - 1].addr, &host[max - 2].addr, sizeof(SOCKADDR_STORAGE)) == 0 && isValidAddress(host[max - 1].addr))) max--;
+		while ((max > 1) && (host[max - 1].addr == host[max - 2].addr && isValidAddress(host[max - 1].addr))) max--;
 	}
 	return max;
 }
@@ -601,11 +606,11 @@ void WinMTRNet::SetAddr(int at, sockaddr& addr)
 		memcpy(&host[at].addr, &addr, getAddressSize(addr));
 
 		if (wmtrdlg->getUseDNS()) {
-			Concurrency::create_task([at, this] {
+			Concurrency::create_task([at, sharedThis = shared_from_this()] {
 					TRACE_MSG(L"DNS resolver thread started.");
 
 					wchar_t buf[NI_MAXHOST];
-					sockaddr_storage addr = this->GetAddr(at);
+					sockaddr_storage addr = sharedThis->GetAddr(at);
 
 					if (const auto nresult = GetNameInfoW(
 						reinterpret_cast<sockaddr*>(&addr)
@@ -617,7 +622,7 @@ void WinMTRNet::SetAddr(int at, sockaddr& addr)
 						, 0);
 						// zero on success
 						!nresult) {
-						this->SetName(at, buf);
+						sharedThis->SetName(at, buf);
 					}
 					else {
 						std::wstring out;
@@ -634,7 +639,7 @@ void WinMTRNet::SetAddr(int at, sockaddr& addr)
 							!result) {
 							out.resize(addrstrsize - 1);
 						}
-						this->SetName(at, std::move(out));
+						sharedThis->SetName(at, std::move(out));
 					}
 
 					TRACE_MSG(L"DNS resolver thread stopped.");
