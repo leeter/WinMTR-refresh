@@ -82,28 +82,25 @@ constexpr auto ECHO_REPLY_TIMEOUT = 5000;
 		{
 			return false;
 		}
-
+	protected:
 		static void NTAPI callback(IN PVOID ApcContext,
 			IN PIO_STATUS_BLOCK IoStatusBlock,
 			IN ULONG Reserved) noexcept {
 			UNREFERENCED_PARAMETER(Reserved);
 			auto context = static_cast<awaitable_base*>(ApcContext);
+			context->m_replysize = gsl::narrow_cast<DWORD>(IoStatusBlock->Information);
 			concurrency::create_task([=] {
-				context->m_result = IoStatusBlock;
 				context->m_resume();
 			}, context->m_context);
-			
 		}
 
-	protected:
 		concurrency::task_continuation_context m_context = concurrency::task_continuation_context::get_current_winrt_context();
-		PIO_STATUS_BLOCK m_result = nullptr;
 		coro_handle m_resume{ nullptr };
 		std::span<std::byte> m_reqData;
 		std::span<std::byte> m_replyData;
 		HANDLE m_handle;
+		DWORD m_replysize = 0;
 		UCHAR m_ttl;
-
 	};
 
 	struct icmp_ping4 final : awaitable_base
@@ -153,8 +150,7 @@ constexpr auto ECHO_REPLY_TIMEOUT = 5000;
 
 		auto await_resume() const noexcept
 		{
-			const auto replySize = gsl::narrow_cast<DWORD>(m_result->Information);
-			return IcmpParseReplies(m_replyData.data(), replySize);
+			return IcmpParseReplies(m_replyData.data(), m_replysize);
 		}
 
 	private:
@@ -211,8 +207,7 @@ constexpr auto ECHO_REPLY_TIMEOUT = 5000;
 
 		auto await_resume() const noexcept
 		{
-			const auto replySize = gsl::narrow_cast<DWORD>(m_result->Information);
-			return Icmp6ParseReplies(m_replyData.data(), replySize);
+			return Icmp6ParseReplies(m_replyData.data(), m_replysize);
 		}
 
 	private:
@@ -227,7 +222,9 @@ constexpr auto ECHO_REPLY_TIMEOUT = 5000;
 using namespace std::chrono_literals;
 struct trace_thread {
 	trace_thread(const trace_thread&) = delete;
+	trace_thread& operator=(const trace_thread&) = delete;
 	trace_thread(trace_thread&&) = default;
+	trace_thread& operator=(trace_thread&&) = default;
 
 	trace_thread(ADDRESS_FAMILY af, WinMTRNet* winmtr, UCHAR ttl)
 		:
@@ -246,7 +243,6 @@ struct trace_thread {
 	IcmpHandle icmpHandle;
 	WinMTRNet* winmtr;
 	UCHAR		ttl;
-
 };
 
 
