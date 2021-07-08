@@ -69,6 +69,7 @@ public:
 
 	WinMTRNet(const WinMTRDialog *wp);
 	~WinMTRNet() noexcept;
+	[[nodiscard("The task should be awaited")]]
 	winrt::Windows::Foundation::IAsyncAction	DoTrace(sockaddr& address);
 	void	ResetHops() noexcept;
 	//winrt::fire_and_forget	StopTrace() noexcept;
@@ -94,11 +95,12 @@ private:
 	std::optional<winrt::Windows::Foundation::IAsyncAction> tracer;
 	std::optional<winrt::apartment_context> context;
 
-
+	[[nodiscard("The task should be awaited")]]
 	winrt::Windows::Foundation::IAsyncAction handleICMPv4(trace_thread current);
+	[[nodiscard("The task should be awaited")]]
 	winrt::Windows::Foundation::IAsyncAction handleICMPv6(trace_thread current);
 	void handleDefault(const trace_thread& current, ULONG status);
-	concurrency::task<void> sleepTilInterval(ULONG roundTripTime);
+	[[nodiscard("The task should be awaited")]] concurrency::task<void> sleepTilInterval(ULONG roundTripTime);
 
 	void	SetAddr(int at, sockaddr& addr);
 	void	SetName(int at, std::wstring n);

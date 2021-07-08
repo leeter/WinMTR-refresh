@@ -5,9 +5,8 @@
 
 namespace utils {
 
-	void CWinMTRCommandLineParser::ParseParam(const WCHAR* pszParam, BOOL bFlag, BOOL bLast)
+	void CWinMTRCommandLineParser::ParseParam(const WCHAR* pszParam, BOOL bFlag, [[maybe_unused]] BOOL bLast)
 	{
-		UNREFERENCED_PARAMETER(bLast);
 		using namespace std::literals;
 		if (bFlag) {
 			if (L"h"sv == pszParam || L"-help"sv == pszParam) {
@@ -44,7 +43,7 @@ namespace utils {
 		this->next = expect_next::none;
 	}
 
-	void CWinMTRCommandLineParser::ParseParam(const char* pszParam, BOOL bFlag, BOOL bLast)
+	void CWinMTRCommandLineParser::ParseParam([[maybe_unused]] const char* pszParam, [[maybe_unused]] BOOL bFlag, [[maybe_unused]] BOOL bLast)
 	{
 		using namespace std::literals;
 	}

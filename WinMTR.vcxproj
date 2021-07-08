@@ -188,7 +188,7 @@
       <PrecompiledHeaderFile>WinMTRGlobal.h</PrecompiledHeaderFile>
       <ConformanceMode>true</ConformanceMode>
       <ControlFlowGuard>Guard</ControlFlowGuard>
-      <AdditionalOptions>/Zc:noexceptTypes /Zc:throwingNew /await %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/Zc:noexceptTypes /Zc:throwingNew %(AdditionalOptions)</AdditionalOptions>
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <EnableEnhancedInstructionSet>AdvancedVectorExtensions2</EnableEnhancedInstructionSet>

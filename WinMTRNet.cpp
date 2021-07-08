@@ -31,16 +31,6 @@ VOID
 #include <iphlpapi.h>
 #include <icmpapi.h>
 
-
-#define TRACE_MSG(msg)										\
-	{														\
-	std::wostringstream dbg_msg(std::wostringstream::out);	\
-	dbg_msg << msg << std::endl;							\
-	OutputDebugString(dbg_msg.str().c_str());				\
-	}
-
-
-
 namespace {
 	
 constexpr auto ECHO_REPLY_TIMEOUT = 5000;
@@ -105,6 +95,7 @@ constexpr auto ECHO_REPLY_TIMEOUT = 5000;
 
 	struct icmp_ping4 final : awaitable_base
 	{
+		[[nodiscard]]
 		static constexpr auto reply_reply_buffer_size(unsigned requestSize) {
 			return sizeof(ICMP_ECHO_REPLY) + 8 + sizeof(IO_STATUS_BLOCK) + requestSize;
 		}
@@ -159,7 +150,7 @@ constexpr auto ECHO_REPLY_TIMEOUT = 5000;
 
 	struct icmp_ping6 final : awaitable_base
 	{
-
+		[[nodiscard]]
 		static constexpr auto reply_reply_buffer_size(unsigned requestSize) {
 			return sizeof(ICMPV6_ECHO_REPLY) + 8 + sizeof(IO_STATUS_BLOCK) + requestSize;
 		}
@@ -214,6 +205,7 @@ constexpr auto ECHO_REPLY_TIMEOUT = 5000;
 		sockaddr_in6* m_addr;
 	};
 
+	[[nodiscard]]
 	inline bool operator==(const SOCKADDR_STORAGE& lhs, const SOCKADDR_STORAGE& rhs) noexcept {
 		return memcmp(&lhs, &rhs, sizeof(SOCKADDR_STORAGE)) == 0;
 	}
@@ -378,7 +370,7 @@ winrt::Windows::Foundation::IAsyncAction WinMTRNet::handleICMPv6(trace_thread cu
 		if(dwReplyCount){
 
 			PICMPV6_ECHO_REPLY icmp_echo_reply = reinterpret_cast<PICMPV6_ECHO_REPLY>(achRepData.data());
-			TRACE_MSG(L"TTL "sv << mine.ttl << L" Status "sv << icmp_echo_reply->Status << L" Reply count "sv << dwReplyCount);
+			TRACE_MSG(L"TTL "sv << mine.ttl << L" Status "sv << icmp_echo_reply->Status << L" Reply count "sv << dwReplyCount)
 			switch (icmp_echo_reply->Status) {
 			case IP_SUCCESS:
 			[[likely]] case IP_TTL_EXPIRED_TRANSIT:

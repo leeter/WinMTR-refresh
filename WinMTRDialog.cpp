@@ -15,13 +15,6 @@
 
 using namespace std::string_view_literals;
 
-#define TRACE_MSG(msg)										\
-	{														\
-	std::wostringstream dbg_msg(std::wostringstream::out);	\
-	dbg_msg << msg << std::endl;							\
-	OutputDebugString(dbg_msg.str().c_str());				\
-	}
-
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #undef THIS_FILE
@@ -614,6 +607,7 @@ void WinMTRDialog::OnOptions()
 }
 
 namespace {
+	[[nodiscard]]
 	std::wstring makeTextOutput(WinMTRNet& wmtrnet) {
 		using namespace std::literals;
 		std::vector<wchar_t> t_buf(1000);
@@ -646,6 +640,7 @@ namespace {
 		return f_buf;
 	}
 
+	[[nodiscard]]
 	auto makeHTMLOutput(WinMTRNet& wmtrnet) {
 		using namespace std::literals;
 		int nh = wmtrnet.GetMax();

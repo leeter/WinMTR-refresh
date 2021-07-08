@@ -129,4 +129,15 @@ std::decay_t<Async> MakeCancellable(Async&& async, Token&& token)
 	return std::forward<Async>(async);
 }
 
+#ifdef DEBUG
+#define TRACE_MSG(msg)										\
+	{														\
+	std::wostringstream dbg_msg(std::wostringstream::out);	\
+	dbg_msg << msg << std::endl;							\
+	OutputDebugStringW(dbg_msg.str().c_str());				\
+	}
+#else
+#define TRACE_MSG(msg)
+#endif
+
 #endif // ifndef WINMTR_GLOBAL_H_
