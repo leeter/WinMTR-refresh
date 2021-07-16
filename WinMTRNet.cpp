@@ -59,7 +59,7 @@ constexpr auto ECHO_REPLY_TIMEOUT = 5000;
 		using coro_handle = std::experimental::coroutine_handle<>;
 #  endif
 #endif
-		awaitable_base(HANDLE icmpHandle, UCHAR ttl, std::span<std::byte> requestData, std::span<std::byte> replyData)
+		awaitable_base(HANDLE icmpHandle, UCHAR ttl, std::span<std::byte> requestData, std::span<std::byte> replyData) noexcept
 			:m_reqData(requestData)
 			, m_replyData(replyData)
 			, m_handle(icmpHandle)
@@ -96,11 +96,11 @@ constexpr auto ECHO_REPLY_TIMEOUT = 5000;
 	struct icmp_ping4 final : awaitable_base
 	{
 		[[nodiscard]]
-		static constexpr auto reply_reply_buffer_size(unsigned requestSize) {
+		static constexpr auto reply_reply_buffer_size(unsigned requestSize) noexcept {
 			return sizeof(ICMP_ECHO_REPLY) + 8 + sizeof(IO_STATUS_BLOCK) + requestSize;
 		}
 
-		icmp_ping4(HANDLE icmpHandle, IPAddr addr, UCHAR ttl, std::span<std::byte> requestData, std::span<std::byte> replyData)
+		icmp_ping4(HANDLE icmpHandle, IPAddr addr, UCHAR ttl, std::span<std::byte> requestData, std::span<std::byte> replyData) noexcept
 			:awaitable_base(icmpHandle, ttl, requestData, replyData)
 			, m_addr(addr)
 		{
@@ -151,11 +151,11 @@ constexpr auto ECHO_REPLY_TIMEOUT = 5000;
 	struct icmp_ping6 final : awaitable_base
 	{
 		[[nodiscard]]
-		static constexpr auto reply_reply_buffer_size(unsigned requestSize) {
+		static constexpr auto reply_reply_buffer_size(unsigned requestSize) noexcept {
 			return sizeof(ICMPV6_ECHO_REPLY) + 8 + sizeof(IO_STATUS_BLOCK) + requestSize;
 		}
 
-		icmp_ping6(HANDLE icmpHandle, sockaddr_in6* addr, UCHAR ttl, std::span<std::byte> requestData, std::span<std::byte> replyData)
+		icmp_ping6(HANDLE icmpHandle, sockaddr_in6* addr, UCHAR ttl, std::span<std::byte> requestData, std::span<std::byte> replyData) noexcept
 			:awaitable_base(icmpHandle, ttl, requestData, replyData)
 			, m_addr(addr)
 		{
@@ -218,7 +218,7 @@ struct trace_thread {
 	trace_thread(trace_thread&&) = default;
 	trace_thread& operator=(trace_thread&&) = default;
 
-	trace_thread(ADDRESS_FAMILY af, WinMTRNet* winmtr, UCHAR ttl)
+	trace_thread(ADDRESS_FAMILY af, WinMTRNet* winmtr, UCHAR ttl) noexcept
 		:
 		address(),
 		winmtr(winmtr),

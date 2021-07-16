@@ -106,7 +106,7 @@ protected:
 			:hWnd(hWnd),nID(nID),bAutoDestroy(bAutoDestroy){}
 		_STATUSBAR_PANE_CTRL_();
 		_STATUSBAR_PANE_CTRL_(const _STATUSBAR_PANE_CTRL_&) = delete;
-		~_STATUSBAR_PANE_CTRL_();
+		~_STATUSBAR_PANE_CTRL_() noexcept;
 		_STATUSBAR_PANE_CTRL_(_STATUSBAR_PANE_CTRL_&&) = default;
 		_STATUSBAR_PANE_CTRL_& operator=(_STATUSBAR_PANE_CTRL_&&) = default;
 	};
@@ -122,15 +122,15 @@ protected:
 	bool PaneInfoGet(int nIndex, _STATUSBAR_PANE_* pPane);
 	bool PaneInfoSet(int nIndex, const _STATUSBAR_PANE_& pPane);
 	
-	void RepositionControls();
+	void RepositionControls() noexcept;
 	
 	// Generated message map functions
 protected:
 	//{{AFX_MSG(WinMTRStatusBar)
-	afx_msg int OnCreate(LPCREATESTRUCT lpCreateStruct);
+	afx_msg int OnCreate(LPCREATESTRUCT lpCreateStruct) noexcept;
 	//}}AFX_MSG
 	DECLARE_MESSAGE_MAP()
-	virtual LRESULT WindowProc(UINT message, WPARAM wParam, LPARAM lParam);
+	LRESULT WindowProc(UINT message, WPARAM wParam, LPARAM lParam) noexcept final override;
 };
 
 #endif // WINMTRSTATUSBAR_H_

@@ -361,12 +361,12 @@ void WinMTRDialog::OnPaint()
 
 		SendMessage(WM_ICONERASEBKGND, (WPARAM) dc.GetSafeHdc(), 0);
 
-		int cxIcon = GetSystemMetrics(SM_CXICON);
-		int cyIcon = GetSystemMetrics(SM_CYICON);
+		const int cxIcon = GetSystemMetrics(SM_CXICON);
+		const int cyIcon = GetSystemMetrics(SM_CYICON);
 		CRect rect;
 		GetClientRect(&rect);
-		int x = (rect.Width() - cxIcon + 1) / 2;
-		int y = (rect.Height() - cyIcon + 1) / 2;
+		const int x = (rect.Width() - cxIcon + 1) / 2;
+		const int y = (rect.Height() - cyIcon + 1) / 2;
 
 		dc.DrawIcon(x, y, m_hIcon);
 	}
@@ -392,7 +392,7 @@ HCURSOR WinMTRDialog::OnQueryDragIcon()
 // WinMTRDialog::OnDblclkList
 //
 //*****************************************************************************
-void WinMTRDialog::OnDblclkList(NMHDR* pNMHDR, LRESULT* pResult)
+void WinMTRDialog::OnDblclkList([[maybe_unused]] NMHDR* pNMHDR, LRESULT* pResult)
 {
 	using namespace std::string_view_literals;
 	*pResult = 0;
@@ -400,7 +400,7 @@ void WinMTRDialog::OnDblclkList(NMHDR* pNMHDR, LRESULT* pResult)
 	if(state == STATES::TRACING) {
 		
 		POSITION pos = m_listMTR.GetFirstSelectedItemPosition();
-		if(pos!=NULL) {
+		if(pos!=nullptr) {
 			int nItem = m_listMTR.GetNextSelectedItem(pos);
 			WinMTRProperties wmtrprop;
 			
@@ -611,7 +611,7 @@ namespace {
 	std::wstring makeTextOutput(WinMTRNet& wmtrnet) {
 		using namespace std::literals;
 		std::vector<wchar_t> t_buf(1000);
-		int nh = wmtrnet.GetMax();
+		const int nh = wmtrnet.GetMax();
 		std::wstring f_buf;
 		f_buf.reserve(255 * 100);
 		f_buf += L"|-------------------------------------------------------------------------------------------|\r\n" \
@@ -643,7 +643,7 @@ namespace {
 	[[nodiscard]]
 	auto makeHTMLOutput(WinMTRNet& wmtrnet) {
 		using namespace std::literals;
-		int nh = wmtrnet.GetMax();
+		const int nh = wmtrnet.GetMax();
 		std::wstring f_buf;
 		f_buf.reserve(255 * 100);
 		f_buf += L"<!DOCTYPE html><html><head><title>WinMTR Statistics</title></head><body>\r\n" \
@@ -1036,7 +1036,7 @@ void WinMTRDialog::Transit(STATES new_state)
 			{
 				// using a different thread to create an MTA so we don't have explosion issues with the
 				// thread pool
-				auto thread = std::thread([this] {
+				auto thread = std::thread([this]() noexcept {
 					winrt::init_apartment(winrt::apartment_type::multi_threaded);
 					try {
 						this->context = winrt::apartment_context();

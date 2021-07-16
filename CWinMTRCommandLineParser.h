@@ -7,13 +7,13 @@ namespace utils {
         public CCommandLineInfo
     {
     public:
-        CWinMTRCommandLineParser(WinMTRDialog& dlg)
+        CWinMTRCommandLineParser(WinMTRDialog& dlg) noexcept
             :dlg(dlg){}
     private:
 
-        void ParseParam(const WCHAR* pszParam, BOOL bFlag, BOOL bLast) override final;
+        void ParseParam(const WCHAR* pszParam, BOOL bFlag, BOOL bLast) noexcept override final;
 #ifdef _UNICODE
-        void ParseParam(const char* pszParam, BOOL bFlag, BOOL bLast) override final;
+        void ParseParam(const char* pszParam, BOOL bFlag, BOOL bLast) noexcept override final;
 #endif
     private:
         

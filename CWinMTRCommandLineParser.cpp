@@ -5,7 +5,7 @@
 
 namespace utils {
 
-	void CWinMTRCommandLineParser::ParseParam(const WCHAR* pszParam, BOOL bFlag, [[maybe_unused]] BOOL bLast)
+	void CWinMTRCommandLineParser::ParseParam(const WCHAR* pszParam, BOOL bFlag, [[maybe_unused]] BOOL bLast) noexcept
 	{
 		using namespace std::literals;
 		if (bFlag) {
@@ -43,7 +43,7 @@ namespace utils {
 		this->next = expect_next::none;
 	}
 
-	void CWinMTRCommandLineParser::ParseParam([[maybe_unused]] const char* pszParam, [[maybe_unused]] BOOL bFlag, [[maybe_unused]] BOOL bLast)
+	void CWinMTRCommandLineParser::ParseParam([[maybe_unused]] const char* pszParam, [[maybe_unused]] BOOL bFlag, [[maybe_unused]] BOOL bLast) noexcept
 	{
 		using namespace std::literals;
 	}

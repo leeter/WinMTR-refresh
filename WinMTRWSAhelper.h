@@ -9,7 +9,7 @@ namespace winmtr::helper {
 	class WSAHelper {
 		bool valid;
 	public:
-		WSAHelper(WORD version)
+		WSAHelper(WORD version) noexcept
 		:valid(false){
 			WSAData data = {};
 			valid = !WSAStartup(version, &data);
@@ -21,7 +21,7 @@ namespace winmtr::helper {
 			}
 		}
 
-		explicit operator bool() const{
+		explicit operator bool() const noexcept{
 			return valid;
 		}
 	};

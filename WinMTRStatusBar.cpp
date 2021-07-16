@@ -20,7 +20,7 @@ END_MESSAGE_MAP()
 // WinMTRStatusBar message handlers
 //////////////////////////////////////////////////////////////////////////
 
-int WinMTRStatusBar::OnCreate(LPCREATESTRUCT lpCreateStruct) 
+int WinMTRStatusBar::OnCreate(LPCREATESTRUCT lpCreateStruct) noexcept
 {
 	if( CStatusBar::OnCreate(lpCreateStruct) == -1 )
 		return -1;
@@ -30,7 +30,7 @@ int WinMTRStatusBar::OnCreate(LPCREATESTRUCT lpCreateStruct)
 
 //////////////////////////////////////////////////////////////////////////
 
-LRESULT WinMTRStatusBar::WindowProc(UINT message, WPARAM wParam, LPARAM lParam)
+LRESULT WinMTRStatusBar::WindowProc(UINT message, WPARAM wParam, LPARAM lParam) noexcept
 {
 	LRESULT lResult =CStatusBar::WindowProc(message, wParam, lParam);
 	if( message == WM_SIZE ){
@@ -41,7 +41,7 @@ LRESULT WinMTRStatusBar::WindowProc(UINT message, WPARAM wParam, LPARAM lParam)
 
 //////////////////////////////////////////////////////////////////////////
 
-void WinMTRStatusBar::RepositionControls()
+void WinMTRStatusBar::RepositionControls() noexcept
 {
 	HDWP _hDWP = ::BeginDeferWindowPos( gsl::narrow_cast<int>(m_arrPaneControls.size()) );
 	
@@ -266,7 +266,7 @@ WinMTRStatusBar::_STATUSBAR_PANE_CTRL_::_STATUSBAR_PANE_CTRL_()
 {
 }
 
-WinMTRStatusBar::_STATUSBAR_PANE_CTRL_::~_STATUSBAR_PANE_CTRL_()
+WinMTRStatusBar::_STATUSBAR_PANE_CTRL_::~_STATUSBAR_PANE_CTRL_() noexcept
 {
 	if (this->hWnd && ::IsWindow(this->hWnd)) {
 		::ShowWindow(this->hWnd, SW_HIDE);
