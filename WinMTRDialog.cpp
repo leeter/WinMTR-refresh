@@ -109,7 +109,7 @@ BOOL WinMTRDialog::OnInitDialog()
 	const wchar_t caption[] = {L"WinMTR v0.92 64 bit by Appnor MSP - www.winmtr.net"};
 	#endif
 
-	SetTimer(1, WINMTR_DIALOG_TIMER, NULL);
+	SetTimer(1, WINMTR_DIALOG_TIMER, nullptr);
 	SetWindowTextW(caption);
 
 	SetIcon(m_hIcon, TRUE);			
@@ -122,9 +122,9 @@ BOOL WinMTRDialog::OnInitDialog()
 	UINT sbi[1];
 	sbi[0] = IDS_STRING_SB_NAME;	
 	statusBar.SetIndicators(sbi);
-	statusBar.SetPaneInfo(0, statusBar.GetItemID(0),SBPS_STRETCH, NULL );
+	statusBar.SetPaneInfo(0, statusBar.GetItemID(0),SBPS_STRETCH, 0 );
 	{ // Add appnor URL
-		CMFCLinkCtrl* m_pWndButton = new CMFCLinkCtrl;
+		std::unique_ptr<CMFCLinkCtrl> m_pWndButton = std::make_unique<CMFCLinkCtrl>();
 		if (!m_pWndButton->Create(_T("www.appnor.com"), WS_CHILD|WS_VISIBLE|WS_TABSTOP, CRect(0,0,0,0), &statusBar, 1234)) {
 			TRACE(_T("Failed to create button control.\n"));
 			return FALSE;
@@ -138,7 +138,7 @@ BOOL WinMTRDialog::OnInitDialog()
 		}
 			
 		statusBar.SetPaneWidth(statusBar.CommandToIndex(1234), 100);
-		statusBar.AddPaneControl(m_pWndButton, 1234, true);
+		statusBar.AddPaneControl(m_pWndButton.release(), 1234, true);
 	}
 
 	for(int i = 0; i< MTR_NR_COLS; i++)
@@ -201,7 +201,7 @@ BOOL WinMTRDialog::InitRegistry()
 	CRegKey versionKey;
 	if (versionKey.Create(HKEY_CURRENT_USER,
 		LR"(Software\WinMTR)",
-		NULL,
+		nullptr,
 		REG_OPTION_NON_VOLATILE,
 		KEY_ALL_ACCESS) != ERROR_SUCCESS){
 		return FALSE;
@@ -213,7 +213,7 @@ BOOL WinMTRDialog::InitRegistry()
 	CRegKey config_key;
 	if (config_key.Create(versionKey,
 		L"Config",
-		NULL,
+		nullptr,
 		REG_OPTION_NON_VOLATILE,
 		KEY_ALL_ACCESS) != ERROR_SUCCESS) {
 		return FALSE;
@@ -249,7 +249,7 @@ BOOL WinMTRDialog::InitRegistry()
 	CRegKey lru_key;
 	if(lru_key.Create(versionKey,
 		L"LRU",
-		NULL,
+		nullptr,
 		REG_OPTION_NON_VOLATILE,
 		KEY_ALL_ACCESS) != ERROR_SUCCESS)
 		return FALSE;
@@ -308,36 +308,36 @@ void WinMTRDialog::OnSize(UINT nType, int cx, int cy)
 	if (::IsWindow(m_staticS.m_hWnd)) {
 		m_staticS.GetWindowRect(&lb);
 		ScreenToClient(&lb);
-		m_staticS.SetWindowPos(NULL, lb.TopLeft().x, lb.TopLeft().y, r.Width()-lb.TopLeft().x-10, lb.Height() , SWP_NOMOVE | SWP_NOZORDER);
+		m_staticS.SetWindowPos(nullptr, lb.TopLeft().x, lb.TopLeft().y, r.Width()-lb.TopLeft().x-10, lb.Height() , SWP_NOMOVE | SWP_NOZORDER);
 	}
 
 	if (::IsWindow(m_staticJ.m_hWnd)) {
 		m_staticJ.GetWindowRect(&lb);
 		ScreenToClient(&lb);
-		m_staticJ.SetWindowPos(NULL, lb.TopLeft().x, lb.TopLeft().y, r.Width() - 21, lb.Height(), SWP_NOMOVE | SWP_NOZORDER);
+		m_staticJ.SetWindowPos(nullptr, lb.TopLeft().x, lb.TopLeft().y, r.Width() - 21, lb.Height(), SWP_NOMOVE | SWP_NOZORDER);
 	}
 
 	if (::IsWindow(m_buttonExit.m_hWnd)) {
 		m_buttonExit.GetWindowRect(&lb);
 		ScreenToClient(&lb);
-		m_buttonExit.SetWindowPos(NULL, r.Width() - lb.Width()-21, lb.TopLeft().y, lb.Width(), lb.Height() , SWP_NOSIZE | SWP_NOZORDER);
+		m_buttonExit.SetWindowPos(nullptr, r.Width() - lb.Width()-21, lb.TopLeft().y, lb.Width(), lb.Height() , SWP_NOSIZE | SWP_NOZORDER);
 	}
 	
 	if (::IsWindow(m_buttonExpH.m_hWnd)) {
 		m_buttonExpH.GetWindowRect(&lb);
 		ScreenToClient(&lb);
-		m_buttonExpH.SetWindowPos(NULL, r.Width() - lb.Width()-21, lb.TopLeft().y, lb.Width(), lb.Height() , SWP_NOSIZE | SWP_NOZORDER);
+		m_buttonExpH.SetWindowPos(nullptr, r.Width() - lb.Width()-21, lb.TopLeft().y, lb.Width(), lb.Height() , SWP_NOSIZE | SWP_NOZORDER);
 	}
 	if (::IsWindow(m_buttonExpT.m_hWnd)) {
 		m_buttonExpT.GetWindowRect(&lb);
 		ScreenToClient(&lb);
-		m_buttonExpT.SetWindowPos(NULL, r.Width() - lb.Width()- 103, lb.TopLeft().y, lb.Width(), lb.Height() , SWP_NOSIZE | SWP_NOZORDER);
+		m_buttonExpT.SetWindowPos(nullptr, r.Width() - lb.Width()- 103, lb.TopLeft().y, lb.Width(), lb.Height() , SWP_NOSIZE | SWP_NOZORDER);
 	}
 
 	if (::IsWindow(m_listMTR.m_hWnd)) {
 		m_listMTR.GetWindowRect(&lb);
 		ScreenToClient(&lb);
-		m_listMTR.SetWindowPos(NULL, lb.TopLeft().x, lb.TopLeft().y, r.Width() - 21, r.Height() - lb.top - 25, SWP_NOMOVE | SWP_NOZORDER);
+		m_listMTR.SetWindowPos(nullptr, lb.TopLeft().x, lb.TopLeft().y, r.Width() - 21, r.Height() - lb.top - 25, SWP_NOMOVE | SWP_NOZORDER);
 	}
 
 	RepositionBars(AFX_IDW_CONTROLBAR_FIRST, AFX_IDW_CONTROLBAR_LAST,
@@ -360,9 +360,9 @@ void WinMTRDialog::OnPaint()
 		CPaintDC dc(this);
 
 		SendMessage(WM_ICONERASEBKGND, (WPARAM) dc.GetSafeHdc(), 0);
-
-		const int cxIcon = GetSystemMetrics(SM_CXICON);
-		const int cyIcon = GetSystemMetrics(SM_CYICON);
+		const auto dpi = GetDpiForWindow(*this);
+		const int cxIcon = GetSystemMetricsForDpi(SM_CXICON, dpi);
+		const int cyIcon = GetSystemMetricsForDpi(SM_CYICON, dpi);
 		CRect rect;
 		GetClientRect(&rect);
 		const int x = (rect.Width() - cxIcon + 1) / 2;
@@ -715,7 +715,7 @@ void WinMTRDialog::OnEXPT()
 
 	CFileDialog dlg(FALSE,
                    _T("TXT"),
-                   NULL,
+                   nullptr,
                    OFN_HIDEREADONLY | OFN_EXPLORER,
                    szFilter,
                    this);
@@ -740,7 +740,7 @@ void WinMTRDialog::OnEXPH()
 
    CFileDialog dlg(FALSE,
                    _T("HTML"),
-                   NULL,
+                   nullptr,
                    OFN_HIDEREADONLY | OFN_EXPLORER,
                    szFilter,
                    this);

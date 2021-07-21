@@ -9,6 +9,32 @@ static char THIS_FILE[] = __FILE__;
 #endif
 
 
+namespace {
+	class deferWindowPos {
+		HDWP m_hdwp;
+	public:
+		deferWindowPos(int nNumWindows) noexcept
+		:m_hdwp(::BeginDeferWindowPos(nNumWindows)){
+		}
+
+		~deferWindowPos() noexcept
+		{
+			VERIFY(EndDeferWindowPos(m_hdwp));
+		}
+
+		void defer(_In_ HWND hWnd,
+			_In_opt_ HWND hWndInsertAfter,
+			_In_ int x,
+			_In_ int y,
+			_In_ int cx,
+			_In_ int cy,
+			_In_ UINT uFlags) noexcept {
+			m_hdwp = DeferWindowPos(m_hdwp, hWnd, hWndInsertAfter, x, y, cx, cy, uFlags);
+		}
+	};
+}
+
+
 BEGIN_MESSAGE_MAP(WinMTRStatusBar, CStatusBar)
 	//{{AFX_MSG_MAP(WinMTRStatusBar)
 	ON_WM_CREATE()
@@ -43,7 +69,7 @@ LRESULT WinMTRStatusBar::WindowProc(UINT message, WPARAM wParam, LPARAM lParam) 
 
 void WinMTRStatusBar::RepositionControls() noexcept
 {
-	HDWP _hDWP = ::BeginDeferWindowPos( gsl::narrow_cast<int>(m_arrPaneControls.size()) );
+	deferWindowPos dwp(gsl::narrow_cast<int>(m_arrPaneControls.size()));
 	
 	CRect rcClient;
 	GetClientRect(&rcClient);
@@ -75,7 +101,8 @@ void WinMTRStatusBar::RepositionControls() noexcept
 				rcPane.right = rcClient.right;
 				if( (GetStyle() & SBARS_SIZEGRIP) == SBARS_SIZEGRIP )
 				{
-					int cxSmIcon = ::GetSystemMetrics( SM_CXSMICON );
+					const auto dpi = GetDpiForWindow(hWnd);
+					int cxSmIcon = ::GetSystemMetricsForDpi( SM_CXSMICON, dpi);
 					rcPane.right -= cxSmIcon + cx;
 				} // if( (GetStyle() & SBARS_SIZEGRIP) == SBARS_SIZEGRIP )
 			} // else from if( (dwPaneStyle & SBPS_STRETCH ) == 0 )
@@ -88,10 +115,9 @@ void WinMTRStatusBar::RepositionControls() noexcept
 		}
 		
 		if (hWnd && ::IsWindow(hWnd)){
-			_hDWP = ::DeferWindowPos(
-				_hDWP, 
+			dwp.defer( 
 				hWnd, 
-				NULL, 
+				nullptr, 
 				rcPane.left,
 				rcPane.top, 
 				rcPane.Width(), 
@@ -101,16 +127,14 @@ void WinMTRStatusBar::RepositionControls() noexcept
 
 			::RedrawWindow(
 				hWnd,
-				NULL,
-				NULL,
+				nullptr,
+				nullptr,
 				RDW_INVALIDATE|RDW_UPDATENOW
 				|RDW_ERASE|RDW_ERASENOW
 				);
 			
 		} // if (hWnd && ::IsWindow(hWnd)){ 
 	}
-	
-	VERIFY( ::EndDeferWindowPos( _hDWP ) );
 };
 
 //////////////////////////////////////////////////////////////////////////
