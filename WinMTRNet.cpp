@@ -451,40 +451,37 @@ winrt::Windows::Foundation::IAsyncAction WinMTRNet::handleICMPv4(trace_thread cu
 	} /* end ping loop */
 }
 
+
 winrt::Windows::Foundation::IAsyncAction WinMTRNet::DoTrace(sockaddr& address)
 {
 	auto cancellation = co_await winrt::get_cancellation_token();
-	std::vector<winrt::Windows::Foundation::IAsyncAction> threads;
-	threads.reserve(MAX_HOPS);
+	cancellation.enable_propagation();
 	tracing = true;
 	ResetHops();
 	memcpy(&last_remote_addr, &address, getAddressSize(address));
-	// one thread per TTL value
-	for (int i = 0; i < MAX_HOPS; i++) {
+	
+	auto threadMaker = [&address, this](UCHAR i) {
 		trace_thread current(address.sa_family, this, i + 1);
-		using namespace std::chrono_literals;
-		using namespace std::string_literals;
-		TRACE_MSG(L"Threaad with TTL=" << current.ttl << L" started.");
+		using namespace std::string_view_literals;
+		TRACE_MSG(L"Thread with TTL="sv << current.ttl << L" started."sv);
 		memcpy(&current.address, &address, getAddressSize(address));
 		if (current.address.ss_family == AF_INET) {
-			threads.emplace_back(MakeCancellable(this->handleICMPv4(std::move(current)), cancellation));
+			return this->handleICMPv4(std::move(current));
 		}
 		else if (current.address.ss_family == AF_INET6) {
-			threads.emplace_back(MakeCancellable(this->handleICMPv6(std::move(current)), cancellation));
+			return this->handleICMPv6(std::move(current));
 		}
-	}
-	
-	cancellation.callback([this] {
-		this->tracing = false;
-		});
-	//co_await threads;
-	for(auto & thrd : threads) {
-		if (cancellation()) {
-			break;
-		}
-		co_await thrd;
-	}
+		winrt::throw_hresult(HRESULT_FROM_WIN32(WSAEOPNOTSUPP));
+	};
 
+	cancellation.callback([this] () noexcept {
+		this->tracing = false;
+		TRACE_MSG(L"Cancellation");
+	});
+	//// one thread per TTL value
+	co_await std::invoke([]<UCHAR ...threads>(std::integer_sequence<UCHAR, threads...>, auto threadMaker) {
+		return winrt::when_all(std::invoke(threadMaker, threads)...);
+	}, std::make_integer_sequence<UCHAR, MAX_HOPS>(), threadMaker);
 	TRACE_MSG(L"Tracing Ended");
 }
 

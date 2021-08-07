@@ -39,6 +39,7 @@
 #include <span>
 #include <cstdint>
 #include <concepts>
+#include <utility>
 #include <ranges>
 
 #ifdef __has_include                           // Check if __has_include is present

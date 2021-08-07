@@ -64,7 +64,8 @@ struct trace_thread;
 //*****************************************************************************
 
 class WinMTRNet final: public std::enable_shared_from_this<WinMTRNet>{
-
+	WinMTRNet(const WinMTRNet&) = delete;
+	WinMTRNet& operator=(const WinMTRNet&) = delete;
 public:
 
 	WinMTRNet(const WinMTRDialog *wp);
