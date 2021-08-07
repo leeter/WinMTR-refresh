@@ -300,44 +300,57 @@ void WinMTRDialog::OnSizing(UINT fwSide, LPRECT pRect)
 //*****************************************************************************
 void WinMTRDialog::OnSize(UINT nType, int cx, int cy)
 {
+	constexpr auto INITIALX_96DPI = 96;
 	CDialog::OnSize(nType, cx, cy);
 	CRect r;
 	GetClientRect(&r);
 	CRect lb;
-	
 	if (::IsWindow(m_staticS.m_hWnd)) {
+		const auto dpi = GetDpiForWindow(m_staticS.m_hWnd);
 		m_staticS.GetWindowRect(&lb);
 		ScreenToClient(&lb);
-		m_staticS.SetWindowPos(nullptr, lb.TopLeft().x, lb.TopLeft().y, r.Width()-lb.TopLeft().x-10, lb.Height() , SWP_NOMOVE | SWP_NOZORDER);
+		const auto scaledXOffset = MulDiv(10, dpi, 96);
+		m_staticS.SetWindowPos(nullptr, lb.TopLeft().x, lb.TopLeft().y, r.Width()-lb.TopLeft().x- scaledXOffset, lb.Height() , SWP_NOMOVE | SWP_NOZORDER);
 	}
 
 	if (::IsWindow(m_staticJ.m_hWnd)) {
+		const auto dpi = GetDpiForWindow(m_staticJ.m_hWnd);
 		m_staticJ.GetWindowRect(&lb);
-		ScreenToClient(&lb);
-		m_staticJ.SetWindowPos(nullptr, lb.TopLeft().x, lb.TopLeft().y, r.Width() - 21, lb.Height(), SWP_NOMOVE | SWP_NOZORDER);
+		ScreenToClient(&lb); 
+		const auto scaledXOffset = MulDiv(21, dpi, 96);
+		m_staticJ.SetWindowPos(nullptr, lb.TopLeft().x, lb.TopLeft().y, r.Width() - scaledXOffset, lb.Height(), SWP_NOMOVE | SWP_NOZORDER);
 	}
 
 	if (::IsWindow(m_buttonExit.m_hWnd)) {
+		const auto dpi = GetDpiForWindow(m_buttonExit.m_hWnd);
 		m_buttonExit.GetWindowRect(&lb);
 		ScreenToClient(&lb);
-		m_buttonExit.SetWindowPos(nullptr, r.Width() - lb.Width()-21, lb.TopLeft().y, lb.Width(), lb.Height() , SWP_NOSIZE | SWP_NOZORDER);
+		const auto scaledXOffset = MulDiv(21, dpi, 96);
+		m_buttonExit.SetWindowPos(nullptr, r.Width() - lb.Width()- scaledXOffset, lb.TopLeft().y, lb.Width(), lb.Height() , SWP_NOSIZE | SWP_NOZORDER);
 	}
 	
 	if (::IsWindow(m_buttonExpH.m_hWnd)) {
+		const auto dpi = GetDpiForWindow(m_buttonExpH.m_hWnd);
 		m_buttonExpH.GetWindowRect(&lb);
 		ScreenToClient(&lb);
-		m_buttonExpH.SetWindowPos(nullptr, r.Width() - lb.Width()-21, lb.TopLeft().y, lb.Width(), lb.Height() , SWP_NOSIZE | SWP_NOZORDER);
+		const auto scaledXOffset = MulDiv(21, dpi, 96);
+		m_buttonExpH.SetWindowPos(nullptr, r.Width() - lb.Width()-scaledXOffset, lb.TopLeft().y, lb.Width(), lb.Height() , SWP_NOSIZE | SWP_NOZORDER);
 	}
 	if (::IsWindow(m_buttonExpT.m_hWnd)) {
+		const auto dpi = GetDpiForWindow(m_buttonExpT.m_hWnd);
 		m_buttonExpT.GetWindowRect(&lb);
 		ScreenToClient(&lb);
-		m_buttonExpT.SetWindowPos(nullptr, r.Width() - lb.Width()- 103, lb.TopLeft().y, lb.Width(), lb.Height() , SWP_NOSIZE | SWP_NOZORDER);
+		const auto scaledXOffset = MulDiv(103, dpi, 96);
+		m_buttonExpT.SetWindowPos(nullptr, r.Width() - lb.Width()- scaledXOffset, lb.TopLeft().y, lb.Width(), lb.Height() , SWP_NOSIZE | SWP_NOZORDER);
 	}
 
 	if (::IsWindow(m_listMTR.m_hWnd)) {
+		const auto dpi = GetDpiForWindow(m_listMTR.m_hWnd);
 		m_listMTR.GetWindowRect(&lb);
 		ScreenToClient(&lb);
-		m_listMTR.SetWindowPos(nullptr, lb.TopLeft().x, lb.TopLeft().y, r.Width() - 21, r.Height() - lb.top - 25, SWP_NOMOVE | SWP_NOZORDER);
+		const auto scaledX = MulDiv(21, dpi, 96);
+		const auto scaledY = MulDiv(25, dpi, 96);
+		m_listMTR.SetWindowPos(nullptr, lb.TopLeft().x, lb.TopLeft().y, r.Width() - scaledX, r.Height() - lb.top - scaledY, SWP_NOMOVE | SWP_NOZORDER);
 	}
 
 	RepositionBars(AFX_IDW_CONTROLBAR_FIRST, AFX_IDW_CONTROLBAR_LAST,
