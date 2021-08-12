@@ -35,7 +35,11 @@ namespace {
 		using coro_handle = std::experimental::coroutine_handle<>;
 #  endif
 #endif
-		WSAOVERLAPPED m_overlapped{};
+		struct overlappedLacky {
+			WSAOVERLAPPED m_overlapped{};
+			name_lookup_async* parent;
+		};
+		overlappedLacky lacky{ .m_overlapped{}, .parent{this} };
 		concurrency::task_continuation_context m_context = concurrency::task_continuation_context::get_current_winrt_context();
 		coro_handle m_resume{ nullptr };
 		PCWSTR m_Name;
@@ -49,7 +53,9 @@ namespace {
 			:m_Name(pName)
 			,m_timeout(timeout)
 			,m_family(family)
-		{}
+		{
+			static_assert(std::is_standard_layout_v<overlappedLacky>);
+		}
 
 		~name_lookup_async()
 		{
@@ -76,7 +82,7 @@ namespace {
 				, &hint
 				, &m_results // PADDRINFOEXW * ppResult,
 				, m_timeout
-				, &m_overlapped
+				, &lacky.m_overlapped
 				, name_lookup_async::lookup_callback
 				, nullptr //LPHANDLE                           lpHandle
 			);
@@ -111,7 +117,7 @@ namespace {
 				__in     [[maybe_unused]] DWORD    dwBytes,
 				__in      LPWSAOVERLAPPED lpOverlapped
 			) noexcept {
-			auto context = static_cast<name_lookup_async*>(CONTAINING_RECORD(lpOverlapped, name_lookup_async, m_overlapped));
+			auto context = static_cast<overlappedLacky*>(CONTAINING_RECORD(lpOverlapped, overlappedLacky, m_overlapped))->parent;
 			context->m_dwError = dwError;
 			concurrency::create_task([=] {
 				context->m_resume();
@@ -1007,13 +1013,12 @@ winrt::Windows::Foundation::IAsyncAction WinMTRDialog::pingThread()
 		this->tracing = false;
 	});
 
-	wchar_t strtmp[255];
-	const wchar_t* Hostname = strtmp;
+	wchar_t strtmp[255] = {};
 	SOCKADDR_STORAGE addrstore = {};
-	this->m_comboHost.GetWindowTextW(strtmp, gsl::narrow_cast<int>(std::size(strtmp)));
+	const int count = this->m_comboHost.GetWindowTextW(strtmp, gsl::narrow_cast<int>(std::size(strtmp)));
 
-	if (Hostname == nullptr) {
-		Hostname = L"localhost";
+	if (count == 0) [[unlikely]] { // Technically never because this is caught in the calling function
+		StringCchCopyW(strtmp, std::size(strtmp), L"localhost");
 	}
 
 	auto cancellation = co_await winrt::get_cancellation_token();
@@ -1031,9 +1036,15 @@ winrt::Windows::Foundation::IAsyncAction WinMTRDialog::pingThread()
 			co_return;
 		}
 	}
-	const int  hintFamily = (this->useIPv4 ? AF_INET : 0) | (this->useIPv6 ? AF_INET6 : 0);
+	int  hintFamily = AF_UNSPEC; //both
+	if (!this->useIPv4) {
+		hintFamily = AF_INET6;
+	}
+	else if (!this->useIPv6) {
+		hintFamily = AF_INET;
+	}
 	timeval timeout{ .tv_sec = 30 };
-	auto result = co_await name_lookup_async(Hostname, &timeout, hintFamily);
+	auto result = co_await name_lookup_async(strtmp, &timeout, hintFamily);
 	if (!result || result->empty()) {
 		AfxMessageBox(L"Unable to resolve address.");
 		co_return;
