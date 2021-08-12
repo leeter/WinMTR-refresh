@@ -65,7 +65,7 @@ public:
 
 	
 	
-	int InitMTRNet();
+	bool InitMTRNet();
 
 	int DisplayRedraw();
 	void Transit(STATES new_state);

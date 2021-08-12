@@ -26,6 +26,98 @@ static	 char THIS_FILE[] = __FILE__;
 namespace {
 	const auto config_key_name = LR"(Software\WinMTR\Config)";
 	const auto lru_key_name = LR"(Software\WinMTR\LRU)";
+
+	class name_lookup_async final {
+#ifdef __has_include                           // Check if __has_include is present
+#  if __has_include(<coroutine>)                // Check for a standard library
+		using coro_handle = std::coroutine_handle<>;
+#  else
+		using coro_handle = std::experimental::coroutine_handle<>;
+#  endif
+#endif
+		WSAOVERLAPPED m_overlapped{};
+		concurrency::task_continuation_context m_context = concurrency::task_continuation_context::get_current_winrt_context();
+		coro_handle m_resume{ nullptr };
+		PCWSTR m_Name;
+		timeval* m_timeout;
+		PADDRINFOEX m_results = nullptr;
+		DWORD m_dwError = ERROR_SUCCESS;
+		int m_family;
+		name_lookup_async(const name_lookup_async&) = delete;
+	public:
+		name_lookup_async(PCWSTR pName, timeval* timeout, int family = AF_UNSPEC)
+			:m_Name(pName)
+			,m_timeout(timeout)
+			,m_family(family)
+		{}
+
+		~name_lookup_async()
+		{
+			if (m_results) {
+				FreeAddrInfoExW(m_results);
+			}
+		}
+
+		bool await_ready() const noexcept
+		{
+			return false;
+		}
+
+		void await_suspend(coro_handle resume_handle)
+		{
+			m_resume = resume_handle;
+			// AF_UNSPEC counts as AF_INET | AF_INET6
+			ADDRINFOEXW hint = {.ai_family = m_family};
+			auto result = GetAddrInfoExW(
+				m_Name
+				, nullptr ///PCWSTR                             pServiceName,
+				, NS_DNS
+				, nullptr //LPGUID                             lpNspId,
+				, &hint
+				, &m_results // PADDRINFOEXW * ppResult,
+				, m_timeout
+				, &m_overlapped
+				, name_lookup_async::lookup_callback
+				, nullptr //LPHANDLE                           lpHandle
+			);
+
+			if (result != WSA_IO_PENDING) {
+				winrt::throw_hresult(HRESULT_FROM_WIN32(result));
+			}
+			
+		}
+
+		std::optional<std::vector<SOCKADDR_STORAGE>> await_resume() const noexcept
+		{
+			if (m_dwError != ERROR_SUCCESS) {
+				return std::nullopt;
+			}
+			
+			std::vector<SOCKADDR_STORAGE> addresses;
+			for (auto result = m_results; result; result = result->ai_next) {
+				SOCKADDR_STORAGE addrstore = {};
+
+				std::memcpy(&addrstore, m_results->ai_addr, m_results->ai_addrlen);
+				addresses.push_back(addrstore);
+			}
+			
+			return addresses;
+		}
+
+	private:
+		static void
+			CALLBACK lookup_callback(
+				__in      DWORD    dwError,
+				__in     [[maybe_unused]] DWORD    dwBytes,
+				__in      LPWSAOVERLAPPED lpOverlapped
+			) noexcept {
+			auto context = static_cast<name_lookup_async*>(CONTAINING_RECORD(lpOverlapped, name_lookup_async, m_overlapped));
+			context->m_dwError = dwError;
+			concurrency::create_task([=] {
+				context->m_resume();
+			}, context->m_context);
+		}
+	};
 }
 
 //*****************************************************************************
@@ -839,41 +931,47 @@ int WinMTRDialog::DisplayRedraw()
 //
 // 
 //*****************************************************************************
-int WinMTRDialog::InitMTRNet()
+bool WinMTRDialog::InitMTRNet()
 {
-	wchar_t strtmp[255];
-	const wchar_t *Hostname = strtmp;
-	m_comboHost.GetWindowText(strtmp, 255);
-   	
-	if (Hostname == nullptr) Hostname = L"localhost";
+	wchar_t strtmp[255] = {};
+	auto count = m_comboHost.GetWindowTextW(strtmp, 255);
+
+	if (count == 0) [[unlikely]] { // Technically never because this is caught in the calling function
+		StringCchCopyW(strtmp, std::size(strtmp), L"localhost"); 
+	}
    
 	bool isIP=true;
-	const wchar_t *t = Hostname;
-	while(*t) {
-		if(!std::iswdigit(*t) && *t!=L'.') {
-			isIP = false;
+	SOCKADDR_STORAGE addrstore{};
+	for (auto af : { AF_INET, AF_INET6 }) {
+		INT addrSize = sizeof(addrstore);
+		if (auto res = WSAStringToAddressW(
+			strtmp
+			, af
+			, nullptr
+			, reinterpret_cast<LPSOCKADDR>(&addrstore)
+			, &addrSize);
+			!res) {
+			isIP = true;
 			break;
 		}
-		t++;
 	}
 
 	if(!isIP) {
-		wchar_t buf[255];
+		wchar_t buf[255] = {};
 		std::swprintf(buf, std::size(buf), L"Resolving host %s...", strtmp);
 		statusBar.SetPaneText(0,buf);
 		PADDRINFOW out = nullptr;
-		ADDRINFOW hint = {};
-		hint.ai_family = AF_INET | AF_INET6;
-		if (const auto result = GetAddrInfoW(Hostname, nullptr, &hint, &out); result) {
+		ADDRINFOW hint = { .ai_family = AF_UNSPEC };
+		if (const auto result = GetAddrInfoW(strtmp, nullptr, &hint, &out); result) {
 			FreeAddrInfoW(out);
 			statusBar.SetPaneText(0, CString((LPCTSTR)IDS_STRING_SB_NAME) );
 			AfxMessageBox(IDS_STRING_UNABLE_TO_RESOLVE_HOSTNAME);
-			return 0;
+			return false;
 		}
 		FreeAddrInfoW(out);
 	}
 
-	return 1;
+	return true;
 }
 
 void WinMTRDialog::OnCbnSelchangeComboHost()
@@ -919,7 +1017,7 @@ winrt::Windows::Foundation::IAsyncAction WinMTRDialog::pingThread()
 	}
 
 	auto cancellation = co_await winrt::get_cancellation_token();
-
+	cancellation.enable_propagation();
 	for (auto af : { AF_INET, AF_INET6 }) {
 		INT addrSize = sizeof(addrstore);
 		if (auto res = WSAStringToAddressW(
@@ -929,25 +1027,19 @@ winrt::Windows::Foundation::IAsyncAction WinMTRDialog::pingThread()
 			, reinterpret_cast<LPSOCKADDR>(&addrstore)
 			, &addrSize);
 			!res) {
-			co_await MakeCancellable(this->wmtrnet->DoTrace(*reinterpret_cast<LPSOCKADDR>(&addrstore)), cancellation);
+			co_await this->wmtrnet->DoTrace(*reinterpret_cast<LPSOCKADDR>(&addrstore));
 			co_return;
 		}
 	}
-
-	PADDRINFOW out = nullptr;
-	ADDRINFOW hint = { .ai_family = (this->useIPv4 ? AF_INET : 0) | (this->useIPv6 ? AF_INET6 : 0) };
-	assert(hint.ai_family != 0);
-	
-	if (const auto result = GetAddrInfoW(Hostname, nullptr, &hint, &out); result) {
-		if (out) {
-			FreeAddrInfoW(out);
-		}
+	const int  hintFamily = (this->useIPv4 ? AF_INET : 0) | (this->useIPv6 ? AF_INET6 : 0);
+	timeval timeout{ .tv_sec = 30 };
+	auto result = co_await name_lookup_async(Hostname, &timeout, hintFamily);
+	if (!result || result->empty()) {
 		AfxMessageBox(L"Unable to resolve address.");
 		co_return;
 	}
-	std::memcpy(&addrstore, out->ai_addr, out->ai_addrlen);
-	FreeAddrInfoW(out);
-	co_await MakeCancellable(this->wmtrnet->DoTrace(*reinterpret_cast<LPSOCKADDR>(&addrstore)), cancellation);
+	addrstore = result->front();
+	co_await this->wmtrnet->DoTrace(*reinterpret_cast<LPSOCKADDR>(&addrstore));
 }
 
 winrt::fire_and_forget WinMTRDialog::stopTrace()
