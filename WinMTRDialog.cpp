@@ -35,11 +35,10 @@ namespace {
 		using coro_handle = std::experimental::coroutine_handle<>;
 #  endif
 #endif
-		struct overlappedLacky {
-			WSAOVERLAPPED m_overlapped{};
+		struct overlappedLacky : public WSAOVERLAPPED {
 			name_lookup_async* parent;
 		};
-		overlappedLacky lacky{ .m_overlapped{}, .parent{this} };
+		overlappedLacky lacky{ .parent{this} };
 		concurrency::task_continuation_context m_context = concurrency::task_continuation_context::get_current_winrt_context();
 		coro_handle m_resume{ nullptr };
 		PCWSTR m_Name;
@@ -54,7 +53,6 @@ namespace {
 			,m_timeout(timeout)
 			,m_family(family)
 		{
-			static_assert(std::is_standard_layout_v<overlappedLacky>);
 		}
 
 		~name_lookup_async()
@@ -82,7 +80,7 @@ namespace {
 				, &hint
 				, &m_results // PADDRINFOEXW * ppResult,
 				, m_timeout
-				, &lacky.m_overlapped
+				, &lacky
 				, name_lookup_async::lookup_callback
 				, nullptr //LPHANDLE                           lpHandle
 			);
@@ -117,7 +115,7 @@ namespace {
 				__in     [[maybe_unused]] DWORD    dwBytes,
 				__in      LPWSAOVERLAPPED lpOverlapped
 			) noexcept {
-			auto context = static_cast<overlappedLacky*>(CONTAINING_RECORD(lpOverlapped, overlappedLacky, m_overlapped))->parent;
+			auto context = static_cast<overlappedLacky*>(lpOverlapped)->parent;
 			context->m_dwError = dwError;
 			concurrency::create_task([=] {
 				context->m_resume();
@@ -939,11 +937,11 @@ int WinMTRDialog::DisplayRedraw()
 //*****************************************************************************
 bool WinMTRDialog::InitMTRNet()
 {
-	wchar_t strtmp[255] = {};
-	auto count = m_comboHost.GetWindowTextW(strtmp, 255);
+	CString sHost;
+	m_comboHost.GetWindowTextW(sHost);
 
-	if (count == 0) [[unlikely]] { // Technically never because this is caught in the calling function
-		StringCchCopyW(strtmp, std::size(strtmp), L"localhost"); 
+	if (sHost.IsEmpty()) [[unlikely]] { // Technically never because this is caught in the calling function
+		sHost = L"localhost";
 	}
    
 	bool isIP=true;
@@ -951,7 +949,7 @@ bool WinMTRDialog::InitMTRNet()
 	for (auto af : { AF_INET, AF_INET6 }) {
 		INT addrSize = sizeof(addrstore);
 		if (auto res = WSAStringToAddressW(
-			strtmp
+			sHost.GetBuffer()
 			, af
 			, nullptr
 			, reinterpret_cast<LPSOCKADDR>(&addrstore)
@@ -964,17 +962,28 @@ bool WinMTRDialog::InitMTRNet()
 
 	if(!isIP) {
 		wchar_t buf[255] = {};
-		std::swprintf(buf, std::size(buf), L"Resolving host %s...", strtmp);
+		std::swprintf(buf, std::size(buf), L"Resolving host %s...", sHost.GetString());
 		statusBar.SetPaneText(0,buf);
-		PADDRINFOW out = nullptr;
-		ADDRINFOW hint = { .ai_family = AF_UNSPEC };
-		if (const auto result = GetAddrInfoW(strtmp, nullptr, &hint, &out); result) {
-			FreeAddrInfoW(out);
+		PADDRINFOEXW out = nullptr;
+		ADDRINFOEXW hint = { .ai_family = AF_UNSPEC };
+		timeval timeout{ .tv_sec = 20 };
+		if (const auto result = GetAddrInfoExW(
+			sHost
+			, nullptr
+			, NS_ALL
+			, nullptr
+			, &hint
+			, &out
+			, &timeout
+			, nullptr
+			, nullptr
+			, nullptr); result) {
+			FreeAddrInfoExW(out);
 			statusBar.SetPaneText(0, CString((LPCTSTR)IDS_STRING_SB_NAME) );
 			AfxMessageBox(IDS_STRING_UNABLE_TO_RESOLVE_HOSTNAME);
 			return false;
 		}
-		FreeAddrInfoW(out);
+		FreeAddrInfoExW(out);
 	}
 
 	return true;
@@ -1013,12 +1022,12 @@ winrt::Windows::Foundation::IAsyncAction WinMTRDialog::pingThread()
 		this->tracing = false;
 	});
 
-	wchar_t strtmp[255] = {};
 	SOCKADDR_STORAGE addrstore = {};
-	const int count = this->m_comboHost.GetWindowTextW(strtmp, gsl::narrow_cast<int>(std::size(strtmp)));
+	CString sHost;
+	this->m_comboHost.GetWindowTextW(sHost);
 
-	if (count == 0) [[unlikely]] { // Technically never because this is caught in the calling function
-		StringCchCopyW(strtmp, std::size(strtmp), L"localhost");
+	if (sHost.IsEmpty()) [[unlikely]] { // Technically never because this is caught in the calling function
+		sHost =  L"localhost";
 	}
 
 	auto cancellation = co_await winrt::get_cancellation_token();
@@ -1026,7 +1035,7 @@ winrt::Windows::Foundation::IAsyncAction WinMTRDialog::pingThread()
 	for (auto af : { AF_INET, AF_INET6 }) {
 		INT addrSize = sizeof(addrstore);
 		if (auto res = WSAStringToAddressW(
-			strtmp
+			sHost.GetBuffer()
 			, af
 			, nullptr
 			, reinterpret_cast<LPSOCKADDR>(&addrstore)
@@ -1044,7 +1053,7 @@ winrt::Windows::Foundation::IAsyncAction WinMTRDialog::pingThread()
 		hintFamily = AF_INET;
 	}
 	timeval timeout{ .tv_sec = 30 };
-	auto result = co_await name_lookup_async(strtmp, &timeout, hintFamily);
+	auto result = co_await name_lookup_async(sHost, &timeout, hintFamily);
 	if (!result || result->empty()) {
 		AfxMessageBox(L"Unable to resolve address.");
 		co_return;
