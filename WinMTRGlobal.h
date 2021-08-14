@@ -31,6 +31,7 @@
 #include <string_view>
 #include <cwchar>
 #include <fstream>
+#include <format>
 #include <sstream>
 #include <vector>
 #include <compare>

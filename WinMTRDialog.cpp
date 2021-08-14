@@ -943,8 +943,7 @@ bool WinMTRDialog::InitMTRNet()
 	if (sHost.IsEmpty()) [[unlikely]] { // Technically never because this is caught in the calling function
 		sHost = L"localhost";
 	}
-   
-	bool isIP=true;
+
 	SOCKADDR_STORAGE addrstore{};
 	for (auto af : { AF_INET, AF_INET6 }) {
 		INT addrSize = sizeof(addrstore);
@@ -955,35 +954,33 @@ bool WinMTRDialog::InitMTRNet()
 			, reinterpret_cast<LPSOCKADDR>(&addrstore)
 			, &addrSize);
 			!res) {
-			isIP = true;
-			break;
+			return true;
 		}
 	}
 
-	if(!isIP) {
-		wchar_t buf[255] = {};
-		std::swprintf(buf, std::size(buf), L"Resolving host %s...", sHost.GetString());
-		statusBar.SetPaneText(0,buf);
-		PADDRINFOEXW out = nullptr;
-		ADDRINFOEXW hint = { .ai_family = AF_UNSPEC };
-		timeval timeout{ .tv_sec = 20 };
-		if (const auto result = GetAddrInfoExW(
-			sHost
-			, nullptr
-			, NS_ALL
-			, nullptr
-			, &hint
-			, &out
-			, &timeout
-			, nullptr
-			, nullptr
-			, nullptr); result) {
+	const auto buf = std::format(L"Resolving host {}..."sv, sHost.GetString());
+	statusBar.SetPaneText(0, buf.c_str());
+	PADDRINFOEXW out = nullptr;
+	const auto cleanup = gsl::finally([&out]() noexcept {
+		if (out) {
 			FreeAddrInfoExW(out);
-			statusBar.SetPaneText(0, CString((LPCTSTR)IDS_STRING_SB_NAME) );
-			AfxMessageBox(IDS_STRING_UNABLE_TO_RESOLVE_HOSTNAME);
-			return false;
 		}
-		FreeAddrInfoExW(out);
+	});
+	ADDRINFOEXW hint = { .ai_family = AF_UNSPEC };
+	if (const auto result = GetAddrInfoExW(
+		sHost
+		, nullptr
+		, NS_ALL
+		, nullptr
+		, &hint
+		, &out
+		, nullptr
+		, nullptr
+		, nullptr
+		, nullptr); result != ERROR_SUCCESS) {
+		statusBar.SetPaneText(0, CString((LPCTSTR)IDS_STRING_SB_NAME));
+		AfxMessageBox(IDS_STRING_UNABLE_TO_RESOLVE_HOSTNAME);
+		return false;
 	}
 
 	return true;
@@ -1064,10 +1061,16 @@ winrt::Windows::Foundation::IAsyncAction WinMTRDialog::pingThread()
 
 winrt::fire_and_forget WinMTRDialog::stopTrace()
 {
-	if (this->tracer) {
-		co_await *context;
-		tracer->Cancel();
+	std::optional<tracer_lacky> temp;
+	{
+		std::unique_lock lock(this->tracer_mutex);
+		std::swap(temp, this->trace_lacky);
 	}
+	if (!temp) {
+		co_return;
+	}
+	co_await temp->context;
+	temp->tracer.Cancel();
 }
 
 void WinMTRDialog::OnCbnSelendokComboHost()
@@ -1164,10 +1167,13 @@ void WinMTRDialog::Transit(STATES new_state)
 				auto thread = std::thread([this]() noexcept {
 					winrt::init_apartment(winrt::apartment_type::multi_threaded);
 					try {
-						this->context = winrt::apartment_context();
-						this->tracer = this->pingThread();
+						auto tracer_local = this->pingThread();
+						{
+							std::unique_lock lock(this->tracer_mutex);
+							this->trace_lacky.emplace(tracer_local, winrt::apartment_context());
+						}
 						// keep the thread alive
-						tracer->get();
+						tracer_local.get();
 					}
 					catch (winrt::hresult_canceled const&) {
 						// don't care this happens
@@ -1175,8 +1181,10 @@ void WinMTRDialog::Transit(STATES new_state)
 					catch (winrt::hresult_illegal_method_call const&){
 						// don't care this happens
 					}
-					this->tracer.reset();
-					this->context.reset();
+					{
+						std::unique_lock lock(this->tracer_mutex);
+						this->trace_lacky.reset();
+					}
 					});
 				thread.detach();
 			}

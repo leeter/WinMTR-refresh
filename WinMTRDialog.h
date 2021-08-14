@@ -85,8 +85,12 @@ private:
 	std::wstring msz_defaulthostname;
 	//std::recursive_mutex			traceThreadMutex;
 	std::shared_ptr<WinMTRNet>			wmtrnet;
-	std::optional<winrt::Windows::Foundation::IAsyncAction> tracer;
-	std::optional<winrt::apartment_context> context;
+	struct tracer_lacky {
+		winrt::Windows::Foundation::IAsyncAction tracer;
+		winrt::apartment_context context;
+	};
+	std::mutex tracer_mutex;
+	std::optional<tracer_lacky> trace_lacky;
 	HICON m_hIcon;
 	double				interval;
 	STATES				state;
