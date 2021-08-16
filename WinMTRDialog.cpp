@@ -48,7 +48,7 @@ namespace {
 		int m_family;
 		name_lookup_async(const name_lookup_async&) = delete;
 	public:
-		name_lookup_async(PCWSTR pName, timeval* timeout, int family = AF_UNSPEC)
+		name_lookup_async(PCWSTR pName, timeval* timeout, int family = AF_UNSPEC) noexcept
 			:m_Name(pName)
 			,m_timeout(timeout)
 			,m_family(family)
@@ -88,7 +88,6 @@ namespace {
 			if (result != WSA_IO_PENDING) {
 				winrt::throw_hresult(HRESULT_FROM_WIN32(result));
 			}
-			
 		}
 
 		std::optional<std::vector<SOCKADDR_STORAGE>> await_resume() const noexcept
