@@ -494,23 +494,7 @@ sockaddr_storage WinMTRNet::GetAddr(int at) const
 std::wstring WinMTRNet::GetName(int at)
 {
 	std::unique_lock lock(ghMutex);
-	if (host[at].name.empty()) {
-		SOCKADDR_STORAGE addr = GetAddr(at);
-		lock.unlock();
-		if (!isValidAddress(addr)) {
-			return {};
-		}
-		std::wstring out;
-		out.resize(40);
-		auto addrlen = getAddressSize(addr);
-		DWORD addrstrsize = gsl::narrow_cast<DWORD>(out.size());
-		if (auto result = WSAAddressToStringW(reinterpret_cast<LPSOCKADDR>(&addr), gsl::narrow_cast<DWORD>(addrlen), nullptr, out.data(), &addrstrsize); !result) {
-			out.resize(addrstrsize - 1);
-		}
-
-		return out;
-	}
-	return host[at].name;
+	return host[at].getName();
 }
 
 int WinMTRNet::GetBest(int at) const
@@ -530,15 +514,13 @@ int WinMTRNet::GetWorst(int at) const
 int WinMTRNet::GetAvg(int at) const
 {
 	std::unique_lock lock(ghMutex);
-	int ret = host[at].returned == 0 ? 0 : host[at].total / host[at].returned;
-	return ret;
+	return host[at].getAvg();
 }
 
 int WinMTRNet::GetPercent(int at) const
 {
 	std::unique_lock lock(ghMutex);
-	int ret = (host[at].xmit == 0) ? 0 : (100 - (100 * host[at].returned / host[at].xmit));
-	return ret;
+	return host[at].getPercent();
 }
 
 int WinMTRNet::GetLast(int at) const
@@ -581,6 +563,15 @@ int WinMTRNet::GetMax() const
 		while ((max > 1) && (host[max - 1].addr == host[max - 2].addr && isValidAddress(host[max - 1].addr))) max--;
 	}
 	return max;
+}
+
+std::vector<s_nethost> WinMTRNet::getCurrentState() const
+{
+	std::unique_lock lock(ghMutex);
+	auto max = GetMax();
+	auto end = std::cbegin(host);
+	std::advance(end, max);
+	return std::vector<s_nethost>(std::cbegin(host), end);
 }
 
 void WinMTRNet::SetAddr(int at, sockaddr& addr)
@@ -676,5 +667,22 @@ void WinMTRNet::AddXmit(int at)
 	host[at].xmit++;
 }
 
+std::wstring s_nethost::getName() const
+{
+	if (name.empty()) {
+		SOCKADDR_STORAGE laddr = addr;
+		if (!isValidAddress(addr)) {
+			return {};
+		}
+		std::wstring out;
+		out.resize(40);
+		auto addrlen = getAddressSize(addr);
+		DWORD addrstrsize = gsl::narrow_cast<DWORD>(out.size());
+		if (auto result = WSAAddressToStringW(reinterpret_cast<LPSOCKADDR>(&laddr), gsl::narrow_cast<DWORD>(addrlen), nullptr, out.data(), &addrstrsize); !result) {
+			out.resize(addrstrsize - 1);
+		}
 
-
+		return out;
+	}
+	return name;
+}

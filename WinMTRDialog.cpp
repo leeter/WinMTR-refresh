@@ -881,14 +881,15 @@ void WinMTRDialog::OnCancel()
 int WinMTRDialog::DisplayRedraw()
 {
 	wchar_t buf[255], nr_crt[255];
-	const int nh = wmtrnet->GetMax();
+	const auto netstate = wmtrnet->getCurrentState();
+	const auto nh = netstate.size();
 	while (m_listMTR.GetItemCount() > nh) {
 		m_listMTR.DeleteItem(m_listMTR.GetItemCount() - 1); 
 	}
 
-	for(int i=0;i <nh ; i++) {
+	for (int i = 0; const auto & host : netstate) {
 
-		auto name = wmtrnet->GetName(i);
+		auto name = host.getName();
 		if (name.empty()) {
 			name = L"No response from host"sv;
 		}
@@ -901,28 +902,28 @@ int WinMTRDialog::DisplayRedraw()
 		
 		m_listMTR.SetItem(i, 1, LVIF_TEXT, nr_crt, 0, 0, 0, 0); 
 
-		std::swprintf(buf, std::size(buf), L"%d", wmtrnet->GetPercent(i));
+		std::swprintf(buf, std::size(buf), L"%d", host.getPercent());
 		m_listMTR.SetItem(i, 2, LVIF_TEXT, buf, 0, 0, 0, 0);
 
-		std::swprintf(buf, std::size(buf), L"%d", wmtrnet->GetXmit(i));
+		std::swprintf(buf, std::size(buf), L"%d", host.xmit);
 		m_listMTR.SetItem(i, 3, LVIF_TEXT, buf, 0, 0, 0, 0);
 
-		std::swprintf(buf, std::size(buf), L"%d", wmtrnet->GetReturned(i));
+		std::swprintf(buf, std::size(buf), L"%d", host.returned);
 		m_listMTR.SetItem(i, 4, LVIF_TEXT, buf, 0, 0, 0, 0);
 
-		std::swprintf(buf, std::size(buf), L"%d", wmtrnet->GetBest(i));
+		std::swprintf(buf, std::size(buf), L"%d", host.best);
 		m_listMTR.SetItem(i, 5, LVIF_TEXT, buf, 0, 0, 0, 0);
 
-		std::swprintf(buf, std::size(buf), L"%d", wmtrnet->GetAvg(i));
+		std::swprintf(buf, std::size(buf), L"%d", host.getAvg());
 		m_listMTR.SetItem(i, 6, LVIF_TEXT, buf, 0, 0, 0, 0);
 
-		std::swprintf(buf, std::size(buf), L"%d", wmtrnet->GetWorst(i));
+		std::swprintf(buf, std::size(buf), L"%d", host.worst);
 		m_listMTR.SetItem(i, 7, LVIF_TEXT, buf, 0, 0, 0, 0);
 
-		std::swprintf(buf, std::size(buf), L"%d", wmtrnet->GetLast(i));
+		std::swprintf(buf, std::size(buf), L"%d", host.last);
 		m_listMTR.SetItem(i, 8, LVIF_TEXT, buf, 0, 0, 0, 0);
 
-   
+		i++;
 	}
 
 	return 0;

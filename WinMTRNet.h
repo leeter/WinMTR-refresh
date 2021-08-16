@@ -32,6 +32,13 @@ struct s_nethost {
   int last = 0;				// last time
   int best = 0;				// best time
   int worst = 0;			// worst time
+  inline auto getPercent() const noexcept {
+	  return (xmit == 0) ? 0 : (100 - (100 * returned / xmit));
+  }
+  inline int getAvg() const noexcept {
+	  return returned == 0 ? 0 : total / returned;
+  }
+  std::wstring getName() const;
 };
 
 template<typename T>
@@ -84,7 +91,10 @@ public:
 	int		GetLast(int at) const;
 	int		GetReturned(int at) const;
 	int		GetXmit(int at) const;
+	[[nodiscard]]
 	int		GetMax() const;
+	[[nodiscard]]
+	std::vector<s_nethost> getCurrentState() const;
 
 private:
 	std::array<s_nethost, MAX_HOPS>	host;
