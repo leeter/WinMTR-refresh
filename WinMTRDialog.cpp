@@ -718,34 +718,30 @@ namespace {
 	[[nodiscard]]
 	std::wstring makeTextOutput(WinMTRNet& wmtrnet) {
 		using namespace std::literals;
-		std::vector<wchar_t> t_buf(1000);
-		const int nh = wmtrnet.GetMax();
-		std::wstring f_buf;
-		f_buf.reserve(255 * 100);
-		f_buf += L"|-------------------------------------------------------------------------------------------|\r\n" \
+		std::wostringstream out_buf;
+		out_buf << L"|-------------------------------------------------------------------------------------------|\r\n" \
 			L"|                                      WinMTR statistics                                    |\r\n" \
 			L"|                       Host              -   %%  | Sent | Recv | Best | Avrg | Wrst | Last |\r\n" \
 			L"|-------------------------------------------------|------|------|------|------|------|------|\r\n"sv;
-
-		for (int i = 0; i < nh; i++) {
-			auto name = wmtrnet.GetName(i);
+		std::ostream_iterator<wchar_t, wchar_t> out(out_buf);
+		const auto curr_state = wmtrnet.getCurrentState();
+		for (const auto& hop : curr_state) {
+			auto name = hop.getName();
 			if (name.empty()) {
 				name = L"No response from host"s;
 			}
-
-			std::swprintf(t_buf.data(), std::size(t_buf), L"|%40ws - %4d | %4d | %4d | %4d | %4d | %4d | %4d |\r\n",
-				name.c_str(), wmtrnet.GetPercent(i),
-				wmtrnet.GetXmit(i), wmtrnet.GetReturned(i), wmtrnet.GetBest(i),
-				wmtrnet.GetAvg(i), wmtrnet.GetWorst(i), wmtrnet.GetLast(i));
-			f_buf += t_buf.data();
+			std::format_to(out, L"| {:40} - {:4} | {:4} | {:4} | {:4} | {:4} | {:4} | {:4} |\r\n"sv,
+				name, hop.getPercent(),
+				hop.xmit, hop.returned, hop.best,
+				hop.getAvg(), hop.worst, hop.last);
 		}
 
-		f_buf += L"|________________________________________________|______|______|______|______|______|______|\r\n"sv;
+		out_buf << L"|_________________________________________________|______|______|______|______|______|______|\r\n"sv;
 
-		CString cs_tmp((LPCTSTR)IDS_STRING_SB_NAME);
-		f_buf += L"   "sv;
-		f_buf += cs_tmp.GetString();
-		return f_buf;
+		CString cs_tmp;
+		(void)cs_tmp.LoadStringW(IDS_STRING_SB_NAME);
+		out_buf << L"   "sv << cs_tmp.GetString();
+		return out_buf.str();
 	}
 
 	[[nodiscard]]
@@ -830,7 +826,7 @@ void WinMTRDialog::OnEXPT()
 	if(dlg.DoModal() == IDOK) {
 		const auto f_buf = makeTextOutput(*wmtrnet);
 
-		if(std::wfstream fp(dlg.GetPathName()); fp) {
+		if(std::wfstream fp(dlg.GetPathName(), std::ios::binary | std::ios::out | std::ios::trunc); fp) {
 			fp << f_buf << std::endl;
 		}
 	}
@@ -856,7 +852,7 @@ void WinMTRDialog::OnEXPH()
 	if(dlg.DoModal() == IDOK) {
 		const auto f_buf = makeHTMLOutput(*wmtrnet);
 
-		if (std::wfstream fp(dlg.GetPathName()); fp) {
+		if (std::wfstream fp(dlg.GetPathName(), std::ios::binary | std::ios::out | std::ios::trunc); fp) {
 			fp << f_buf << std::endl;
 		}
 	}
