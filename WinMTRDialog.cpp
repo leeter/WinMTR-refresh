@@ -199,9 +199,9 @@ BOOL WinMTRDialog::OnInitDialog()
 	CDialog::OnInitDialog();
 
 	#ifndef  _WIN64
-	const wchar_t caption[] = {L"WinMTR v0.92 32 bit by Appnor MSP - www.winmtr.net"};
+	const wchar_t caption[] = {L"WinMTR v0.93 32 bit by Appnor MSP - www.winmtr.net"};
 	#else
-	const wchar_t caption[] = {L"WinMTR v0.92 64 bit by Appnor MSP - www.winmtr.net"};
+	const wchar_t caption[] = {L"WinMTR v0.93 64 bit by Appnor MSP - www.winmtr.net"};
 	#endif
 
 	SetTimer(1, WINMTR_DIALOG_TIMER, nullptr);
