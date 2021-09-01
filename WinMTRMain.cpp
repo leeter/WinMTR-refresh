@@ -63,6 +63,7 @@ WinMTRMain::WinMTRMain()
 //*****************************************************************************
 BOOL WinMTRMain::InitInstance()
 {
+	std::locale::global(std::locale(".UTF8"));
 	winrt::init_apartment(winrt::apartment_type::single_threaded);
 	if (!AfxSocketInit())
 	{

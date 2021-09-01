@@ -728,7 +728,7 @@ namespace {
 		for (const auto& hop : curr_state) {
 			auto name = hop.getName();
 			if (name.empty()) {
-				name = L"No response from host"s;
+				name = L"No response from host"sv;
 			}
 			std::format_to(out, L"| {:40} - {:4} | {:4} | {:4} | {:4} | {:4} | {:4} | {:4} |\r\n"sv,
 				name, hop.getPercent(),
@@ -744,32 +744,32 @@ namespace {
 		return out_buf.str();
 	}
 
-	[[nodiscard]]
-	auto makeHTMLOutput(WinMTRNet& wmtrnet) {
+	std::wostream& makeHTMLOutput(WinMTRNet& wmtrnet, std::wostream& out) {
 		using namespace std::literals;
-		const int nh = wmtrnet.GetMax();
-		std::wstring f_buf;
-		f_buf.reserve(255 * 100);
-		f_buf += L"<!DOCTYPE html><html><head><title>WinMTR Statistics</title></head><body>\r\n" \
-			L"<h1>WinMTR statistics</h1>\r\n" \
-			L"<table>\r\n" \
-			L"<thead><tr><th>Host</th> <th>%%</th> <th>Sent</th> <th>Recv</th> <th>Best</th> <th>Avrg</th> <th>Wrst</th> <th>Last</th></tr></thead><tbody>\r\n"sv;
-		std::vector<wchar_t> t_buf(1000);
-		for (int i = 0; i < nh; i++) {
-			auto name = wmtrnet.GetName(i);
+		out << L"<table>" \
+			L"<thead><tr><th>Host</th><th>%%</th><th>Sent</th><th>Recv</th><th>Best</th><th>Avrg</th><th>Wrst</th><th>Last</th></tr></thead><tbody>"sv;
+		std::ostream_iterator<wchar_t, wchar_t> outitr(out);
+		const auto curr_state = wmtrnet.getCurrentState();
+		for (const auto& hop : curr_state) {
+			auto name = hop.getName();
 			if (name.empty()) {
-				name = L"No response from host"s;
+				name = L"No response from host"sv;
 			}
-
-			std::swprintf(t_buf.data(), std::size(t_buf), L"<tr><td>%ws</td> <td>%4d</td> <td>%4d</td> <td>%4d</td> <td>%4d</td> <td>%4d</td> <td>%4d</td> <td>%4d</td></tr>\r\n",
-				name.c_str(), wmtrnet.GetPercent(i),
-				wmtrnet.GetXmit(i), wmtrnet.GetReturned(i), wmtrnet.GetBest(i),
-				wmtrnet.GetAvg(i), wmtrnet.GetWorst(i), wmtrnet.GetLast(i));
-			f_buf += t_buf.data();
+			std::format_to(outitr
+				, L"<tr><td>{}</td><td>{}</td><td>{}</td><td>{}</td><td>{}</td><td>{}</td><td>{}</td><td>{}</td></tr>"sv
+				, name
+				, hop.getPercent()
+				, hop.xmit
+				, hop.returned
+				, hop.best
+				, hop.getAvg()
+				, hop.worst
+				, hop.last
+			);
 		}
 
-		f_buf += L"</tbody></table></body></html>\r\n"sv;
-		return f_buf;
+		out<< L"</tbody></table>"sv;
+		return out;
 	}
 }
 
@@ -798,8 +798,9 @@ void WinMTRDialog::OnCTTC()
 void WinMTRDialog::OnCHTC() 
 {	
 	using namespace winrt::Windows::ApplicationModel::DataTransfer;
-
-	const auto f_buf = makeHTMLOutput(*wmtrnet);
+	std::wostringstream out;
+	makeHTMLOutput(*wmtrnet, out);
+	const auto f_buf = out.str();
 	const auto htmlFormat = HtmlFormatHelper::CreateHtmlFormat(f_buf);
 	auto dataPackage = DataPackage();
 	dataPackage.SetHtmlFormat(htmlFormat);
@@ -850,10 +851,13 @@ void WinMTRDialog::OnEXPH()
                    this);
 
 	if(dlg.DoModal() == IDOK) {
-		const auto f_buf = makeHTMLOutput(*wmtrnet);
-
 		if (std::wfstream fp(dlg.GetPathName(), std::ios::binary | std::ios::out | std::ios::trunc); fp) {
-			fp << f_buf << std::endl;
+			fp << L"<!DOCTYPE html><html><head><meta charset=\"utf-8\"/><title>WinMTR Statistics</title><style>" \
+				L"td{padding:0.2rem 1rem;border:1px solid #000;}"
+				L"table{border:1px solid #000;border-collapse:collapse;}" \
+				L"tbody tr:nth-child(even){background:#ccc;}</style></head><body>" \
+				L"<h1>WinMTR statistics</h1>"sv;
+			makeHTMLOutput(*wmtrnet, fp) << L"</body></html>"sv << std::endl;
 		}
 	}
 }
