@@ -106,13 +106,6 @@ private:
 	std::optional<winrt::Windows::Foundation::IAsyncAction> tracer;
 	std::optional<winrt::apartment_context> context;
 
-	[[nodiscard("The task should be awaited")]]
-	winrt::Windows::Foundation::IAsyncAction handleICMPv4(trace_thread current);
-	[[nodiscard("The task should be awaited")]]
-	winrt::Windows::Foundation::IAsyncAction handleICMPv6(trace_thread current);
-	void handleDefault(const trace_thread& current, ULONG status);
-	[[nodiscard("The task should be awaited")]] concurrency::task<void> sleepTilInterval(ULONG roundTripTime);
-
 	void	SetAddr(int at, sockaddr& addr);
 	void	SetName(int at, std::wstring n);
 	void	SetBest(int at, int current);
@@ -120,6 +113,10 @@ private:
 	void	SetLast(int at, int last);
 	void	AddReturned(int at);
 	void	AddXmit(int at);
+
+	template<class T>
+	[[nodiscard("The task should be awaited")]]
+	winrt::Windows::Foundation::IAsyncAction handleICMP(trace_thread current);
 };
 
 #endif	// ifndef WINMTRNET_H_
