@@ -1015,8 +1015,8 @@ winrt::Windows::Foundation::IAsyncAction WinMTRDialog::pingThread()
 	if (tracing.exchange(true)) {
 		throw new std::runtime_error("Tracing started twice!");
 	}
-	auto finally = gsl::finally([this] {
-		this->tracing = false;
+	const auto finally = gsl::finally([this]() noexcept {
+		this->tracing.store(false, std::memory_order_release);
 	});
 
 	SOCKADDR_STORAGE addrstore = {};
@@ -1027,7 +1027,7 @@ winrt::Windows::Foundation::IAsyncAction WinMTRDialog::pingThread()
 		sHost =  L"localhost";
 	}
 
-	auto cancellation = co_await winrt::get_cancellation_token();
+	const auto cancellation = co_await winrt::get_cancellation_token();
 	cancellation.enable_propagation();
 	for (auto af : { AF_INET, AF_INET6 }) {
 		INT addrSize = sizeof(addrstore);
@@ -1244,7 +1244,7 @@ void WinMTRDialog::OnTimer(UINT_PTR nIDEvent)
 	static unsigned int call_count = 0;
 	call_count += 1;
 	//std::unique_lock lock(traceThreadMutex, std::try_to_lock);
-	const bool is_tracing = tracing;
+	const bool is_tracing = tracing.load(std::memory_order_acquire);
 	if(state == STATES::EXIT && !is_tracing) {
 		OnOK();
 	}
