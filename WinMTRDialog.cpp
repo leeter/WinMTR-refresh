@@ -724,8 +724,7 @@ namespace {
 			L"|                       Host              -   %%  | Sent | Recv | Best | Avrg | Wrst | Last |\r\n" \
 			L"|-------------------------------------------------|------|------|------|------|------|------|\r\n"sv;
 		std::ostream_iterator<wchar_t, wchar_t> out(out_buf);
-		const auto curr_state = wmtrnet.getCurrentState();
-		for (const auto& hop : curr_state) {
+		for (const auto curr_state = wmtrnet.getCurrentState(); const auto& hop : curr_state) {
 			auto name = hop.getName();
 			if (name.empty()) {
 				name = L"No response from host"sv;
@@ -749,8 +748,7 @@ namespace {
 		out << L"<table>" \
 			L"<thead><tr><th>Host</th><th>%%</th><th>Sent</th><th>Recv</th><th>Best</th><th>Avrg</th><th>Wrst</th><th>Last</th></tr></thead><tbody>"sv;
 		std::ostream_iterator<wchar_t, wchar_t> outitr(out);
-		const auto curr_state = wmtrnet.getCurrentState();
-		for (const auto& hop : curr_state) {
+		for (const auto curr_state = wmtrnet.getCurrentState(); const auto& hop : curr_state) {
 			auto name = hop.getName();
 			if (name.empty()) {
 				name = L"No response from host"sv;
