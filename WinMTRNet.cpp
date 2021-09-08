@@ -291,10 +291,10 @@ struct trace_thread {
 };
 
 
-WinMTRNet::WinMTRNet(const WinMTRDialog* wp)
+WinMTRNet::WinMTRNet(const IWinMTROptionsProvider* wp)
 	:host(),
 	last_remote_addr(),
-	wmtrdlg(wp),
+	options(wp),
 	wsaHelper(MAKEWORD(2, 2)),
 	tracing(false) {
 
@@ -321,7 +321,7 @@ winrt::Windows::Foundation::IAsyncAction WinMTRNet::handleICMP(trace_thread curr
 	trace_thread mine = std::move(current);
 	co_await winrt::resume_background();
 	using namespace std::string_view_literals;
-	const auto				nDataLen = this->wmtrdlg->getPingSize();
+	const auto				nDataLen = this->options->getPingSize();
 	std::vector<std::byte>	achReqData(nDataLen, static_cast<std::byte>(32)); //whitespaces
 	std::vector<std::byte> achRepData(reply_reply_buffer_size<T>(nDataLen));
 
@@ -414,7 +414,7 @@ winrt::Windows::Foundation::IAsyncAction WinMTRNet::handleICMP(trace_thread curr
 				this->SetName(current.ttl - 1, L"General failure."s);
 				break;
 			}
-			const auto intervalInSec = this->wmtrdlg->getInterval() * 1s;
+			const auto intervalInSec = this->options->getInterval() * 1s;
 			const auto roundTripDuration = std::chrono::milliseconds(icmp_echo_reply->RoundTripTime);
 			if (intervalInSec > roundTripDuration) {
 				const auto sleepTime = intervalInSec - roundTripDuration;
@@ -557,7 +557,7 @@ void WinMTRNet::SetAddr(int at, sockaddr& addr)
 		//TRACE_MSG(L"Start DnsResolverThread for new address " << addr << L". Old addr value was " << host[at].addr);
 		memcpy(&host[at].addr, &addr, getAddressSize(addr));
 
-		if (wmtrdlg->getUseDNS()) {
+		if (options->getUseDNS()) {
 			Concurrency::create_task([at, sharedThis = shared_from_this()] {
 					TRACE_MSG(L"DNS resolver thread started.");
 

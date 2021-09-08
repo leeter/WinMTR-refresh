@@ -29,7 +29,7 @@
 //
 //*****************************************************************************
 
-class WinMTRDialog final: public CDialog
+class WinMTRDialog final: public CDialog, public IWinMTROptionsProvider
 {
 public:
 	WinMTRDialog(CWnd* pParent = NULL);
@@ -119,9 +119,9 @@ public:
 	void SetMaxLRU(int mlru, options_source fromCmdLine = options_source::none) noexcept;
 	void SetUseDNS(bool udns, options_source fromCmdLine = options_source::none) noexcept;
 
-	inline auto getInterval() const noexcept { return interval; }
-	inline auto getPingSize() const noexcept { return pingsize; }
-	inline auto getUseDNS() const noexcept { return useDNS; }
+	inline double getInterval() const noexcept { return interval; }
+	inline int getPingSize() const noexcept { return pingsize; }
+	inline bool getUseDNS() const noexcept { return useDNS; }
 
 protected:
 	virtual void DoDataExchange(CDataExchange* pDX);

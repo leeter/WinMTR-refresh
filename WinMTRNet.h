@@ -20,8 +20,13 @@
 #include "WinMTRWSAhelper.h"
 
 
-class WinMTRDialog;
 constexpr auto MAX_HOPS = 30;
+
+struct __declspec(novtable) IWinMTROptionsProvider {
+	virtual int getPingSize() const noexcept = 0;
+	virtual double getInterval() const noexcept = 0;
+	virtual bool getUseDNS() const noexcept = 0;
+};
 
 struct s_nethost {
   SOCKADDR_STORAGE addr = {};
@@ -41,9 +46,15 @@ struct s_nethost {
   std::wstring getName() const;
 };
 
+template<class T>
+concept socket_type = requires(T a, ADDRESS_FAMILY afam) {
+	a.sa_family;
+	std::convertible_to<decltype(a.sa_family), ADDRESS_FAMILY>;
+};
+
 template<typename T>
 inline constexpr auto getAddressFamily(const T& addr) noexcept {
-	if constexpr (std::is_same_v<sockaddr, T>) {
+	if constexpr (socket_type<T>) {
 		return addr.sa_family;
 	}
 	else if (std::is_same_v<SOCKADDR_STORAGE, T>) {
@@ -75,7 +86,7 @@ class WinMTRNet final: public std::enable_shared_from_this<WinMTRNet>{
 	WinMTRNet& operator=(const WinMTRNet&) = delete;
 public:
 
-	WinMTRNet(const WinMTRDialog *wp);
+	WinMTRNet(const IWinMTROptionsProvider*wp);
 	~WinMTRNet() noexcept;
 	[[nodiscard("The task should be awaited")]]
 	winrt::Windows::Foundation::IAsyncAction	DoTrace(sockaddr& address);
@@ -100,7 +111,7 @@ private:
 	std::array<s_nethost, MAX_HOPS>	host;
 	SOCKADDR_STORAGE last_remote_addr;
 	mutable std::recursive_mutex	ghMutex;
-	const WinMTRDialog* wmtrdlg;
+	const IWinMTROptionsProvider* options;
 	winmtr::helper::WSAHelper wsaHelper;
 	std::atomic_bool	tracing;
 	std::optional<winrt::Windows::Foundation::IAsyncAction> tracer;
