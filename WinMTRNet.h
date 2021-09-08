@@ -47,7 +47,7 @@ struct s_nethost {
 };
 
 template<class T>
-concept socket_type = requires(T a, ADDRESS_FAMILY afam) {
+concept socket_type = requires(T a) {
 	a.sa_family;
 	std::convertible_to<decltype(a.sa_family), ADDRESS_FAMILY>;
 };
