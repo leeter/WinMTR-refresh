@@ -97,9 +97,18 @@ constexpr auto ECHO_REPLY_TIMEOUT = 5000;
 		typename T::storagetype;
 		T::parsemethod;
 		T::pingmethod;
-		/*requires std::convertible_to<decltype(IcmpSendEcho2Ex), decltype(T::pingmethod)> 
-			|| std::convertible_to<decltype(Icmp6SendEcho2), decltype(T::pingmethod)>;*/
-		 //{ T::get_anyaddr() } noexcept -> std::convertible_to<decltype(T::addrtype)>;
+		requires std::convertible_to<decltype(IcmpSendEcho2Ex), decltype(T::pingmethod)> 
+			|| std::convertible_to<decltype(Icmp6SendEcho2), decltype(T::pingmethod)>;
+		// 
+	};
+
+	template<class T>
+	concept icmp_pingable = icmp_type<T> && requires(
+		std::add_const_t<typename T::reply_type_ptr> rtp
+		,std::add_pointer_t<typename T::storagetype> storage){
+		{ T::get_anyaddr() } noexcept -> std::convertible_to<typename T::addrtype>;
+		{ T::to_addr_from_ping(rtp) } noexcept -> std::convertible_to<typename T::storagetype>;
+		{ T::to_addr_from_storage(storage) } noexcept -> std::convertible_to<typename T::addrtype>;
 	};
 
 	template<typename T>
@@ -110,8 +119,8 @@ constexpr auto ECHO_REPLY_TIMEOUT = 5000;
 		using storagetype = void;
 		static constexpr auto pingmethod = 0;
 		static constexpr auto parsemethod = 0;
-		static  addrtype get_anyaddr() noexcept {
-			return {};
+		static auto get_anyaddr() noexcept ->  addrtype {
+			return;
 		}
 		static storagetype to_addr_from_ping(const reply_type_ptr reply) noexcept {
 			return {};
@@ -127,7 +136,7 @@ constexpr auto ECHO_REPLY_TIMEOUT = 5000;
 		using storagetype = sockaddr_in;
 		static constexpr auto pingmethod = IcmpSendEcho2Ex;
 		static constexpr auto parsemethod = IcmpParseReplies;
-		static constexpr addrtype get_anyaddr() noexcept {
+		static  auto get_anyaddr() noexcept -> addrtype {
 			return any_address<sockaddr_in>::value();
 		}
 
@@ -150,7 +159,7 @@ constexpr auto ECHO_REPLY_TIMEOUT = 5000;
 		using storagetype = std::remove_pointer_t<addrtype>;
 		static constexpr auto pingmethod = Icmp6SendEcho2;
 		static constexpr auto parsemethod = Icmp6ParseReplies;
-		static addrtype get_anyaddr() noexcept {
+		static auto get_anyaddr() noexcept -> addrtype {
 			return any_address<sockaddr_in6>::value();
 		}
 
@@ -165,7 +174,7 @@ constexpr auto ECHO_REPLY_TIMEOUT = 5000;
 	};
 
 	template<typename traits>
-	requires icmp_type<traits>
+	requires icmp_pingable<traits>
 	struct icmp_ping {
 #ifdef __has_include                           // Check if __has_include is present
 #  if __has_include(<coroutine>)                // Check for a standard library
@@ -343,10 +352,7 @@ winrt::Windows::Foundation::IAsyncAction WinMTRNet::handleICMP(trace_thread curr
 			switch (icmp_echo_reply->Status) {
 			case IP_SUCCESS:
 			[[likely]] case IP_TTL_EXPIRED_TRANSIT:
-				this->SetLast(mine.ttl - 1, icmp_echo_reply->RoundTripTime);
-				this->SetBest(mine.ttl - 1, icmp_echo_reply->RoundTripTime);
-				this->SetWorst(mine.ttl - 1, icmp_echo_reply->RoundTripTime);
-				this->AddReturned(mine.ttl - 1);
+				this->addNewReturn(mine.ttl - 1, icmp_echo_reply->RoundTripTime);
 				{
 					auto naddr = traits::to_addr_from_ping(icmp_echo_reply);
 					this->SetAddr(mine.ttl - 1, *reinterpret_cast<sockaddr*>(&naddr));
@@ -404,8 +410,6 @@ winrt::Windows::Foundation::IAsyncAction WinMTRNet::handleICMP(trace_thread curr
 				this->SetName(current.ttl - 1, L"Bad destination."s);
 				break;
 			case IP_GENERAL_FAILURE:
-				this->SetName(current.ttl - 1, L"General failure."s);
-				break;
 			default:
 				this->SetName(current.ttl - 1, L"General failure."s);
 				break;
@@ -618,6 +622,19 @@ void WinMTRNet::SetWorst(int at, int current)
 	UNREFERENCED_PARAMETER(at);
 	UNREFERENCED_PARAMETER(current);
 	//std::unique_lock lock(ghMutex);
+}
+
+void WinMTRNet::addNewReturn(int at, int last) {
+	std::unique_lock lock(ghMutex);
+	host[at].last = last;
+	host[at].total += last;
+	if (host[at].best > last || host[at].xmit == 1) {
+		host[at].best = last;
+	};
+	if (host[at].worst < last) {
+		host[at].worst = last;
+	}
+	host[at].returned++;
 }
 
 void WinMTRNet::SetLast(int at, int last)

@@ -110,6 +110,7 @@ private:
 	void	SetName(int at, std::wstring n);
 	void	SetBest(int at, int current);
 	void	SetWorst(int at, int current);
+	void addNewReturn(int ttl, int last);
 	void	SetLast(int at, int last);
 	void	AddReturned(int at);
 	void	AddXmit(int at);
