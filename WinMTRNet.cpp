@@ -466,59 +466,6 @@ sockaddr_storage WinMTRNet::GetAddr(int at) const
 	return host[at].addr;
 }
 
-std::wstring WinMTRNet::GetName(int at)
-{
-	std::unique_lock lock(ghMutex);
-	return host[at].getName();
-}
-
-int WinMTRNet::GetBest(int at) const
-{
-	std::unique_lock lock(ghMutex);
-	int ret = host[at].best;
-	return ret;
-}
-
-int WinMTRNet::GetWorst(int at) const
-{
-	std::unique_lock lock(ghMutex);
-	int ret = host[at].worst;
-	return ret;
-}
-
-int WinMTRNet::GetAvg(int at) const
-{
-	std::unique_lock lock(ghMutex);
-	return host[at].getAvg();
-}
-
-int WinMTRNet::GetPercent(int at) const
-{
-	std::unique_lock lock(ghMutex);
-	return host[at].getPercent();
-}
-
-int WinMTRNet::GetLast(int at) const
-{
-	std::unique_lock lock(ghMutex);
-	int ret = host[at].last;
-	return ret;
-}
-
-int WinMTRNet::GetReturned(int at) const
-{
-	std::unique_lock lock(ghMutex);
-	int ret = host[at].returned;
-	return ret;
-}
-
-int WinMTRNet::GetXmit(int at) const
-{
-	std::unique_lock lock(ghMutex);
-	int ret = host[at].xmit;
-	return ret;
-}
-
 int WinMTRNet::GetMax() const
 {
 	std::unique_lock lock(ghMutex);
@@ -547,6 +494,12 @@ std::vector<s_nethost> WinMTRNet::getCurrentState() const
 	auto end = std::cbegin(host);
 	std::advance(end, max);
 	return std::vector<s_nethost>(std::cbegin(host), end);
+}
+
+s_nethost WinMTRNet::getStateAt(int at) const
+{
+	std::unique_lock lock(ghMutex);
+	return host[at];
 }
 
 void WinMTRNet::SetAddr(int at, sockaddr& addr)
@@ -606,24 +559,6 @@ void WinMTRNet::SetName(int at, std::wstring n)
 	host[at].name = std::move(n);
 }
 
-void WinMTRNet::SetBest(int at, int current)
-{
-	std::unique_lock lock(ghMutex);
-	if (host[at].best > current || host[at].xmit == 1) {
-		host[at].best = current;
-	};
-	if (host[at].worst < current) {
-		host[at].worst = current;
-	}
-}
-
-void WinMTRNet::SetWorst(int at, int current)
-{
-	UNREFERENCED_PARAMETER(at);
-	UNREFERENCED_PARAMETER(current);
-	//std::unique_lock lock(ghMutex);
-}
-
 void WinMTRNet::addNewReturn(int at, int last) {
 	std::unique_lock lock(ghMutex);
 	host[at].last = last;
@@ -634,19 +569,6 @@ void WinMTRNet::addNewReturn(int at, int last) {
 	if (host[at].worst < last) {
 		host[at].worst = last;
 	}
-	host[at].returned++;
-}
-
-void WinMTRNet::SetLast(int at, int last)
-{
-	std::unique_lock lock(ghMutex);
-	host[at].last = last;
-	host[at].total += last;
-}
-
-void WinMTRNet::AddReturned(int at)
-{
-	std::unique_lock lock(ghMutex);
 	host[at].returned++;
 }
 

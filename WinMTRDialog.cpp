@@ -512,35 +512,35 @@ void WinMTRDialog::OnDblclkList([[maybe_unused]] NMHDR* pNMHDR, LRESULT* pResult
 			int nItem = m_listMTR.GetNextSelectedItem(pos);
 			WinMTRProperties wmtrprop;
 			
-			if(auto addr = wmtrnet->GetAddr(nItem); !isValidAddress(addr)) {
+			if(auto state = wmtrnet->getStateAt(nItem); !isValidAddress(state.addr)) {
 				wmtrprop.host.clear();
 				wmtrprop.ip.clear();
-				wmtrprop.comment = wmtrnet->GetName(nItem);
+				wmtrprop.comment = state.getName();
 
 				wmtrprop.pck_loss = wmtrprop.pck_sent = wmtrprop.pck_recv = 0;
 
 				wmtrprop.ping_avrg = wmtrprop.ping_last = 0.0;
 				wmtrprop.ping_best = wmtrprop.ping_worst = 0.0;
 			} else {
-				wmtrprop.host = wmtrnet->GetName(nItem);
+				wmtrprop.host = state.getName();
 				wmtrprop.ip.resize(40);
-				auto addrlen = getAddressSize(addr);
+				auto addrlen = getAddressSize(state.addr);
 				DWORD addrstrsize = static_cast<DWORD>(wmtrprop.ip.size());
-				auto result = WSAAddressToStringW(reinterpret_cast<LPSOCKADDR>(&addr), static_cast<DWORD>(addrlen), nullptr, wmtrprop.ip.data(), &addrstrsize);
+				auto result = WSAAddressToStringW(reinterpret_cast<LPSOCKADDR>(&state.addr), static_cast<DWORD>(addrlen), nullptr, wmtrprop.ip.data(), &addrstrsize);
 				if (!result) {
 					wmtrprop.ip.resize(addrstrsize - 1);
 				}
 				
 				wmtrprop.comment = L"Host alive."sv;
 
-				wmtrprop.ping_avrg = static_cast<float>(wmtrnet->GetAvg(nItem)); 
-				wmtrprop.ping_last = static_cast<float>(wmtrnet->GetLast(nItem)); 
-				wmtrprop.ping_best = static_cast<float>(wmtrnet->GetBest(nItem));
-				wmtrprop.ping_worst = static_cast<float>(wmtrnet->GetWorst(nItem)); 
+				wmtrprop.ping_avrg = static_cast<float>(state.getAvg()); 
+				wmtrprop.ping_last = static_cast<float>(state.last); 
+				wmtrprop.ping_best = static_cast<float>(state.best);
+				wmtrprop.ping_worst = static_cast<float>(state.worst); 
 
-				wmtrprop.pck_loss = wmtrnet->GetPercent(nItem);
-				wmtrprop.pck_recv = wmtrnet->GetReturned(nItem);
-				wmtrprop.pck_sent = wmtrnet->GetXmit(nItem);
+				wmtrprop.pck_loss = state.getPercent();
+				wmtrprop.pck_recv = state.returned;
+				wmtrprop.pck_sent = state.xmit;
 			}
 
 			wmtrprop.DoModal();

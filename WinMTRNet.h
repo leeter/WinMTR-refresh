@@ -91,22 +91,12 @@ public:
 	[[nodiscard("The task should be awaited")]]
 	winrt::Windows::Foundation::IAsyncAction	DoTrace(sockaddr& address);
 	void	ResetHops() noexcept;
-	//winrt::fire_and_forget	StopTrace() noexcept;
 
-	SOCKADDR_STORAGE GetAddr(int at) const;
-	std::wstring GetName(int at);
-	int		GetBest(int at) const;
-	int		GetWorst(int at) const;
-	int		GetAvg(int at) const;
-	int		GetPercent(int at) const;
-	int		GetLast(int at) const;
-	int		GetReturned(int at) const;
-	int		GetXmit(int at) const;
 	[[nodiscard]]
 	int		GetMax() const;
 	[[nodiscard]]
 	std::vector<s_nethost> getCurrentState() const;
-
+	s_nethost getStateAt(int at) const;
 private:
 	std::array<s_nethost, MAX_HOPS>	host;
 	SOCKADDR_STORAGE last_remote_addr;
@@ -117,13 +107,11 @@ private:
 	std::optional<winrt::Windows::Foundation::IAsyncAction> tracer;
 	std::optional<winrt::apartment_context> context;
 
+	[[nodiscard]]
+	SOCKADDR_STORAGE GetAddr(int at) const;
 	void	SetAddr(int at, sockaddr& addr);
 	void	SetName(int at, std::wstring n);
-	void	SetBest(int at, int current);
-	void	SetWorst(int at, int current);
 	void addNewReturn(int ttl, int last);
-	void	SetLast(int at, int last);
-	void	AddReturned(int at);
 	void	AddXmit(int at);
 
 	template<class T>
