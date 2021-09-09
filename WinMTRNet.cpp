@@ -116,15 +116,54 @@ constexpr auto ECHO_REPLY_TIMEOUT = 5000;
 		typename T::reply_type_ptr;
 		typename T::addrtype;
 		typename T::storagetype;
-		T::parsemethod;
-		T::pingmethod;
-		requires std::convertible_to<decltype(IcmpSendEcho2Ex), decltype(T::pingmethod)> 
-			|| std::convertible_to<decltype(Icmp6SendEcho2), decltype(T::pingmethod)>;
-		// 
 	};
 
 	template<class T>
-	concept icmp_pingable = icmp_type<T> && requires(
+	concept supports_ICMP_ping = icmp_type<T> && requires(
+		_In_                       HANDLE                   IcmpHandle,
+		_In_opt_                   HANDLE                   Event,
+#ifdef PIO_APC_ROUTINE_DEFINED
+		_In_opt_                   PIO_APC_ROUTINE          ApcRoutine,
+#else
+		_In_opt_                   FARPROC                  ApcRoutine,
+#endif
+		_In_opt_                   PVOID                    ApcContext,
+		_In_                       typename T::addrtype                   SourceAddress,
+		_In_                       typename T::addrtype                   DestinationAddress,
+		_In_reads_bytes_(RequestSize)   LPVOID                   RequestData,
+		_In_                       WORD                     RequestSize,
+		_In_opt_                   PIP_OPTION_INFORMATION   RequestOptions,
+		_Out_writes_bytes_(ReplySize)    LPVOID                   ReplyBuffer,
+		_In_range_(>= , sizeof(ICMP_ECHO_REPLY) + RequestSize + 8)
+		DWORD                    ReplySize,
+		_In_                       DWORD                    Timeout) {
+			{ T::pingmethod(IcmpHandle,
+				Event,
+				ApcRoutine,
+				ApcContext,
+				SourceAddress,
+				DestinationAddress,
+				RequestData,
+				RequestSize,
+				RequestOptions,
+				ReplyBuffer,
+				ReplySize,
+				Timeout) } noexcept -> std::convertible_to<DWORD>;
+	};
+
+	template<class T>
+	concept supports_ICMP_ping_parse = icmp_type<T> && requires(
+		_Out_writes_bytes_(ReplySize)   LPVOID                   ReplyBuffer,
+		_In_range_(> , sizeof(T::reply_type) + 8)
+		DWORD                    ReplySize) {
+			{
+				T::parsemethod(
+					ReplyBuffer,
+					ReplySize)  } noexcept -> std::convertible_to<DWORD>;
+	};
+
+	template<class T>
+	concept icmp_pingable = icmp_type<T> && supports_ICMP_ping<T> && supports_ICMP_ping_parse<T> && requires(
 		std::add_const_t<typename T::reply_type_ptr> rtp
 		,std::add_pointer_t<typename T::storagetype> storage){
 		{ T::get_anyaddr() } noexcept -> std::convertible_to<typename T::addrtype>;
@@ -155,8 +194,38 @@ constexpr auto ECHO_REPLY_TIMEOUT = 5000;
 		using reply_type_ptr = std::add_pointer_t<reply_type>;
 		using addrtype = IPAddr;
 		using storagetype = sockaddr_in;
-		static constexpr auto pingmethod = IcmpSendEcho2Ex;
-		static constexpr auto parsemethod = IcmpParseReplies;
+		static inline DWORD
+			WINAPI
+			pingmethod(
+				_In_                       HANDLE                   IcmpHandle,
+				_In_opt_                   HANDLE                   Event,
+#ifdef PIO_APC_ROUTINE_DEFINED
+				_In_opt_                   PIO_APC_ROUTINE          ApcRoutine,
+#else
+				_In_opt_                   FARPROC                  ApcRoutine,
+#endif
+				_In_opt_                   PVOID                    ApcContext,
+				_In_                       addrtype                   SourceAddress,
+				_In_                       addrtype                   DestinationAddress,
+				_In_reads_bytes_(RequestSize)   LPVOID                   RequestData,
+				_In_                       WORD                     RequestSize,
+				_In_opt_                   PIP_OPTION_INFORMATION   RequestOptions,
+				_Out_writes_bytes_(ReplySize)    LPVOID                   ReplyBuffer,
+				_In_range_(>= , sizeof(ICMP_ECHO_REPLY) + RequestSize + 8)
+				DWORD                    ReplySize,
+				_In_                       DWORD                    Timeout
+			) noexcept {
+			return IcmpSendEcho2Ex(IcmpHandle, Event, ApcRoutine, ApcContext, SourceAddress, DestinationAddress, RequestData, RequestSize, RequestOptions, ReplyBuffer, ReplySize, Timeout);
+		}
+		static inline DWORD
+			WINAPI
+			parsemethod(
+				_Out_writes_bytes_(ReplySize)   LPVOID                   ReplyBuffer,
+				_In_range_(> , sizeof(reply_type) + 8)
+				DWORD                    ReplySize
+			) noexcept {
+			return IcmpParseReplies(ReplyBuffer, ReplySize);
+		}
 		static  auto get_anyaddr() noexcept -> addrtype {
 			return any_address<sockaddr_in>::value();
 		}
@@ -178,8 +247,38 @@ constexpr auto ECHO_REPLY_TIMEOUT = 5000;
 		using reply_type_ptr = std::add_pointer_t<reply_type>;
 		using addrtype = sockaddr_in6*;
 		using storagetype = std::remove_pointer_t<addrtype>;
-		static constexpr auto pingmethod = Icmp6SendEcho2;
-		static constexpr auto parsemethod = Icmp6ParseReplies;
+		static inline DWORD
+			WINAPI
+			pingmethod(
+				_In_                       HANDLE                   IcmpHandle,
+				_In_opt_                   HANDLE                   Event,
+#ifdef PIO_APC_ROUTINE_DEFINED
+				_In_opt_                   PIO_APC_ROUTINE          ApcRoutine,
+#else
+				_In_opt_                   FARPROC                  ApcRoutine,
+#endif
+				_In_opt_                   PVOID                    ApcContext,
+				_In_                       addrtype                   SourceAddress,
+				_In_                       addrtype                   DestinationAddress,
+				_In_reads_bytes_(RequestSize)   LPVOID                   RequestData,
+				_In_                       WORD                     RequestSize,
+				_In_opt_                   PIP_OPTION_INFORMATION   RequestOptions,
+				_Out_writes_bytes_(ReplySize)    LPVOID                   ReplyBuffer,
+				_In_range_(>= , sizeof(ICMP_ECHO_REPLY) + RequestSize + 8)
+				DWORD                    ReplySize,
+				_In_                       DWORD                    Timeout
+			) noexcept {
+			return Icmp6SendEcho2(IcmpHandle, Event, ApcRoutine, ApcContext, SourceAddress, DestinationAddress, RequestData, RequestSize, RequestOptions, ReplyBuffer, ReplySize, Timeout);
+		}
+		static inline DWORD
+			WINAPI
+			parsemethod(
+				_Out_writes_bytes_(ReplySize)   LPVOID                   ReplyBuffer,
+				_In_range_(> , sizeof(reply_type) + 8)
+				DWORD                    ReplySize
+			) noexcept {
+			return Icmp6ParseReplies(ReplyBuffer, ReplySize);
+		}
 		static auto get_anyaddr() noexcept -> addrtype {
 			return any_address<sockaddr_in6>::value();
 		}
