@@ -1031,7 +1031,7 @@ void WinMTRDialog::ClearHistory()
 	m_comboHost.AddString(CString((LPCSTR)IDS_STRING_CLEAR_HISTORY));
 }
 
-winrt::Windows::Foundation::IAsyncAction WinMTRDialog::pingThread()
+winrt::Windows::Foundation::IAsyncAction WinMTRDialog::pingThread(std::wstring sHost)
 {
 	if (tracing.exchange(true)) {
 		throw new std::runtime_error("Tracing started twice!");
@@ -1041,19 +1041,14 @@ winrt::Windows::Foundation::IAsyncAction WinMTRDialog::pingThread()
 	});
 
 	SOCKADDR_STORAGE addrstore = {};
-	CString sHost;
-	this->m_comboHost.GetWindowTextW(sHost);
-
-	if (sHost.IsEmpty()) [[unlikely]] { // Technically never because this is caught in the calling function
-		sHost =  L"localhost";
-	}
+	
 
 	const auto cancellation = co_await winrt::get_cancellation_token();
 	cancellation.enable_propagation();
 	for (auto af : { AF_INET, AF_INET6 }) {
 		INT addrSize = sizeof(addrstore);
 		if (auto res = WSAStringToAddressW(
-			sHost.GetBuffer()
+			sHost.data()
 			, af
 			, nullptr
 			, reinterpret_cast<LPSOCKADDR>(&addrstore)
@@ -1071,7 +1066,7 @@ winrt::Windows::Foundation::IAsyncAction WinMTRDialog::pingThread()
 		hintFamily = AF_INET;
 	}
 	timeval timeout{ .tv_sec = 30 };
-	auto result = co_await GetAddrInfoAsync(sHost, &timeout, hintFamily);
+	auto result = co_await GetAddrInfoAsync(sHost.c_str(), &timeout, hintFamily);
 	if (!result || result->empty()) {
 		AfxMessageBox(L"Unable to resolve address.");
 		co_return;
@@ -1185,10 +1180,16 @@ void WinMTRDialog::Transit(STATES new_state)
 			{
 				// using a different thread to create an MTA so we don't have explosion issues with the
 				// thread pool
-				auto thread = std::thread([this]() noexcept {
+				CString sHost;
+				this->m_comboHost.GetWindowTextW(sHost);
+
+				if (sHost.IsEmpty()) [[unlikely]] { // Technically never because this is caught in the calling function
+					sHost = L"localhost";
+				}
+				auto thread = std::thread([this](auto sHost) noexcept {
 					winrt::init_apartment(winrt::apartment_type::multi_threaded);
 					try {
-						auto tracer_local = this->pingThread();
+						auto tracer_local = this->pingThread(sHost);
 						{
 							std::unique_lock lock(this->tracer_mutex);
 							this->trace_lacky.emplace(tracer_local, winrt::apartment_context());
@@ -1206,7 +1207,7 @@ void WinMTRDialog::Transit(STATES new_state)
 						std::unique_lock lock(this->tracer_mutex);
 						this->trace_lacky.reset();
 					}
-					});
+					}, std::wstring(sHost));
 				thread.detach();
 			}
 			m_buttonStart.EnableWindow(TRUE);

@@ -129,7 +129,7 @@ private:
 	std::atomic_bool	tracing = false;
 
 	void ClearHistory();
-	winrt::Windows::Foundation::IAsyncAction pingThread();
+	winrt::Windows::Foundation::IAsyncAction pingThread(std::wstring shost);
 	winrt::fire_and_forget stopTrace();
 public:
 
