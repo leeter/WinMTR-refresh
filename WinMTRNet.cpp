@@ -291,84 +291,89 @@ constexpr auto ECHO_REPLY_TIMEOUT = 5000;
 			return naddr;
 		}
 	};
-
-	template<icmp_pingable traits>
-	struct icmp_ping final {
+	namespace detail {
+		template<icmp_pingable traits>
+		struct icmp_ping final {
 #ifdef __has_include                           // Check if __has_include is present
 #  if __has_include(<coroutine>)                // Check for a standard library
-		using coro_handle = std::coroutine_handle<>;
+			using coro_handle = std::coroutine_handle<>;
 #  else
-		using coro_handle = std::experimental::coroutine_handle<>;
+			using coro_handle = std::experimental::coroutine_handle<>;
 #  endif
 #endif
-		icmp_ping(HANDLE icmpHandle, traits::addrtype addr, UCHAR ttl, std::span<std::byte> requestData, std::span<std::byte> replyData) noexcept
-			:m_reqData(requestData)
-			, m_replyData(replyData)
-			, m_handle(icmpHandle)
-			, m_addr(addr)
-			, m_ttl(ttl)
-		{
+			icmp_ping(HANDLE icmpHandle, traits::addrtype addr, UCHAR ttl, std::span<std::byte> requestData, std::span<std::byte> replyData) noexcept
+				:m_reqData(requestData)
+				, m_replyData(replyData)
+				, m_handle(icmpHandle)
+				, m_addr(addr)
+				, m_ttl(ttl)
+			{
 
-		}
-
-		void await_suspend(coro_handle resume_handle)
-		{
-			m_resume = resume_handle;
-			IP_OPTION_INFORMATION	stIPInfo = {
-				.Ttl = m_ttl,
-				.Flags = IP_FLAG_DF
-			};
-			auto local = traits::get_anyaddr();
-
-			const auto io_res = traits::pingmethod(
-				m_handle
-				, nullptr
-				, &callback
-				, this
-				, local
-				, m_addr
-				, m_reqData.data()
-				, gsl::narrow<WORD>(m_reqData.size())
-				, &stIPInfo
-				, m_replyData.data()
-				, gsl::narrow_cast<DWORD>(m_replyData.size())
-				, ECHO_REPLY_TIMEOUT);
-
-			if (const auto err = GetLastError(); err != ERROR_IO_PENDING) {
-				throw std::system_error(err, std::system_category());
 			}
-		}
 
-		auto await_resume() const noexcept
-		{
-			return traits::parsemethod(m_replyData.data(), m_replysize);
-		}
+			void await_suspend(coro_handle resume_handle)
+			{
+				m_resume = resume_handle;
+				IP_OPTION_INFORMATION	stIPInfo = {
+					.Ttl = m_ttl,
+					.Flags = IP_FLAG_DF
+				};
+				auto local = traits::get_anyaddr();
 
-		bool await_ready() const noexcept
-		{
-			return false;
-		}
-	private:
-		static void NTAPI callback(IN PVOID ApcContext,
-			IN PIO_STATUS_BLOCK IoStatusBlock,
-			IN ULONG Reserved) noexcept {
-			UNREFERENCED_PARAMETER(Reserved);
-			auto context = static_cast<icmp_ping<traits>*>(ApcContext);
-			context->m_replysize = gsl::narrow_cast<DWORD>(IoStatusBlock->Information);
-			concurrency::create_task([=] {
-				context->m_resume();
-			}, context->m_context);
-		}
+				const auto io_res = traits::pingmethod(
+					m_handle
+					, nullptr
+					, &callback
+					, this
+					, local
+					, m_addr
+					, m_reqData.data()
+					, gsl::narrow<WORD>(m_reqData.size())
+					, &stIPInfo
+					, m_replyData.data()
+					, gsl::narrow_cast<DWORD>(m_replyData.size())
+					, ECHO_REPLY_TIMEOUT);
 
-		concurrency::task_continuation_context m_context = concurrency::task_continuation_context::get_current_winrt_context();
-		coro_handle m_resume{ nullptr };
-		std::span<std::byte> m_reqData;
-		std::span<std::byte> m_replyData;
-		HANDLE m_handle;
-		traits::addrtype m_addr;
-		DWORD m_replysize = 0;
-		UCHAR m_ttl;
-	};
+				if (const auto err = GetLastError(); err != ERROR_IO_PENDING) {
+					throw std::system_error(err, std::system_category());
+				}
+			}
+
+			auto await_resume() const noexcept
+			{
+				return traits::parsemethod(m_replyData.data(), m_replysize);
+			}
+
+			bool await_ready() const noexcept
+			{
+				return false;
+			}
+		private:
+			static void NTAPI callback(IN PVOID ApcContext,
+				IN PIO_STATUS_BLOCK IoStatusBlock,
+				IN ULONG Reserved) noexcept {
+				UNREFERENCED_PARAMETER(Reserved);
+				auto context = static_cast<icmp_ping<traits>*>(ApcContext);
+				context->m_replysize = gsl::narrow_cast<DWORD>(IoStatusBlock->Information);
+				concurrency::create_task([=] {
+					context->m_resume();
+					}, context->m_context);
+			}
+
+			concurrency::task_continuation_context m_context = concurrency::task_continuation_context::get_current_winrt_context();
+			coro_handle m_resume{ nullptr };
+			std::span<std::byte> m_reqData;
+			std::span<std::byte> m_replyData;
+			HANDLE m_handle;
+			traits::addrtype m_addr;
+			DWORD m_replysize = 0;
+			UCHAR m_ttl;
+		};
+	}
+	template<class T, class addrtype = std::remove_pointer_t<std::remove_cvref_t<T>>,  class traits = icmp_ping_traits<addrtype>>
+	inline auto IcmpSendEchoAsync(HANDLE icmpHandle, T addr, UCHAR ttl, std::span<std::byte> requestData, std::span<std::byte> replyData) noexcept {
+		return detail::icmp_ping<traits>{icmpHandle, traits::to_addr_from_storage(addr), ttl, requestData, replyData};
+	}
 
 	template<class T>
 	[[nodiscard]]
@@ -461,7 +466,7 @@ winrt::Windows::Foundation::IAsyncAction WinMTRNet::handleICMP(trace_thread curr
 		// - as soon as we get a hop, we start pinging directly that hop, with a greater TTL
 		// - a drawback would be that, some servers are configured to reply for TTL transit expire, but not to ping requests, so,
 		// for these servers we'll have 100% loss
-		const auto dwReplyCount = co_await icmp_ping<traits>(mine.icmpHandle.Get(), traits::to_addr_from_storage(addr), mine.ttl, achReqData, achRepData);
+		const auto dwReplyCount = co_await IcmpSendEchoAsync(mine.icmpHandle.Get(), addr, mine.ttl, achReqData, achRepData);
 		this->AddXmit(mine.ttl - 1);
 		if (dwReplyCount) {
 			auto icmp_echo_reply = reinterpret_cast<traits::reply_type_ptr>(achRepData.data());
