@@ -74,6 +74,7 @@ concept socket_type = requires(T a) {
 };
 
 template<typename T>
+requires socket_type<T> || std::convertible_to<T, SOCKADDR_STORAGE>
 inline constexpr auto getAddressFamily(const T& addr) noexcept {
 	if constexpr (socket_type<T>) {
 		return addr.sa_family;
