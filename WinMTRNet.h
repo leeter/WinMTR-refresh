@@ -88,7 +88,10 @@ inline constexpr size_t getAddressSize(const T& addr) noexcept {
 	return getAddressFamily(addr) == AF_INET ? sizeof(sockaddr_in) : sizeof(sockaddr_in6);
 }
 
-template<typename T>
+template<class T>
+concept socket_addr_type = socket_type<T> || std::convertible_to<T, sockaddr_storage>;
+
+template<socket_addr_type T>
 inline constexpr bool isValidAddress(const T& addr) noexcept {
 	const ADDRESS_FAMILY family = getAddressFamily(addr);
 	

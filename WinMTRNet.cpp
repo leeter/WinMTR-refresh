@@ -293,9 +293,8 @@ constexpr auto ECHO_REPLY_TIMEOUT = 5000;
 		}
 	};
 
-	template<typename traits>
-	requires icmp_pingable<traits>
-	struct icmp_ping {
+	template<icmp_pingable traits>
+	struct icmp_ping final {
 #ifdef __has_include                           // Check if __has_include is present
 #  if __has_include(<coroutine>)                // Check for a standard library
 		using coro_handle = std::coroutine_handle<>;
@@ -350,7 +349,7 @@ constexpr auto ECHO_REPLY_TIMEOUT = 5000;
 		{
 			return false;
 		}
-	protected:
+	private:
 		static void NTAPI callback(IN PVOID ApcContext,
 			IN PIO_STATUS_BLOCK IoStatusBlock,
 			IN ULONG Reserved) noexcept {
