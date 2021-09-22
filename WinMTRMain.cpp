@@ -47,8 +47,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "WinMTRDialog.h"
 #include "WinMTRHelp.h"
 #include "CWinMTRCommandLineParser.h"
-#include <algorithm>
-#include <iostream>
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
