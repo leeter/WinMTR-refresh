@@ -842,7 +842,7 @@ void WinMTRDialog::OnEXPT()
 	CFileDialog dlg(FALSE,
                    _T("TXT"),
                    nullptr,
-                   OFN_HIDEREADONLY | OFN_EXPLORER,
+                   OFN_HIDEREADONLY,
                    szFilter,
                    this);
 	if(dlg.DoModal() == IDOK) {
@@ -867,7 +867,7 @@ void WinMTRDialog::OnEXPH()
    CFileDialog dlg(FALSE,
                    _T("HTML"),
                    nullptr,
-                   OFN_HIDEREADONLY | OFN_EXPLORER,
+                   OFN_HIDEREADONLY,
                    szFilter,
                    this);
 
