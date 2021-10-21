@@ -38,9 +38,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <mutex>
 #include <array>
 #include <vector>
-#include "WinMTRWSAhelper.h"
-
-
+import winmtr.helper;
 constexpr auto MAX_HOPS = 30;
 
 struct __declspec(novtable) IWinMTROptionsProvider {

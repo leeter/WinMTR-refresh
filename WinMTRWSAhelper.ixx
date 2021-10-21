@@ -18,14 +18,21 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
-#pragma once
-#ifndef WINMTRWSAHELPER_H_
-#define WINMTRWSAHELPER_H_
+module;
 
+#define VC_EXTRALEAN
+#define WIN32_LEAN_AND_MEAN
+#define NOSERVICE
+#define NOUSER
+#define NOGDI
+#define NOKERNEL
+#define NOUSER
+#define NONLS
 #include <WinSock2.h>
 
+export module winmtr.helper;
 
-namespace winmtr::helper {
+export namespace winmtr::helper {
 	class WSAHelper {
 		bool valid;
 	public:
@@ -46,5 +53,3 @@ namespace winmtr::helper {
 		}
 	};
 }
-
-#endif
