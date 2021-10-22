@@ -33,10 +33,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #ifndef WINMTRMAIN_H_
 #define WINMTRMAIN_H_
 
-#include "WinMTRDialog.h"
-#include <string>
-#include <optional>
-
+#include <afxwin.h>
 
 //*****************************************************************************
 // CLASS:  WinMTRMain
@@ -54,9 +51,6 @@ public:
 	DECLARE_MESSAGE_MAP()
 
 private:
-	/*void	ParseCommandLineParams(LPTSTR cmd, WinMTRDialog *wmtrdlg);
-	int		GetParamValue(LPTSTR cmd, const wchar_t * param, wchar_t sparam, wchar_t *value);
-	std::optional<std::wstring>		GetHostNameParamValue(LPTSTR cmd);*/
 
 };
 

@@ -37,14 +37,15 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 #include "WinMTRStatusBar.h"
 #include "IWinMTROptionsProvider.hpp"
-#include "WinMTRNet.h"
 #include <string>
 #include <memory>
 #include <mutex>
+#include <optional>
+#include <atomic>
 #include <winrt/Windows.Foundation.h>
 #include "resource.h"
 
-
+class WinMTRNet;
 //*****************************************************************************
 // CLASS:  WinMTRDialog
 //
@@ -105,7 +106,6 @@ private:
 	CButton	m_buttonExpT;
 	CButton	m_buttonExpH;
 	std::wstring msz_defaulthostname;
-	//std::recursive_mutex			traceThreadMutex;
 	std::shared_ptr<WinMTRNet>			wmtrnet;
 	struct tracer_lacky {
 		winrt::Windows::Foundation::IAsyncAction tracer;
