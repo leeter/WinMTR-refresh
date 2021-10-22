@@ -36,10 +36,12 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #define WINMTR_DIALOG_TIMER 100
 
 #include "WinMTRStatusBar.h"
+#include "IWinMTROptionsProvider.hpp"
 #include "WinMTRNet.h"
 #include <string>
 #include <memory>
 #include <mutex>
+#include <winrt/Windows.Foundation.h>
 #include "resource.h"
 
 
@@ -52,7 +54,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 class WinMTRDialog final: public CDialog, public IWinMTROptionsProvider
 {
 public:
-	WinMTRDialog(CWnd* pParent = NULL);
+	WinMTRDialog(CWnd* pParent = nullptr);
 
 	enum { IDD = IDD_WINMTR_DIALOG };
 	enum class options_source : bool {

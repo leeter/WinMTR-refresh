@@ -435,6 +435,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CWinMTRCommandLineParser.h" />
+    <ClInclude Include="IWinMTROptionsProvider.hpp" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="WinMTRLicense.h" />
     <ClInclude Include="WinMTRLogging.h" />

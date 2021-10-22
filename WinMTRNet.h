@@ -38,14 +38,9 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <mutex>
 #include <array>
 #include <vector>
+#include "IWinMTROptionsProvider.hpp"
 import winmtr.helper;
 constexpr auto MAX_HOPS = 30;
-
-struct __declspec(novtable) IWinMTROptionsProvider {
-	virtual int getPingSize() const noexcept = 0;
-	virtual double getInterval() const noexcept = 0;
-	virtual bool getUseDNS() const noexcept = 0;
-};
 
 struct s_nethost {
   SOCKADDR_STORAGE addr = {};
