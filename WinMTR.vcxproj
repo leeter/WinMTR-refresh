@@ -431,6 +431,14 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug - Sanitizers|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="WinMTRICMPUtils.ixx">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug - Sanitizers|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug - Sanitizers|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
+    </ClCompile>
     <ClCompile Include="WinMTRLicense.cpp" />
     <ClCompile Include="WinMTRLogging.cpp" />
     <ClCompile Include="WinMTRStatusBar.cpp" />
@@ -445,6 +453,7 @@
     <ClInclude Include="CWinMTRCommandLineParser.h" />
     <ClInclude Include="IWinMTROptionsProvider.hpp" />
     <ClInclude Include="targetver.h" />
+    <ClInclude Include="WinMTRICMPPIOdef.h" />
     <ClInclude Include="WinMTRLicense.h" />
     <ClInclude Include="WinMTRLogging.h" />
     <ClInclude Include="WinMTRStatusBar.h" />

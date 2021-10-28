@@ -26,360 +26,31 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 #include "WinMTRGlobal.h"
 #include "WinMTRNet.h"
-#include <wrl/wrappers/corewrappers.h>
+#include <winrt/Windows.Foundation.h>
 #include "resource.h"
+import WinMTRICMPUtils;
 
-
-namespace wrl = ::Microsoft::WRL;
-
-typedef struct _IO_STATUS_BLOCK {
-	union {
-		NTSTATUS Status;
-		PVOID    Pointer;
-	} DUMMYUNIONNAME;
-	ULONG_PTR Information;
-} IO_STATUS_BLOCK, * PIO_STATUS_BLOCK;
-
-typedef
-VOID
-(NTAPI* PIO_APC_ROUTINE) (
-	IN PVOID ApcContext,
-	IN PIO_STATUS_BLOCK IoStatusBlock,
-	IN ULONG Reserved
-	);
-#define PIO_APC_ROUTINE_DEFINED
-#include <iphlpapi.h>
 #include <icmpapi.h>
 
 namespace {
 
-constexpr auto ECHO_REPLY_TIMEOUT = 5000;
+	struct ICMPHandleTraits
+	{
+		using type = HANDLE;
 
-	struct ICMPHandleTraits {
-		using Type = HANDLE;
-		inline static bool Close(_In_ Type h) noexcept
+		static void close(type value) noexcept
 		{
-			return ::IcmpCloseHandle(h) != FALSE;
+			WINRT_VERIFY_(TRUE, ::IcmpCloseHandle(value));
 		}
 
 		[[nodiscard]]
-		inline static constexpr Type GetInvalidValue() noexcept
+		static type invalid() noexcept
 		{
 			return INVALID_HANDLE_VALUE;
 		}
 	};
-
-	using IcmpHandle = wrl::Wrappers::HandleT<ICMPHandleTraits>;
-
-	template<class T>
-	struct ping_reply {
-		using type = void;
-	};
-
-	template<>
-	struct ping_reply<sockaddr_in> {
-		using type = ICMP_ECHO_REPLY;
-	};
-
-	template<>
-	struct ping_reply<sockaddr_in6> {
-		using type = ICMPV6_ECHO_REPLY;
-	};
-
-	template <class T>
-	using ping_reply_t = ping_reply<T>::type;
-
-	template<class T>
-	struct any_address {
-		static constexpr void value() {};
-	};
-
-	template<>
-	struct any_address<sockaddr_in> {
-		static constexpr auto value() {
-			return ADDR_ANY;
-		}
-	};
-
-	template<>
-	struct any_address<sockaddr_in6> {
-		static SOCKADDR_IN6* value() {
-			static sockaddr_in6 anyaddr = { .sin6_family = AF_INET6, .sin6_addr = in6addr_any };
-			return &anyaddr;
-		}
-	};
-
-	template<class T>
-	concept icmp_type = requires {
-		typename T::reply_type;
-		typename T::reply_type_ptr;
-		typename T::addrtype;
-		typename T::storagetype;
-	};
-
-	template<class T>
-	concept supports_ICMP_ping = icmp_type<T> && requires(
-		_In_                       HANDLE                   IcmpHandle,
-		_In_opt_                   HANDLE                   Event,
-#ifdef PIO_APC_ROUTINE_DEFINED
-		_In_opt_                   PIO_APC_ROUTINE          ApcRoutine,
-#else
-		_In_opt_                   FARPROC                  ApcRoutine,
-#endif
-		_In_opt_                   PVOID                    ApcContext,
-		_In_                       typename T::addrtype                   SourceAddress,
-		_In_                       typename T::addrtype                   DestinationAddress,
-		_In_reads_bytes_(RequestSize)   LPVOID                   RequestData,
-		_In_                       WORD                     RequestSize,
-		_In_opt_                   PIP_OPTION_INFORMATION   RequestOptions,
-		_Out_writes_bytes_(ReplySize)    LPVOID                   ReplyBuffer,
-		_In_range_(>= , sizeof(ICMP_ECHO_REPLY) + RequestSize + 8)
-		DWORD                    ReplySize,
-		_In_                       DWORD                    Timeout) {
-			{ T::pingmethod(IcmpHandle,
-				Event,
-				ApcRoutine,
-				ApcContext,
-				SourceAddress,
-				DestinationAddress,
-				RequestData,
-				RequestSize,
-				RequestOptions,
-				ReplyBuffer,
-				ReplySize,
-				Timeout) } noexcept -> std::convertible_to<DWORD>;
-	};
-
-	template<class T>
-	concept supports_ICMP_ping_parse = icmp_type<T> && requires(
-		_Out_writes_bytes_(ReplySize)   LPVOID                   ReplyBuffer,
-		_In_range_(> , sizeof(T::reply_type) + 8)
-		DWORD                    ReplySize) {
-			{
-				T::parsemethod(
-					ReplyBuffer,
-					ReplySize)  } noexcept -> std::convertible_to<DWORD>;
-	};
-
-	template<class T>
-	concept icmp_pingable = icmp_type<T> && supports_ICMP_ping<T> && supports_ICMP_ping_parse<T> && requires(
-		std::add_const_t<typename T::reply_type_ptr> rtp
-		,std::add_pointer_t<typename T::storagetype> storage){
-		{ T::get_anyaddr() } noexcept -> std::convertible_to<typename T::addrtype>;
-		{ T::to_addr_from_ping(rtp) } noexcept -> std::convertible_to<typename T::storagetype>;
-		{ T::to_addr_from_storage(storage) } noexcept -> std::convertible_to<typename T::addrtype>;
-	};
-
-	template<typename T>
-	struct icmp_ping_traits {
-		using reply_type = ping_reply_t<T>;
-		using reply_type_ptr = std::add_pointer_t<reply_type>;
-		using addrtype = void;
-		using storagetype = void;
-		static constexpr auto pingmethod = 0;
-		static constexpr auto parsemethod = 0;
-		static auto get_anyaddr() noexcept ->  addrtype {
-			return;
-		}
-		static storagetype to_addr_from_ping(const reply_type_ptr reply) noexcept {
-			return {};
-		}
-	};
-
-
-	template<>
-	struct icmp_ping_traits<sockaddr_in> {
-		using reply_type = ping_reply_t<sockaddr_in>;
-		using reply_type_ptr = std::add_pointer_t<reply_type>;
-		using addrtype = IPAddr;
-		using storagetype = sockaddr_in;
-		static inline DWORD
-			WINAPI
-			pingmethod(
-				_In_                       HANDLE                   IcmpHandle,
-				_In_opt_                   HANDLE                   Event,
-#ifdef PIO_APC_ROUTINE_DEFINED
-				_In_opt_                   PIO_APC_ROUTINE          ApcRoutine,
-#else
-				_In_opt_                   FARPROC                  ApcRoutine,
-#endif
-				_In_opt_                   PVOID                    ApcContext,
-				_In_                       addrtype                   SourceAddress,
-				_In_                       addrtype                   DestinationAddress,
-				_In_reads_bytes_(RequestSize)   LPVOID                   RequestData,
-				_In_                       WORD                     RequestSize,
-				_In_opt_                   PIP_OPTION_INFORMATION   RequestOptions,
-				_Out_writes_bytes_(ReplySize)    LPVOID                   ReplyBuffer,
-				_In_range_(>= , sizeof(ICMP_ECHO_REPLY) + RequestSize + 8)
-				DWORD                    ReplySize,
-				_In_                       DWORD                    Timeout
-			) noexcept {
-			return IcmpSendEcho2Ex(IcmpHandle, Event, ApcRoutine, ApcContext, SourceAddress, DestinationAddress, RequestData, RequestSize, RequestOptions, ReplyBuffer, ReplySize, Timeout);
-		}
-		static inline DWORD
-			WINAPI
-			parsemethod(
-				_Out_writes_bytes_(ReplySize)   LPVOID                   ReplyBuffer,
-				_In_range_(> , sizeof(reply_type) + 8)
-				DWORD                    ReplySize
-			) noexcept {
-			return IcmpParseReplies(ReplyBuffer, ReplySize);
-		}
-		static  auto get_anyaddr() noexcept -> addrtype {
-			return any_address<sockaddr_in>::value();
-		}
-
-		static addrtype to_addr_from_storage(storagetype* storage) noexcept {
-			return storage->sin_addr.S_un.S_addr;
-		}
-
-		static storagetype to_addr_from_ping(const reply_type_ptr reply) noexcept {
-			sockaddr_in naddr = {.sin_family = AF_INET};
-			naddr.sin_addr.S_un.S_addr = reply->Address;
-			return naddr;
-		}
-	};
-
-	template<>
-	struct icmp_ping_traits<sockaddr_in6> {
-		using reply_type = ping_reply_t<sockaddr_in6>;
-		using reply_type_ptr = std::add_pointer_t<reply_type>;
-		using addrtype = sockaddr_in6*;
-		using storagetype = std::remove_pointer_t<addrtype>;
-		static inline DWORD
-			WINAPI
-			pingmethod(
-				_In_                       HANDLE                   IcmpHandle,
-				_In_opt_                   HANDLE                   Event,
-#ifdef PIO_APC_ROUTINE_DEFINED
-				_In_opt_                   PIO_APC_ROUTINE          ApcRoutine,
-#else
-				_In_opt_                   FARPROC                  ApcRoutine,
-#endif
-				_In_opt_                   PVOID                    ApcContext,
-				_In_                       addrtype                   SourceAddress,
-				_In_                       addrtype                   DestinationAddress,
-				_In_reads_bytes_(RequestSize)   LPVOID                   RequestData,
-				_In_                       WORD                     RequestSize,
-				_In_opt_                   PIP_OPTION_INFORMATION   RequestOptions,
-				_Out_writes_bytes_(ReplySize)    LPVOID                   ReplyBuffer,
-				_In_range_(>= , sizeof(ICMP_ECHO_REPLY) + RequestSize + 8)
-				DWORD                    ReplySize,
-				_In_                       DWORD                    Timeout
-			) noexcept {
-			return Icmp6SendEcho2(IcmpHandle, Event, ApcRoutine, ApcContext, SourceAddress, DestinationAddress, RequestData, RequestSize, RequestOptions, ReplyBuffer, ReplySize, Timeout);
-		}
-		static inline DWORD
-			WINAPI
-			parsemethod(
-				_Out_writes_bytes_(ReplySize)   LPVOID                   ReplyBuffer,
-				_In_range_(> , sizeof(reply_type) + 8)
-				DWORD                    ReplySize
-			) noexcept {
-			return Icmp6ParseReplies(ReplyBuffer, ReplySize);
-		}
-		static auto get_anyaddr() noexcept -> addrtype {
-			return any_address<sockaddr_in6>::value();
-		}
-
-		static constexpr addrtype to_addr_from_storage(storagetype* storage) noexcept {
-			return storage;
-		}
-		static storagetype to_addr_from_ping(const reply_type_ptr reply) noexcept {
-			sockaddr_in6 naddr = { .sin6_family = AF_INET6 };
-			memcpy(&naddr.sin6_addr, reply->Address.sin6_addr, sizeof(naddr.sin6_addr));
-			return naddr;
-		}
-	};
-	namespace detail {
-		template<icmp_pingable traits>
-		struct icmp_ping final {
-#ifdef __has_include                           // Check if __has_include is present
-#  if __has_include(<coroutine>)                // Check for a standard library
-			using coro_handle = std::coroutine_handle<>;
-#  else
-			using coro_handle = std::experimental::coroutine_handle<>;
-#  endif
-#endif
-			icmp_ping(HANDLE icmpHandle, traits::addrtype addr, UCHAR ttl, std::span<std::byte> requestData, std::span<std::byte> replyData) noexcept
-				:m_reqData(requestData)
-				, m_replyData(replyData)
-				, m_handle(icmpHandle)
-				, m_addr(addr)
-				, m_ttl(ttl)
-			{
-
-			}
-
-			void await_suspend(coro_handle resume_handle)
-			{
-				m_resume = resume_handle;
-				IP_OPTION_INFORMATION	stIPInfo = {
-					.Ttl = m_ttl,
-					.Flags = IP_FLAG_DF
-				};
-				auto local = traits::get_anyaddr();
-
-				const auto io_res = traits::pingmethod(
-					m_handle
-					, nullptr
-					, &callback
-					, this
-					, local
-					, m_addr
-					, m_reqData.data()
-					, gsl::narrow<WORD>(m_reqData.size())
-					, &stIPInfo
-					, m_replyData.data()
-					, gsl::narrow_cast<DWORD>(m_replyData.size())
-					, ECHO_REPLY_TIMEOUT);
-
-				if (const auto err = GetLastError(); err != ERROR_IO_PENDING) {
-					throw std::system_error(err, std::system_category());
-				}
-			}
-
-			auto await_resume() const noexcept
-			{
-				return traits::parsemethod(m_replyData.data(), m_replysize);
-			}
-
-			bool await_ready() const noexcept
-			{
-				return false;
-			}
-		private:
-			static void NTAPI callback(IN PVOID ApcContext,
-				IN PIO_STATUS_BLOCK IoStatusBlock,
-				IN ULONG Reserved) noexcept {
-				UNREFERENCED_PARAMETER(Reserved);
-				auto context = static_cast<icmp_ping<traits>*>(ApcContext);
-				context->m_replysize = gsl::narrow_cast<DWORD>(IoStatusBlock->Information);
-				concurrency::create_task([=] {
-					context->m_resume();
-					}, context->m_context);
-			}
-
-			concurrency::task_continuation_context m_context = concurrency::task_continuation_context::get_current_winrt_context();
-			coro_handle m_resume{ nullptr };
-			std::span<std::byte> m_reqData;
-			std::span<std::byte> m_replyData;
-			HANDLE m_handle;
-			traits::addrtype m_addr;
-			DWORD m_replysize = 0;
-			UCHAR m_ttl;
-		};
-	}
-	template<class T, class addrtype = std::remove_pointer_t<std::remove_cvref_t<T>>,  class traits = icmp_ping_traits<addrtype>>
-	inline auto IcmpSendEchoAsync(HANDLE icmpHandle, T addr, UCHAR ttl, std::span<std::byte> requestData, std::span<std::byte> replyData) noexcept {
-		return detail::icmp_ping<traits>{icmpHandle, traits::to_addr_from_storage(addr), ttl, requestData, replyData};
-	}
-
-	template<class T>
-	[[nodiscard]]
-	static constexpr auto reply_reply_buffer_size(unsigned requestSize) noexcept {
-		return sizeof(ping_reply_t<T>) + 8 + sizeof(IO_STATUS_BLOCK) + requestSize;
-	}
+	
+	using IcmpHandle = winrt::handle_type<ICMPHandleTraits>;
 
 	[[nodiscard]]
 	inline bool operator==(const SOCKADDR_STORAGE& lhs, const SOCKADDR_STORAGE& rhs) noexcept {
@@ -401,10 +72,10 @@ struct trace_thread {
 		ttl(ttl)
 	{
 		if (af == AF_INET) {
-			icmpHandle.Attach(IcmpCreateFile());
+			icmpHandle.attach(IcmpCreateFile());
 		}
 		else if (af == AF_INET6) {
-			icmpHandle.Attach(Icmp6CreateFile());
+			icmpHandle.attach(Icmp6CreateFile());
 		}
 	}
 	SOCKADDR_STORAGE address;
@@ -466,7 +137,7 @@ winrt::Windows::Foundation::IAsyncAction WinMTRNet::handleICMP(trace_thread curr
 		// - as soon as we get a hop, we start pinging directly that hop, with a greater TTL
 		// - a drawback would be that, some servers are configured to reply for TTL transit expire, but not to ping requests, so,
 		// for these servers we'll have 100% loss
-		const auto dwReplyCount = co_await IcmpSendEchoAsync(mine.icmpHandle.Get(), addr, mine.ttl, achReqData, achRepData);
+		const auto dwReplyCount = co_await IcmpSendEchoAsync(mine.icmpHandle.get(), addr, mine.ttl, achReqData, achRepData);
 		this->AddXmit(mine.ttl - 1);
 		if (dwReplyCount) {
 			auto icmp_echo_reply = reinterpret_cast<traits::reply_type_ptr>(achRepData.data());
