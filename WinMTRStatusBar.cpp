@@ -91,7 +91,7 @@ LRESULT WinMTRStatusBar::WindowProc(UINT message, WPARAM wParam, LPARAM lParam) 
 
 void WinMTRStatusBar::RepositionControls() noexcept
 {
-	deferWindowPos dwp(gsl::narrow_cast<int>(m_arrPaneControls.size()));
+	deferWindowPos dwp(static_cast<int>(m_arrPaneControls.size()));
 	
 	CRect rcClient;
 	GetClientRect(&rcClient);

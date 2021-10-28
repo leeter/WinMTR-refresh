@@ -313,9 +313,9 @@ void WinMTRNet::SetAddr(int at, sockaddr& addr)
 
 					if (const auto nresult = GetNameInfoW(
 						reinterpret_cast<sockaddr*>(&addr)
-						, gsl::narrow_cast<socklen_t>(getAddressSize(addr))
+						, static_cast<socklen_t>(getAddressSize(addr))
 						, buf
-						, gsl::narrow_cast<DWORD>(std::size(buf))
+						, static_cast<DWORD>(std::size(buf))
 						, nullptr
 						, 0
 						, 0);
@@ -326,8 +326,8 @@ void WinMTRNet::SetAddr(int at, sockaddr& addr)
 					else {
 						std::wstring out;
 						out.resize(40);
-						auto addrlen = gsl::narrow_cast<DWORD>(getAddressSize(addr));
-						DWORD addrstrsize = gsl::narrow_cast<DWORD>(out.size());
+						auto addrlen = static_cast<DWORD>(getAddressSize(addr));
+						DWORD addrstrsize = static_cast<DWORD>(out.size());
 						if (const auto result = WSAAddressToStringW(
 							reinterpret_cast<LPSOCKADDR>(&addr)
 							,addrlen
@@ -382,8 +382,8 @@ std::wstring s_nethost::getName() const
 		std::wstring out;
 		out.resize(40);
 		auto addrlen = getAddressSize(addr);
-		DWORD addrstrsize = gsl::narrow_cast<DWORD>(out.size());
-		if (auto result = WSAAddressToStringW(reinterpret_cast<LPSOCKADDR>(&laddr), gsl::narrow_cast<DWORD>(addrlen), nullptr, out.data(), &addrstrsize); !result) {
+		DWORD addrstrsize = static_cast<DWORD>(out.size());
+		if (auto result = WSAAddressToStringW(reinterpret_cast<LPSOCKADDR>(&laddr), static_cast<DWORD>(addrlen), nullptr, out.data(), &addrstrsize); !result) {
 			out.resize(addrstrsize - 1);
 		}
 

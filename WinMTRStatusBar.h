@@ -89,7 +89,7 @@ public:
 	}
 	
 	BOOL SetIndicators(std::span<UINT> indicators) {
-		return static_cast<CStatusBar*>(this)->SetIndicators(indicators.data(), gsl::narrow_cast<int>(indicators.size()));
+		return static_cast<CStatusBar*>(this)->SetIndicators(indicators.data(), static_cast<int>(indicators.size()));
 	}
 // Overrides
 	// ClassWizard generated virtual function overrides

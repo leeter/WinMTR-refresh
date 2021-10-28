@@ -33,7 +33,6 @@ module;
 #include <coroutine>
 #include <span>
 #include <type_traits>
-#include <gsl/gsl>
 #include <ppltasks.h>
 #include <pplawait.h>
 #include <WinSock2.h>
@@ -309,10 +308,10 @@ struct icmp_ping final {
 			, local
 			, m_addr
 			, m_reqData.data()
-			, gsl::narrow<WORD>(m_reqData.size())
+			, static_cast<WORD>(m_reqData.size())
 			, &stIPInfo
 			, m_replyData.data()
-			, gsl::narrow_cast<DWORD>(m_replyData.size())
+			, static_cast<DWORD>(m_replyData.size())
 			, ECHO_REPLY_TIMEOUT);
 
 		if (const auto err = GetLastError(); err != ERROR_IO_PENDING) {
@@ -335,7 +334,7 @@ private:
 		IN ULONG Reserved) noexcept {
 		UNREFERENCED_PARAMETER(Reserved);
 		auto context = static_cast<icmp_ping<traits>*>(ApcContext);
-		context->m_replysize = gsl::narrow_cast<DWORD>(IoStatusBlock->Information);
+		context->m_replysize = static_cast<DWORD>(IoStatusBlock->Information);
 		concurrency::create_task([=] {
 			context->m_resume();
 			}, context->m_context);

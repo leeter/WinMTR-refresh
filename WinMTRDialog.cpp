@@ -282,7 +282,7 @@ BOOL WinMTRDialog::InitRegistry()
 		nrLRU = tmp_dword;
 		for(int i=0;i<maxLRU;i++) {
 			std::swprintf(key_name, std::size(key_name), L"Host%d", i+1);
-			auto value_size = gsl::narrow_cast<DWORD>(std::size(str_host));
+			auto value_size = static_cast<DWORD>(std::size(str_host));
 			if (lru_key.QueryStringValue(key_name, str_host, &value_size) == ERROR_SUCCESS) {
 				str_host[value_size]=L'\0';
 				m_comboHost.AddString((CString)str_host);
@@ -883,12 +883,14 @@ bool WinMTRDialog::InitMTRNet()
 
 	const auto buf = std::format(L"Resolving host {}..."sv, sHost.GetString());
 	statusBar.SetPaneText(0, buf.c_str());
-	PADDRINFOEXW out = nullptr;
-	const auto cleanup = gsl::finally([&out]() noexcept {
-		if (out) {
-			FreeAddrInfoExW(out);
+	struct adderinfoholder {
+		PADDRINFOEXW out = nullptr;
+		~adderinfoholder() noexcept {
+			if (out) {
+				FreeAddrInfoExW(out);
+			}
 		}
-	});
+	} holder{};
 	ADDRINFOEXW hint = { .ai_family = AF_UNSPEC };
 	if (const auto result = GetAddrInfoExW(
 		sHost
@@ -896,7 +898,7 @@ bool WinMTRDialog::InitMTRNet()
 		, NS_ALL
 		, nullptr
 		, &hint
-		, &out
+		, &holder.out
 		, nullptr
 		, nullptr
 		, nullptr
@@ -938,9 +940,12 @@ winrt::Windows::Foundation::IAsyncAction WinMTRDialog::pingThread(std::wstring s
 	if (tracing.exchange(true)) {
 		throw new std::runtime_error("Tracing started twice!");
 	}
-	const auto finally = gsl::finally([this]() noexcept {
-		this->tracing.store(false, std::memory_order_release);
-	});
+	struct tracexit {
+		WinMTRDialog* dialog;
+		~tracexit() noexcept {
+			dialog->tracing.store(false, std::memory_order_release);
+		}
+	}tracexit{this};
 
 	SOCKADDR_STORAGE addrstore = {};
 	
