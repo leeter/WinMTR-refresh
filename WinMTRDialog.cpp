@@ -139,8 +139,7 @@ BOOL WinMTRDialog::OnInitDialog()
 		AfxMessageBox(L"Error creating status bar");
 	statusBar.GetStatusBarCtrl().SetMinHeight(23);
 		
-	UINT sbi[1];
-	sbi[0] = IDS_STRING_SB_NAME;	
+	UINT sbi[1] = {IDS_STRING_SB_NAME};
 	statusBar.SetIndicators(sbi);
 	statusBar.SetPaneInfo(0, statusBar.GetItemID(0),SBPS_STRETCH, 0 );
 	{ // Add appnor URL
@@ -437,35 +436,35 @@ void WinMTRDialog::OnDblclkList([[maybe_unused]] NMHDR* pNMHDR, LRESULT* pResult
 			int nItem = m_listMTR.GetNextSelectedItem(pos);
 			WinMTRProperties wmtrprop;
 			
-			if(auto state = wmtrnet->getStateAt(nItem); !isValidAddress(state.addr)) {
+			if(auto lstate = wmtrnet->getStateAt(nItem); !isValidAddress(lstate.addr)) {
 				wmtrprop.host.clear();
 				wmtrprop.ip.clear();
-				wmtrprop.comment = state.getName();
+				wmtrprop.comment = lstate.getName();
 
 				wmtrprop.pck_loss = wmtrprop.pck_sent = wmtrprop.pck_recv = 0;
 
 				wmtrprop.ping_avrg = wmtrprop.ping_last = 0.0;
 				wmtrprop.ping_best = wmtrprop.ping_worst = 0.0;
 			} else {
-				wmtrprop.host = state.getName();
+				wmtrprop.host = lstate.getName();
 				wmtrprop.ip.resize(40);
-				auto addrlen = getAddressSize(state.addr);
+				auto addrlen = getAddressSize(lstate.addr);
 				DWORD addrstrsize = static_cast<DWORD>(wmtrprop.ip.size());
-				auto result = WSAAddressToStringW(reinterpret_cast<LPSOCKADDR>(&state.addr), static_cast<DWORD>(addrlen), nullptr, wmtrprop.ip.data(), &addrstrsize);
+				auto result = WSAAddressToStringW(reinterpret_cast<LPSOCKADDR>(&lstate.addr), static_cast<DWORD>(addrlen), nullptr, wmtrprop.ip.data(), &addrstrsize);
 				if (!result) {
 					wmtrprop.ip.resize(addrstrsize - 1);
 				}
 				
 				wmtrprop.comment = L"Host alive."sv;
 
-				wmtrprop.ping_avrg = static_cast<float>(state.getAvg()); 
-				wmtrprop.ping_last = static_cast<float>(state.last); 
-				wmtrprop.ping_best = static_cast<float>(state.best);
-				wmtrprop.ping_worst = static_cast<float>(state.worst); 
+				wmtrprop.ping_avrg = static_cast<float>(lstate.getAvg()); 
+				wmtrprop.ping_last = static_cast<float>(lstate.last); 
+				wmtrprop.ping_best = static_cast<float>(lstate.best);
+				wmtrprop.ping_worst = static_cast<float>(lstate.worst); 
 
-				wmtrprop.pck_loss = state.getPercent();
-				wmtrprop.pck_recv = state.returned;
-				wmtrprop.pck_sent = state.xmit;
+				wmtrprop.pck_loss = lstate.getPercent();
+				wmtrprop.pck_recv = lstate.returned;
+				wmtrprop.pck_sent = lstate.xmit;
 			}
 
 			wmtrprop.DoModal();

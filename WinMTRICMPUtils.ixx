@@ -314,7 +314,10 @@ struct icmp_ping final {
 			, static_cast<DWORD>(m_replyData.size())
 			, ECHO_REPLY_TIMEOUT);
 
-		if (const auto err = GetLastError(); err != ERROR_IO_PENDING) {
+		if (io_res != ERROR_SUCCESS) [[unlikely]] {
+			throw std::system_error(io_res, std::system_category());
+		}
+		if (const auto err = GetLastError(); err != ERROR_IO_PENDING) [[unlikely]] {
 			throw std::system_error(err, std::system_category());
 		}
 	}
