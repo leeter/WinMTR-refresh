@@ -35,7 +35,7 @@ export auto GetAddrInfoAsync(PCWSTR pName, timeval* timeout, int family = AF_UNS
 		coro_handle m_resume{ nullptr };
 		PCWSTR m_Name;
 		timeval* m_timeout;
-		std::unique_ptr<ADDRINFOEXW, addrinfo_deleter> m_results;
+		PADDRINFOEXW m_results;
 		DWORD m_dwError = ERROR_SUCCESS;
 		int m_family;
 		name_lookup_async(const name_lookup_async&) = delete;
@@ -45,6 +45,14 @@ export auto GetAddrInfoAsync(PCWSTR pName, timeval* timeout, int family = AF_UNS
 			, m_timeout(timeout)
 			, m_family(family)
 		{
+		}
+
+		~name_lookup_async()
+		{
+			if (m_results) {
+				FreeAddrInfoExW(m_results);
+			}
+
 		}
 
 		bool await_ready() const noexcept
@@ -63,7 +71,7 @@ export auto GetAddrInfoAsync(PCWSTR pName, timeval* timeout, int family = AF_UNS
 				, NS_DNS
 				, nullptr //LPGUID                             lpNspId,
 				, &hint
-				, std::out_ptr(m_results) // PADDRINFOEXW * ppResult,
+				, &m_results // PADDRINFOEXW * ppResult,
 				, m_timeout
 				, &lacky
 				, name_lookup_async::lookup_callback
@@ -82,7 +90,7 @@ export auto GetAddrInfoAsync(PCWSTR pName, timeval* timeout, int family = AF_UNS
 			}
 
 			std::vector<SOCKADDR_STORAGE> addresses;
-			for (auto result = m_results.get(); result; result = result->ai_next) {
+			for (auto result = m_results; result; result = result->ai_next) {
 				SOCKADDR_STORAGE addrstore = {};
 
 				std::memcpy(&addrstore, m_results->ai_addr, m_results->ai_addrlen);
