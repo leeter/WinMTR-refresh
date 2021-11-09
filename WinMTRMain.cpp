@@ -112,6 +112,7 @@ BOOL WinMTRMain::InitInstance()
 	
 	m_pMainWnd = &mtrDialog;
 
+	[[maybe_unused]]
 	auto nResponse = mtrDialog.DoModal();
 
 

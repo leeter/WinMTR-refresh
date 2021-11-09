@@ -319,7 +319,6 @@ void WinMTRDialog::OnSizing(UINT fwSide, LPRECT pRect)
 //*****************************************************************************
 void WinMTRDialog::OnSize(UINT nType, int cx, int cy)
 {
-	constexpr auto INITIALX_96DPI = 96;
 	CDialog::OnSize(nType, cx, cy);
 	CRect r;
 	GetClientRect(&r);
@@ -570,7 +569,6 @@ void WinMTRDialog::OnRestart()
 				
 				nrLRU++;
 				std::swprintf(key_name, std::size(key_name), L"Host%d", nrLRU);
-				const auto sHostLen = sHost.GetAllocLength() * sizeof(wchar_t) + sizeof(wchar_t);
 				lru_key.SetStringValue(key_name, static_cast<LPCWSTR>(sHost));
 				auto tmp_dword =  static_cast<DWORD>(nrLRU);
 				lru_key.SetDWORDValue(L"NrLRU", tmp_dword);
