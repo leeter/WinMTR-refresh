@@ -30,7 +30,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 //    
 //
 //*****************************************************************************
-
+#pragma once
 #ifndef WINMTRNET_H_
 #define WINMTRNET_H_
 #include <string>
@@ -38,8 +38,14 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <mutex>
 #include <array>
 #include <vector>
+#include <concepts>
+#include <type_traits>
+#include <winrt/Windows.Foundation.h>
+#include <winsock2.h>
+#include <WS2tcpip.h>
 #include "IWinMTROptionsProvider.hpp"
-import winmtr.helper;
+import winmtr.helper;
+
 constexpr auto MAX_HOPS = 30;
 
 struct s_nethost {

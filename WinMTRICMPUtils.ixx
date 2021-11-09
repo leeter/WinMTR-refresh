@@ -45,29 +45,35 @@ export module WinMTRICMPUtils;
 
 constexpr auto ECHO_REPLY_TIMEOUT = 5000;
 
+export
 template<class T>
 struct ping_reply {
 	using type = void;
 };
 
+export
 template<>
 struct ping_reply<sockaddr_in> {
 	using type = ICMP_ECHO_REPLY;
 };
 
+export
 template<>
 struct ping_reply<sockaddr_in6> {
 	using type = ICMPV6_ECHO_REPLY;
 };
 
+export
 template <class T>
 using ping_reply_t = ping_reply<T>::type;
 
+export
 template<class T>
 struct any_address {
 	static constexpr void value() {};
 };
 
+export
 template<>
 struct any_address<sockaddr_in> {
 	static constexpr auto value() {
@@ -75,6 +81,7 @@ struct any_address<sockaddr_in> {
 	}
 };
 
+export
 template<>
 struct any_address<sockaddr_in6> {
 	static SOCKADDR_IN6* value() {
@@ -272,6 +279,7 @@ struct icmp_ping_traits<sockaddr_in6> {
 	}
 };
 
+export
 template<icmp_pingable traits>
 struct icmp_ping final {
 #ifdef __has_include                           // Check if __has_include is present

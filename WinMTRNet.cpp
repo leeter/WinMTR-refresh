@@ -26,11 +26,9 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 #include "WinMTRGlobal.h"
 #include "WinMTRNet.h"
-#include <winrt/Windows.Foundation.h>
 #include "resource.h"
-import WinMTRICMPUtils;
-
 #include <icmpapi.h>
+import WinMTRICMPUtils;
 
 namespace {
 
