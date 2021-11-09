@@ -880,14 +880,7 @@ bool WinMTRDialog::InitMTRNet()
 
 	const auto buf = std::format(L"Resolving host {}..."sv, sHost.GetString());
 	statusBar.SetPaneText(0, buf.c_str());
-	struct adderinfoholder {
-		PADDRINFOEXW out = nullptr;
-		~adderinfoholder() noexcept {
-			if (out) {
-				FreeAddrInfoExW(out);
-			}
-		}
-	} holder{};
+	std::unique_ptr<ADDRINFOEXW, addrinfo_deleter> holder;
 	ADDRINFOEXW hint = { .ai_family = AF_UNSPEC };
 	if (const auto result = GetAddrInfoExW(
 		sHost
@@ -895,7 +888,7 @@ bool WinMTRDialog::InitMTRNet()
 		, NS_ALL
 		, nullptr
 		, &hint
-		, &holder.out
+		, std::out_ptr(holder)
 		, nullptr
 		, nullptr
 		, nullptr
