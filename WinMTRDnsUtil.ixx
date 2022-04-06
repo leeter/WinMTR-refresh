@@ -11,7 +11,7 @@ module;
 
 export module WinMTRDnsUtil;
 
-export struct addrinfo_deleter {
+export struct addrinfo_deleter final {
 	void operator()(PADDRINFOEXW adder_info) const noexcept {
 		FreeAddrInfoExW(adder_info);
 	}
@@ -27,7 +27,7 @@ export auto GetAddrInfoAsync(PCWSTR pName, timeval* timeout, int family = AF_UNS
 #  endif
 #endif
 		
-		struct overlappedLacky : public WSAOVERLAPPED {
+		struct overlappedLacky final : public WSAOVERLAPPED {
 			name_lookup_async* parent;
 		};
 		overlappedLacky lacky{ .parent{this} };

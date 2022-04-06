@@ -33,6 +33,7 @@ module;
 #include <coroutine>
 #include <span>
 #include <type_traits>
+#include <ppl.h>
 #include <ppltasks.h>
 #include <pplawait.h>
 #include <WinSock2.h>

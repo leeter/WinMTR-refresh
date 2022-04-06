@@ -57,7 +57,7 @@ namespace {
 }
 
 using namespace std::chrono_literals;
-struct trace_thread {
+struct trace_thread final {
 	trace_thread(const trace_thread&) = delete;
 	trace_thread& operator=(const trace_thread&) = delete;
 	trace_thread(trace_thread&&) = default;
