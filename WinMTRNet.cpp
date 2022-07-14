@@ -306,7 +306,7 @@ void WinMTRNet::SetAddr(int at, sockaddr& addr)
 			Concurrency::create_task([at, sharedThis = shared_from_this()] {
 					TRACE_MSG(L"DNS resolver thread started.");
 
-					wchar_t buf[NI_MAXHOST];
+					wchar_t buf[NI_MAXHOST] = {};
 					sockaddr_storage addr = sharedThis->GetAddr(at);
 
 					if (const auto nresult = GetNameInfoW(

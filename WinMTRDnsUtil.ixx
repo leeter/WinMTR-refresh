@@ -35,7 +35,7 @@ export auto GetAddrInfoAsync(PCWSTR pName, timeval* timeout, int family = AF_UNS
 		coro_handle m_resume{ nullptr };
 		PCWSTR m_Name;
 		timeval* m_timeout;
-		PADDRINFOEXW m_results;
+		PADDRINFOEXW m_results{ nullptr };
 		DWORD m_dwError = ERROR_SUCCESS;
 		int m_family;
 		name_lookup_async(const name_lookup_async&) = delete;

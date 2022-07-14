@@ -125,11 +125,11 @@ private:
 	std::array<s_nethost, MAX_HOPS>	host;
 	SOCKADDR_STORAGE last_remote_addr;
 	mutable std::recursive_mutex	ghMutex;
+	std::optional<winrt::Windows::Foundation::IAsyncAction> tracer;
+	std::optional<winrt::apartment_context> context;
 	const IWinMTROptionsProvider* options;
 	winmtr::helper::WSAHelper wsaHelper;
 	std::atomic_bool	tracing;
-	std::optional<winrt::Windows::Foundation::IAsyncAction> tracer;
-	std::optional<winrt::apartment_context> context;
 
 	[[nodiscard]]
 	SOCKADDR_STORAGE GetAddr(int at) const;
