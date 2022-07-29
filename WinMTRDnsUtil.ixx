@@ -17,7 +17,7 @@ export struct addrinfo_deleter final {
 	}
 };
 
-export auto GetAddrInfoAsync(PCWSTR pName, timeval* timeout, int family = AF_UNSPEC) noexcept {
+export auto GetAddrInfoAsync(PCWSTR pName, timeval* timeout, int family = AF_UNSPEC, int flags = 0) noexcept {
 	class name_lookup_async final {
 #ifdef __has_include                           // Check if __has_include is present
 #  if __has_include(<coroutine>)                // Check for a standard library
@@ -38,12 +38,14 @@ export auto GetAddrInfoAsync(PCWSTR pName, timeval* timeout, int family = AF_UNS
 		PADDRINFOEXW m_results{ nullptr };
 		DWORD m_dwError = ERROR_SUCCESS;
 		int m_family;
+		int m_flags;
 		name_lookup_async(const name_lookup_async&) = delete;
 	public:
-		name_lookup_async(PCWSTR pName, timeval* timeout, int family = AF_UNSPEC) noexcept
+		name_lookup_async(PCWSTR pName, timeval* timeout, int family = AF_UNSPEC, int flags = 0) noexcept
 			:m_Name(pName)
 			, m_timeout(timeout)
 			, m_family(family)
+			, m_flags(flags)
 		{
 		}
 
@@ -64,7 +66,7 @@ export auto GetAddrInfoAsync(PCWSTR pName, timeval* timeout, int family = AF_UNS
 		{
 			m_resume = resume_handle;
 			// AF_UNSPEC counts as AF_INET | AF_INET6
-			ADDRINFOEXW hint = { .ai_family = m_family };
+			ADDRINFOEXW hint = { .ai_flags = m_flags, .ai_family = m_family };
 			auto result = GetAddrInfoExW(
 				m_Name
 				, nullptr ///PCWSTR                             pServiceName,
@@ -114,5 +116,5 @@ export auto GetAddrInfoAsync(PCWSTR pName, timeval* timeout, int family = AF_UNS
 				}, context->m_context);
 		}
 	};
-	return name_lookup_async{ pName, timeout, family };
+	return name_lookup_async{ pName, timeout, family, flags };
 }
