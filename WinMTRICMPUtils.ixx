@@ -38,7 +38,6 @@ module;
 #include <pplawait.h>
 #include <WinSock2.h>
 #include <WS2tcpip.h>
-#include <winrt/Windows.Foundation.h>
 #include "WinMTRICMPPIOdef.h"
 #include <iphlpapi.h>
 #include <icmpapi.h>

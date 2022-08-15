@@ -44,6 +44,27 @@ static	 char THIS_FILE[] = __FILE__;
 import WinMTRDnsUtil;
 
 namespace {
+	constexpr auto DEFAULT_PING_SIZE = 64;
+	constexpr auto DEFAULT_INTERVAL = 1.0;
+	constexpr auto DEFAULT_MAX_LRU = 128;
+	constexpr auto DEFAULT_DNS = true;
+
+#define MTR_NR_COLS 9
+	constexpr wchar_t MTR_COLS[MTR_NR_COLS][10] = {
+		L"Hostname",
+		L"Nr",
+		L"Loss %",
+		L"Sent",
+		L"Recv",
+		L"Best",
+		L"Avrg",
+		L"Worst",
+		L"Last"
+	};
+
+	constexpr int MTR_COL_LENGTH[MTR_NR_COLS] = {
+			190, 30, 50, 40, 40, 50, 50, 50, 50
+	};
 	const auto config_key_name = LR"(Software\WinMTR\Config)";
 	const auto lru_key_name = LR"(Software\WinMTR\LRU)";	
 }
