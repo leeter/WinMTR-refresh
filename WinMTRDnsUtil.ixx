@@ -2,6 +2,7 @@ module;
 #include "targetver.h"
 #define WIN32_LEAN_AND_MEAN
 #define VC_EXTRALEAN
+#include <optional>
 #include <coroutine>
 #include <ppltasks.h>
 #include <pplawait.h>
@@ -19,13 +20,7 @@ export struct addrinfo_deleter final {
 
 export auto GetAddrInfoAsync(PCWSTR pName, timeval* timeout, int family = AF_UNSPEC, int flags = 0) noexcept {
 	class name_lookup_async final {
-#ifdef __has_include                           // Check if __has_include is present
-#  if __has_include(<coroutine>)                // Check for a standard library
 		using coro_handle = std::coroutine_handle<>;
-#  else
-		using coro_handle = std::experimental::coroutine_handle<>;
-#  endif
-#endif
 		
 		struct overlappedLacky final : public WSAOVERLAPPED {
 			name_lookup_async* parent;

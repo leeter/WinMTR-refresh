@@ -33,9 +33,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #ifndef WINMTR_GLOBAL_H_
 #define WINMTR_GLOBAL_H_
 
-//#ifndef  _WIN64
-//#define  _USE_32BIT_TIME_T
-//#endif
 #include "targetver.h"
 
 #define VC_EXTRALEAN
@@ -62,11 +59,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <utility>
 #include <ranges>
 #include <mutex>
-#ifdef __cpp_lib_coroutine                           // Check if __has_include is present
 #include <coroutine>
-#else
-#include <experimental/coroutine>
-#endif
 
 #include <winrt/Windows.Foundation.h>
 #include <winrt/Windows.ApplicationModel.DataTransfer.h>
@@ -119,12 +112,6 @@ constexpr auto MaxHost = 256;
 //#define MAX_UNKNOWN_HOSTS 10
 
 //#define IP_HEADER_LENGTH   20
-
-
-
-
-
-
 
 #ifdef DEBUG
 #define TRACE_MSG(msg)										\
