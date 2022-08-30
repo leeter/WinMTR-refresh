@@ -19,3 +19,5 @@
 /CMakeCache.txt
 /Debug_x64_san
 /packages/*
+/ARM64/Release
+/Release_ARM64
