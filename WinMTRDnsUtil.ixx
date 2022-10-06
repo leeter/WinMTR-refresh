@@ -2,15 +2,16 @@ module;
 #include "targetver.h"
 #define WIN32_LEAN_AND_MEAN
 #define VC_EXTRALEAN
-#include <optional>
-#include <coroutine>
 #include <ppltasks.h>
 #include <pplawait.h>
 #include <WinSock2.h>
 #include <WS2tcpip.h>
-#include <winrt/Windows.Foundation.h>
 
 export module WinMTRDnsUtil;
+
+import <optional>;
+import <coroutine>;
+import <winrt/Windows.Foundation.h>;
 
 export struct addrinfo_deleter final {
 	void operator()(PADDRINFOEXW adder_info) const noexcept {

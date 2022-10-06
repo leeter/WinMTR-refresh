@@ -36,7 +36,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "targetver.h"
 
 #define VC_EXTRALEAN
-#define WIN32_LEAN_AND_MEAN
 
 #include <version>
 #include <algorithm>

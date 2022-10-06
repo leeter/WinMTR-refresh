@@ -21,3 +21,4 @@
 /packages/*
 /ARM64/Release
 /Release_ARM64
+/Release_x32

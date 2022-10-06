@@ -29,10 +29,6 @@ module;
 #define NOAPISET
 #define NOSERVICE
 #define NOMINMAX
-#include <concepts>
-#include <coroutine>
-#include <span>
-#include <type_traits>
 #include <ppl.h>
 #include <ppltasks.h>
 #include <pplawait.h>
@@ -42,6 +38,11 @@ module;
 #include <iphlpapi.h>
 #include <icmpapi.h>
 export module WinMTRICMPUtils;
+
+import <concepts>;
+import <coroutine>;
+import <span>;
+import <type_traits>;
 
 constexpr auto ECHO_REPLY_TIMEOUT = 5000;
 
