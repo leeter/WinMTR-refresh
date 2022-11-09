@@ -29,9 +29,6 @@ module;
 #define NOAPISET
 #define NOSERVICE
 #define NOMINMAX
-#include <ppl.h>
-#include <ppltasks.h>
-#include <pplawait.h>
 #include <WinSock2.h>
 #include <WS2tcpip.h>
 #include "WinMTRICMPPIOdef.h"
@@ -43,6 +40,9 @@ import <concepts>;
 import <coroutine>;
 import <span>;
 import <type_traits>;
+import <ppl.h>;
+import <ppltasks.h>;
+import <pplawait.h>;
 
 constexpr auto ECHO_REPLY_TIMEOUT = 5000;
 

@@ -2,8 +2,7 @@ module;
 #include "targetver.h"
 #define WIN32_LEAN_AND_MEAN
 #define VC_EXTRALEAN
-#include <ppltasks.h>
-#include <pplawait.h>
+
 #include <WinSock2.h>
 #include <WS2tcpip.h>
 
@@ -12,6 +11,8 @@ export module WinMTRDnsUtil;
 import <optional>;
 import <coroutine>;
 import <type_traits>;
+import <ppltasks.h>;
+import <pplawait.h>;
 import <winrt/Windows.Foundation.h>;
 
 
