@@ -11,7 +11,32 @@ export module WinMTRDnsUtil;
 
 import <optional>;
 import <coroutine>;
+import <type_traits>;
 import <winrt/Windows.Foundation.h>;
+
+
+export template<class T, class U>
+concept layout_compatible = std::is_layout_compatible_v<U, T>;
+
+export template<layout_compatible<ADDRINFOEXW> A>
+std::optional<SOCKADDR_STORAGE> get_sockaddr_from_addrinfo(const A* info) {
+	if (info->ai_addr == nullptr) {
+		return std::nullopt;
+	}
+	SOCKADDR_STORAGE addrstore = {};
+
+	std::memcpy(&addrstore, info->ai_addr, info->ai_addrlen);
+	return addrstore;
+}
+
+export template<layout_compatible<ADDRINFOEXW> A>
+std::optional<std::wstring> get_name_from_addrinfo(const ADDRINFOEXW* info) {
+	if (info->ai_canonname == nullptr) {
+		return std::nullopt;
+	}
+	
+	return std::wstring(info->ai_canonname);
+}
 
 export struct addrinfo_deleter final {
 	void operator()(PADDRINFOEXW adder_info) const noexcept {
@@ -69,7 +94,7 @@ export auto GetAddrInfoAsync(PCWSTR pName, timeval* timeout, int family = AF_UNS
 				, NS_DNS
 				, nullptr //LPGUID                             lpNspId,
 				, &hint
-				, &m_results // PADDRINFOEXW * ppResult,
+				, & m_results // PADDRINFOEXW * ppResult,
 				, m_timeout
 				, &lacky
 				, name_lookup_async::lookup_callback
@@ -92,7 +117,10 @@ export auto GetAddrInfoAsync(PCWSTR pName, timeval* timeout, int family = AF_UNS
 				SOCKADDR_STORAGE addrstore = {};
 
 				std::memcpy(&addrstore, m_results->ai_addr, m_results->ai_addrlen);
-				addresses.push_back(addrstore);
+				auto addr = get_sockaddr_from_addrinfo(result);
+				if (addr) {
+					addresses.push_back(*addr);
+				}
 			}
 
 			return addresses;
