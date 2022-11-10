@@ -42,21 +42,22 @@ module;
 #include <icmpapi.h>
 export module WinMTRNet;
 
-import <string>;
+export import <string>;
 import <sstream>;
 import <string_view>;
 import <atomic>;
 import <mutex>;
 import <array>;
-import <vector>;
-import <concepts>;
+export import <memory>;
+export import <vector>;
+import <optional>;
 import <type_traits>;
 import <cstring>;
 import <iterator>;
 import <ppltasks.h>;
-import <winrt/Windows.Foundation.h>;
+export import <winrt/Windows.Foundation.h>;
 
-import "IWinMTROptionsProvider.hpp";
+export import "IWinMTROptionsProvider.hpp";
 import winmtr.helper;
 import WinMTRICMPUtils;
 import WinMTRIPUtils;

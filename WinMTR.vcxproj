@@ -716,7 +716,6 @@
     <ClInclude Include="WinMTRGlobal.h" />
     <ClInclude Include="WinMTRHelp.h" />
     <ClInclude Include="WinMTRMain.h" />
-    <ClInclude Include="WinMTRNet.h" />
     <ClInclude Include="WinMTROptions.h" />
     <ClInclude Include="WinMTRProperties.h" />
     <ClCompile Include="WinMTRWSAhelper.ixx">

@@ -34,7 +34,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #define WINMTR_GLOBAL_H_
 
 #include "targetver.h"
-
+#define WIN32_LEAN_AND_MEAN
 #define VC_EXTRALEAN
 
 #include <version>
@@ -62,9 +62,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <iterator>
 #include <cstring>
 
-#include <winrt/Windows.Foundation.h>
-#include <winrt/Windows.ApplicationModel.DataTransfer.h>
-#include <winrt/Windows.Foundation.Diagnostics.h>
 #include <afxwin.h>
 #include <afxext.h>
 #include <afxdisp.h>
@@ -74,17 +71,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
   #include <afxcmn.h>
 #endif 
 #include <afxsock.h>
-#include <bcrypt.h>
-#include <ip2string.h>
-#include <ppl.h>
-#include <ppltasks.h>
-#include <pplawait.h>
-#include <strsafe.h>
 
-#define WINMTR_VERSION	L"0.9"
-#define WINMTR_LICENSE	L"GPL - GNU Public License"
-#define WINMTR_COPYRIGHT L"WinMTR 0.9 (c) 2010-2011 Appnor MSP - Fully Managed Hosting & Cloud Provider www.appnor.com"
-#define WINMTR_HOMEPAGE	L"http://WinMTR.sourceforge.net"
+
 
 
 

@@ -29,9 +29,10 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "WinMTROptions.h"
 #include "WinMTRProperties.h"
 //#include "WinMTRNet.h"
-
-#include "afxlinkctrl.h"
-
+#include <afxlinkctrl.h>
+import <winrt/Windows.Foundation.h>;
+#include <winrt/Windows.ApplicationModel.DataTransfer.h>
+#include <winrt/Windows.Foundation.Diagnostics.h>
 import "IWinMTROptionsProvider.hpp";
 using namespace std::string_view_literals;
 
@@ -43,7 +44,7 @@ static	 char THIS_FILE[] = __FILE__;
 
 import WinMTRIPUtils;
 import WinMTRNet;
-import WinMTRDnsUtil;
+import WinMTRDnsUtil;
 
 namespace {
 	constexpr auto DEFAULT_PING_SIZE = 64;
@@ -183,8 +184,9 @@ BOOL WinMTRDialog::OnInitDialog()
 		statusBar.AddPaneControl(m_pWndButton.release(), 1234, true);
 	}
 
-	for(int i = 0; i< MTR_NR_COLS; i++)
-		m_listMTR.InsertColumn(i, MTR_COLS[i], LVCFMT_LEFT, MTR_COL_LENGTH[i] , -1);
+	for (int i = 0; i < MTR_NR_COLS; i++) {
+		m_listMTR.InsertColumn(i, MTR_COLS[i], LVCFMT_LEFT, MTR_COL_LENGTH[i], -1);
+	}
    
 	m_comboHost.SetFocus();
 
@@ -249,6 +251,10 @@ BOOL WinMTRDialog::InitRegistry()
 		return FALSE;
 
 	}
+	static const auto WINMTR_VERSION = L"0.9";
+	static const auto WINMTR_LICENSE = L"GPL - GNU Public License";
+	//static const auto WINMTR_COPYRIGHT = L"WinMTR 0.9 (c) 2010-2011 Appnor MSP - Fully Managed Hosting & Cloud Provider www.appnor.com";
+	static const auto WINMTR_HOMEPAGE = L"http://WinMTR.sourceforge.net";
 	versionKey.SetStringValue(L"Version", WINMTR_VERSION);
 	versionKey.SetStringValue(L"License", WINMTR_LICENSE);
 	versionKey.SetStringValue(L"HomePage", WINMTR_HOMEPAGE);
