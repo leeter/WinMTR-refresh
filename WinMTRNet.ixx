@@ -23,13 +23,82 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 // FILE:            WinMTRNet.cpp
 //
 //*****************************************************************************
-
-#include "WinMTRGlobal.h"
-#include "WinMTRNet.h"
+module;
+#pragma warning (disable : 4005)
+#include "targetver.h"
+#define WIN32_LEAN_AND_MEAN
+#define VC_EXTRALEAN
+#define NOMCX
+#define NOIME
+#define NOGDI
+#define NONLS
+#define NOAPISET
+#define NOSERVICE
+#define NOMINMAX
+#include <winsock2.h>
+#include <WS2tcpip.h>
+#include <Ipexport.h>
 #include "resource.h"
 #include <icmpapi.h>
-import WinMTRICMPUtils;
+export module WinMTRNet;
 
+import <string>;
+import <sstream>;
+import <string_view>;
+import <atomic>;
+import <mutex>;
+import <array>;
+import <vector>;
+import <concepts>;
+import <type_traits>;
+import <cstring>;
+import <iterator>;
+import <ppltasks.h>;
+import <winrt/Windows.Foundation.h>;
+
+import "IWinMTROptionsProvider.hpp";
+import winmtr.helper;
+import WinMTRICMPUtils;
+import WinMTRIPUtils;
+
+#ifdef DEBUG
+#define TRACE_MSG(msg)										\
+	{														\
+	std::wostringstream dbg_msg(std::wostringstream::out);	\
+	dbg_msg << msg << std::endl;							\
+	OutputDebugStringW(dbg_msg.str().c_str());				\
+	}
+#else
+#define TRACE_MSG(msg)
+#endif
+
+constexpr auto MAX_HOPS = 30;
+
+
+export struct s_nethost final{
+	SOCKADDR_STORAGE addr = {};
+	std::wstring name;
+	int xmit = 0;			// number of PING packets sent
+	int returned = 0;		// number of ICMP echo replies received
+	unsigned long total = 0;	// total time
+	int last = 0;				// last time
+	int best = 0;				// best time
+	int worst = 0;			// worst time
+	inline auto getPercent() const noexcept {
+		return (xmit == 0) ? 0 : (100 - (100 * returned / xmit));
+	}
+	inline int getAvg() const noexcept {
+		return returned == 0 ? 0 : total / returned;
+	}
+	std::wstring getName() const {
+		if (name.empty()) {
+			SOCKADDR_STORAGE laddr = addr;
+			return addr_to_string(laddr);
+		}
+		return name;
+	}
+};
+class WinMTRNet;
 namespace {
 
 	struct ICMPHandleTraits
@@ -47,57 +116,99 @@ namespace {
 			return INVALID_HANDLE_VALUE;
 		}
 	};
-	
+
 	using IcmpHandle = winrt::handle_type<ICMPHandleTraits>;
 
 	[[nodiscard]]
 	inline bool operator==(const SOCKADDR_STORAGE& lhs, const SOCKADDR_STORAGE& rhs) noexcept {
-		return memcmp(&lhs, &rhs, sizeof(SOCKADDR_STORAGE)) == 0;
+		return std::memcmp(&lhs, &rhs, sizeof(SOCKADDR_STORAGE)) == 0;
 	}
+	
+	struct trace_thread final {
+		trace_thread(const trace_thread&) = delete;
+		trace_thread& operator=(const trace_thread&) = delete;
+		trace_thread(trace_thread&&) = default;
+		trace_thread& operator=(trace_thread&&) = default;
+
+		trace_thread(ADDRESS_FAMILY af, WinMTRNet* winmtr, UCHAR ttl) noexcept
+			:
+			address(),
+			winmtr(winmtr),
+			ttl(ttl)
+		{
+			if (af == AF_INET) {
+				icmpHandle.attach(IcmpCreateFile());
+			}
+			else if (af == AF_INET6) {
+				icmpHandle.attach(Icmp6CreateFile());
+			}
+		}
+		SOCKADDR_STORAGE address;
+		IcmpHandle icmpHandle;
+		WinMTRNet* winmtr;
+		UCHAR		ttl;
+	};
 }
 
-using namespace std::chrono_literals;
-struct trace_thread final {
-	trace_thread(const trace_thread&) = delete;
-	trace_thread& operator=(const trace_thread&) = delete;
-	trace_thread(trace_thread&&) = default;
-	trace_thread& operator=(trace_thread&&) = default;
+//*****************************************************************************
+// CLASS:  WinMTRNet
+//
+//
+//*****************************************************************************
 
-	trace_thread(ADDRESS_FAMILY af, WinMTRNet* winmtr, UCHAR ttl) noexcept
-		:
-		address(),
-		winmtr(winmtr),
-		ttl(ttl)
-	{
-		if (af == AF_INET) {
-			icmpHandle.attach(IcmpCreateFile());
-		}
-		else if (af == AF_INET6) {
-			icmpHandle.attach(Icmp6CreateFile());
+export class WinMTRNet final : public std::enable_shared_from_this<WinMTRNet> {
+	WinMTRNet(const WinMTRNet&) = delete;
+	WinMTRNet& operator=(const WinMTRNet&) = delete;
+public:
+
+	WinMTRNet(const IWinMTROptionsProvider* wp)
+		:host(),
+		last_remote_addr(),
+		options(wp),
+		wsaHelper(MAKEWORD(2, 2)),
+		tracing(false) {
+
+		if (!wsaHelper) [[unlikely]] {
+			//AfxMessageBox(IDP_SOCKETS_INIT_FAILED);
+			return;
 		}
 	}
-	SOCKADDR_STORAGE address;
-	IcmpHandle icmpHandle;
-	WinMTRNet* winmtr;
-	UCHAR		ttl;
+	~WinMTRNet() noexcept = default;
+	[[nodiscard("The task should be awaited")]]
+	winrt::Windows::Foundation::IAsyncAction	DoTrace(sockaddr& address);
+	void	ResetHops() noexcept;
+
+	[[nodiscard]]
+	int		GetMax() const;
+	[[nodiscard]]
+	std::vector<s_nethost> getCurrentState() const;
+	s_nethost getStateAt(int at) const;
+private:
+	std::array<s_nethost, MAX_HOPS>	host;
+	SOCKADDR_STORAGE last_remote_addr;
+	mutable std::recursive_mutex	ghMutex;
+	std::optional<winrt::Windows::Foundation::IAsyncAction> tracer;
+	std::optional<winrt::apartment_context> context;
+	const IWinMTROptionsProvider* options;
+	winmtr::helper::WSAHelper wsaHelper;
+	std::atomic_bool	tracing;
+
+	[[nodiscard]]
+	SOCKADDR_STORAGE GetAddr(int at) const;
+	void	SetAddr(int at, sockaddr& addr);
+	void	SetName(int at, std::wstring n);
+	void addNewReturn(int ttl, int last);
+	void	AddXmit(int at);
+
+	template<class T>
+	[[nodiscard("The task should be awaited")]]
+	winrt::Windows::Foundation::IAsyncAction handleICMP(trace_thread current);
 };
 
 
-WinMTRNet::WinMTRNet(const IWinMTROptionsProvider* wp)
-	:host(),
-	last_remote_addr(),
-	options(wp),
-	wsaHelper(MAKEWORD(2, 2)),
-	tracing(false) {
 
-	if (!wsaHelper) [[unlikely]] {
-		AfxMessageBox(IDP_SOCKETS_INIT_FAILED);
-		return;
-	}
-}
+using namespace std::chrono_literals;
 
-WinMTRNet::~WinMTRNet() noexcept
-{}
 
 void WinMTRNet::ResetHops() noexcept
 {
@@ -322,21 +433,7 @@ void WinMTRNet::SetAddr(int at, sockaddr& addr)
 						sharedThis->SetName(at, buf);
 					}
 					else {
-						std::wstring out;
-						out.resize(40);
-						auto addrlen = static_cast<DWORD>(getAddressSize(addr));
-						DWORD addrstrsize = static_cast<DWORD>(out.size());
-						if (const auto result = WSAAddressToStringW(
-							reinterpret_cast<LPSOCKADDR>(&addr)
-							,addrlen
-							,nullptr
-							,out.data()
-							,&addrstrsize);
-							// zero on success
-							!result) {
-							out.resize(addrstrsize - 1);
-						}
-						sharedThis->SetName(at, std::move(out));
+						sharedThis->SetName(at, addr_to_string(addr));
 					}
 
 					TRACE_MSG(L"DNS resolver thread stopped.");
@@ -370,22 +467,3 @@ void WinMTRNet::AddXmit(int at)
 	host[at].xmit++;
 }
 
-std::wstring s_nethost::getName() const
-{
-	if (name.empty()) {
-		SOCKADDR_STORAGE laddr = addr;
-		if (!isValidAddress(addr)) {
-			return {};
-		}
-		std::wstring out;
-		out.resize(40);
-		auto addrlen = getAddressSize(addr);
-		DWORD addrstrsize = static_cast<DWORD>(out.size());
-		if (auto result = WSAAddressToStringW(reinterpret_cast<LPSOCKADDR>(&laddr), static_cast<DWORD>(addrlen), nullptr, out.data(), &addrstrsize); !result) {
-			out.resize(addrstrsize - 1);
-		}
-
-		return out;
-	}
-	return name;
-}

@@ -28,11 +28,11 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "WinMTRDialog.h"
 #include "WinMTROptions.h"
 #include "WinMTRProperties.h"
-#include "WinMTRNet.h"
+//#include "WinMTRNet.h"
 
 #include "afxlinkctrl.h"
 
-
+import "IWinMTROptionsProvider.hpp";
 using namespace std::string_view_literals;
 
 #ifdef _DEBUG
@@ -41,7 +41,9 @@ using namespace std::string_view_literals;
 static	 char THIS_FILE[] = __FILE__;
 #endif
 
-import WinMTRDnsUtil;
+import WinMTRIPUtils;
+import WinMTRNet;
+import WinMTRDnsUtil;
 
 namespace {
 	constexpr auto DEFAULT_PING_SIZE = 64;
@@ -467,13 +469,7 @@ void WinMTRDialog::OnDblclkList([[maybe_unused]] NMHDR* pNMHDR, LRESULT* pResult
 				wmtrprop.ping_best = wmtrprop.ping_worst = 0.0;
 			} else {
 				wmtrprop.host = lstate.getName();
-				wmtrprop.ip.resize(40);
-				auto addrlen = getAddressSize(lstate.addr);
-				DWORD addrstrsize = static_cast<DWORD>(wmtrprop.ip.size());
-				auto result = WSAAddressToStringW(reinterpret_cast<LPSOCKADDR>(&lstate.addr), static_cast<DWORD>(addrlen), nullptr, wmtrprop.ip.data(), &addrstrsize);
-				if (!result) {
-					wmtrprop.ip.resize(addrstrsize - 1);
-				}
+				wmtrprop.ip = addr_to_string(lstate.addr);
 				
 				wmtrprop.comment = L"Host alive."sv;
 
