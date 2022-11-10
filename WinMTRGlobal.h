@@ -60,6 +60,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <mutex>
 #include <coroutine>
 #include <iterator>
+#include <cstring>
 
 #include <winrt/Windows.Foundation.h>
 #include <winrt/Windows.ApplicationModel.DataTransfer.h>
