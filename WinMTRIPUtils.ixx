@@ -1,7 +1,7 @@
 /*
 WinMTR
 Copyright (C)  2010-2019 Appnor MSP S.A. - http://www.appnor.com
-Copyright (C) 2019-2021 Leetsoftwerx
+Copyright (C) 2019-2022 Leetsoftwerx
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -50,7 +50,7 @@ inline constexpr auto getAddressFamily(const T & addr) noexcept {
 	if constexpr (socket_type<T>) {
 		return addr.sa_family;
 	}
-	else if (std::is_same_v<SOCKADDR_STORAGE, T>) {
+	else if (std::is_same_v<SOCKADDR_STORAGE, std::remove_cvref_t<T>>) {
 		return addr.ss_family;
 	}
 }
@@ -71,15 +71,19 @@ inline constexpr bool isValidAddress(const T& addr) noexcept {
 }
 
 export template<socket_addr_type T>
-std::wstring addr_to_string(T& addr) {
+[[nodiscard]]
+std::wstring addr_to_string(const T & addr) {
 	if (!isValidAddress(addr)) {
 		return {};
 	}
+	// remove const at cost of a copy
+	std::remove_cv_t<T> laddr = addr;
 	std::wstring out;
 	out.resize(40); // max IPv6 Address length + 1 for terminator
-	auto addrlen = getAddressSize(addr);
+	const auto addrlen = getAddressSize(addr);
+	// mutated by WSAAddressToStringW
 	DWORD addrstrsize = static_cast<DWORD>(out.size());
-	if (const auto result = WSAAddressToStringW(reinterpret_cast<LPSOCKADDR>(&addr), static_cast<DWORD>(addrlen), nullptr, out.data(), &addrstrsize); !result && addrstrsize > 1) {
+	if (const auto result = WSAAddressToStringW(reinterpret_cast<LPSOCKADDR>(&laddr), static_cast<DWORD>(addrlen), nullptr, out.data(), &addrstrsize); !result && addrstrsize > 1) {
 		out.resize(addrstrsize - 1);
 	}
 	return out;
