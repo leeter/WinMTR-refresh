@@ -35,10 +35,11 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 #define WINMTR_DIALOG_TIMER 100
 
-#include "WinMTRStatusBar.h"
+
 #pragma warning (disable : 4005)
 import <string>;
 import WinMTROptionsProvider;
+import WinMTRStatusBar;
 import <memory>;
 import <mutex>;
 import <optional>;
