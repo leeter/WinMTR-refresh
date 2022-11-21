@@ -46,7 +46,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 class WinMTROptions final : public CDialog
 {
 public:
-	WinMTROptions(CWnd* pParent = NULL);
+	WinMTROptions(CWnd* pParent = nullptr);
 
 	inline void SetUseDNS(bool udns) noexcept { useDNS = udns;  };
 	inline void SetInterval(double i) noexcept { interval = i;   };
@@ -71,10 +71,10 @@ public:
 	CButton m_useIPv6;
 
 protected:
-	virtual void DoDataExchange(CDataExchange* pDX);
+	void DoDataExchange(CDataExchange* pDX) override;
 
-	virtual BOOL OnInitDialog();
-	virtual void OnOK();
+	BOOL OnInitDialog() override;
+	void OnOK() override;
 
 	afx_msg void OnLicense();
 	DECLARE_MESSAGE_MAP()

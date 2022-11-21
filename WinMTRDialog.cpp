@@ -54,6 +54,7 @@ import WinMTRSNetHost;
 import WinMTRIPUtils;
 import WinMTRNet;
 import WinMTRDnsUtil;
+import WinMTRUtils;
 
 
 
@@ -246,6 +247,9 @@ BOOL WinMTRDialog::OnInitDialog()
 	return FALSE;
 }
 
+
+static constexpr auto reg_host_fmt = L"Host{:d}"sv;
+const auto NrLRU_REG_KEY = L"NrLRU";
 //*****************************************************************************
 // WinMTRDialog::InitRegistry
 //
@@ -312,15 +316,17 @@ BOOL WinMTRDialog::InitRegistry()
 		REG_OPTION_NON_VOLATILE,
 		KEY_ALL_ACCESS) != ERROR_SUCCESS)
 		return FALSE;
-	if(lru_key.QueryDWORDValue(L"NrLRU", tmp_dword) != ERROR_SUCCESS) {
+	if(lru_key.QueryDWORDValue(NrLRU_REG_KEY, tmp_dword) != ERROR_SUCCESS) {
 		tmp_dword = nrLRU;
-		lru_key.SetDWORDValue(L"NrLRU", tmp_dword);
+		lru_key.SetDWORDValue(NrLRU_REG_KEY, tmp_dword);
 	} else {
 		wchar_t key_name[20];
 		wchar_t str_host[NI_MAXHOST];
 		nrLRU = tmp_dword;
+		constexpr auto key_name_size = std::size(key_name) - 1;
 		for(int i=0;i<maxLRU;i++) {
-			std::swprintf(key_name, std::size(key_name), L"Host%d", i+1);
+			auto result = std::format_to_n(key_name, key_name_size, reg_host_fmt, i+1);
+			*result.out = '\0';
 			auto value_size = static_cast<DWORD>(std::size(str_host));
 			if (lru_key.QueryStringValue(key_name, str_host, &value_size) == ERROR_SUCCESS) {
 				str_host[value_size]=L'\0';
@@ -602,10 +608,11 @@ void WinMTRDialog::OnRestart()
 					nrLRU = 0;
 				
 				nrLRU++;
-				std::swprintf(key_name, std::size(key_name), L"Host%d", nrLRU);
+				auto result = std::format_to_n(key_name, std::size(key_name) - 1, reg_host_fmt, nrLRU);
+				*result.out = '\0';
 				lru_key.SetStringValue(key_name, static_cast<LPCWSTR>(sHost));
 				auto tmp_dword =  static_cast<DWORD>(nrLRU);
-				lru_key.SetDWORDValue(L"NrLRU", tmp_dword);
+				lru_key.SetDWORDValue(NrLRU_REG_KEY, tmp_dword);
 			}
 			Transit(STATES::TRACING);
 		}
@@ -658,14 +665,15 @@ void WinMTRDialog::OnOptions()
 		if(maxLRU<nrLRU) {
 			CRegKey lru_key;
 			lru_key.Open(HKEY_CURRENT_USER, lru_key_name, KEY_ALL_ACCESS);
-
+			constexpr auto key_name_size = std::size(key_name) - 1;
 			for(int i = maxLRU; i<=nrLRU; i++) {
-				std::swprintf(key_name, std::size(key_name), L"Host%d", i);
+				auto result = std::format_to_n(key_name, key_name_size, reg_host_fmt, i);
+				*result.out = '\0';
 				lru_key.DeleteValue(key_name);
 			}
 			nrLRU = maxLRU;
 			tmp_dword = nrLRU;
-			lru_key.SetDWORDValue(L"NrLRU", tmp_dword);
+			lru_key.SetDWORDValue(NrLRU_REG_KEY, tmp_dword);
 		}
 	}
 }
@@ -834,7 +842,7 @@ void WinMTRDialog::OnCancel()
 //*****************************************************************************
 int WinMTRDialog::DisplayRedraw()
 {
-	wchar_t buf[255], nr_crt[255];
+	wchar_t buf[255] = {}, nr_crt[255] = {};
 	const auto netstate = wmtrnet->getCurrentState();
 	const auto nh = netstate.size();
 	while (m_listMTR.GetItemCount() > nh) {
@@ -848,33 +856,41 @@ int WinMTRDialog::DisplayRedraw()
 			name = L"No response from host"sv;
 		}
 		
-		std::swprintf(nr_crt, std::size(nr_crt), L"%d", i+1);
+		auto result = std::format_to_n(nr_crt, std::size(nr_crt) - 1, WinMTRUtils::int_number_format, i+1);
+		*result.out = '\0';
 		if(m_listMTR.GetItemCount() <= i )
 			m_listMTR.InsertItem(i, name.c_str());
 		else
 			m_listMTR.SetItem(i, 0, LVIF_TEXT, name.c_str(), 0, 0, 0, 0); 
 		
 		m_listMTR.SetItem(i, 1, LVIF_TEXT, nr_crt, 0, 0, 0, 0); 
-
-		std::swprintf(buf, std::size(buf), L"%d", host.getPercent());
+		constexpr auto writable_size = std::size(buf) - 1;
+		result = std::format_to_n(buf, writable_size, WinMTRUtils::int_number_format, host.getPercent());
+		*result.out = '\0';
 		m_listMTR.SetItem(i, 2, LVIF_TEXT, buf, 0, 0, 0, 0);
 
-		std::swprintf(buf, std::size(buf), L"%d", host.xmit);
+		result = std::format_to_n(buf, writable_size, WinMTRUtils::int_number_format, host.xmit);
+		*result.out = '\0';
 		m_listMTR.SetItem(i, 3, LVIF_TEXT, buf, 0, 0, 0, 0);
 
-		std::swprintf(buf, std::size(buf), L"%d", host.returned);
+		result = std::format_to_n(buf, writable_size, WinMTRUtils::int_number_format, host.returned);
+		*result.out = '\0';
 		m_listMTR.SetItem(i, 4, LVIF_TEXT, buf, 0, 0, 0, 0);
 
-		std::swprintf(buf, std::size(buf), L"%d", host.best);
+		result = std::format_to_n(buf, writable_size, WinMTRUtils::int_number_format, host.best);
+		*result.out = '\0';
 		m_listMTR.SetItem(i, 5, LVIF_TEXT, buf, 0, 0, 0, 0);
 
-		std::swprintf(buf, std::size(buf), L"%d", host.getAvg());
+		result = std::format_to_n(buf, writable_size, WinMTRUtils::int_number_format, host.getAvg());
+		*result.out = '\0';
 		m_listMTR.SetItem(i, 6, LVIF_TEXT, buf, 0, 0, 0, 0);
 
-		std::swprintf(buf, std::size(buf), L"%d", host.worst);
+		result = std::format_to_n(buf, writable_size, WinMTRUtils::int_number_format, host.worst);
+		*result.out = '\0';
 		m_listMTR.SetItem(i, 7, LVIF_TEXT, buf, 0, 0, 0, 0);
 
-		std::swprintf(buf, std::size(buf), L"%d", host.last);
+		result = std::format_to_n(buf, writable_size, WinMTRUtils::int_number_format, host.last);
+		*result.out = '\0';
 		m_listMTR.SetItem(i, 8, LVIF_TEXT, buf, 0, 0, 0, 0);
 
 		i++;
@@ -942,17 +958,18 @@ void WinMTRDialog::OnCbnSelchangeComboHost()
 void WinMTRDialog::ClearHistory()
 {
 	DWORD tmp_dword;
-	wchar_t key_name[20];
+	wchar_t key_name[20] = {};
 	CRegKey lru_key;
 	lru_key.Open(HKEY_CURRENT_USER, LR"(Software\WinMTR\LRU)", KEY_ALL_ACCESS);
-
+	constexpr auto key_name_size = std::size(key_name) - 1;
 	for(int i = 0; i<=nrLRU; i++) {
-		std::swprintf(key_name, std::size(key_name), L"Host%d", i);
+		auto result = std::format_to_n(key_name, key_name_size, reg_host_fmt, i);
+		*result.out = '\0';
 		lru_key.DeleteValue(key_name);
 	}
 	nrLRU = 0;
 	tmp_dword = nrLRU;
-	lru_key.SetDWORDValue(L"NrLRU", tmp_dword);
+	lru_key.SetDWORDValue(NrLRU_REG_KEY, tmp_dword);
 
 	m_comboHost.Clear();
 	m_comboHost.ResetContent();

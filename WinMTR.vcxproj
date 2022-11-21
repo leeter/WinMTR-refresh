@@ -191,10 +191,9 @@
       <PrecompiledHeaderFile>WinMTRGlobal.h</PrecompiledHeaderFile>
       <ConformanceMode>true</ConformanceMode>
       <ControlFlowGuard>Guard</ControlFlowGuard>
-      <AdditionalOptions>/Zc:__cplusplus /Zc:noexceptTypes /Zc:throwingNew /await %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/Zc:__cplusplus /Zc:noexceptTypes /Zc:throwingNew %(AdditionalOptions)</AdditionalOptions>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
-      <EnableEnhancedInstructionSet>AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
       <UseStandardPreprocessor>true</UseStandardPreprocessor>
     </ClCompile>
     <Midl>
@@ -221,6 +220,7 @@
       <EnableUAC>false</EnableUAC>
       <UACUIAccess>true</UACUIAccess>
       <LargeAddressAware>true</LargeAddressAware>
+      <OptimizeReferences>true</OptimizeReferences>
     </Link>
     <Manifest>
       <EnableDpiAwareness>PerMonitorHighDPIAware</EnableDpiAwareness>
@@ -275,6 +275,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <FixedBaseAddress>false</FixedBaseAddress>
       <CETCompat>true</CETCompat>
+      <OptimizeReferences>true</OptimizeReferences>
     </Link>
     <Manifest>
       <EnableDpiAwareness>PerMonitorHighDPIAware</EnableDpiAwareness>
@@ -329,6 +330,7 @@
       <LargeAddressAware>true</LargeAddressAware>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <FixedBaseAddress>false</FixedBaseAddress>
+      <OptimizeReferences>true</OptimizeReferences>
     </Link>
     <Manifest>
       <EnableDpiAwareness>PerMonitorHighDPIAware</EnableDpiAwareness>
@@ -455,7 +457,7 @@
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>WinMTRGlobal.h</PrecompiledHeaderFile>
-      <AdditionalOptions>/Zc:__cplusplus /Zc:noexceptTypes /Zc:throwingNew /d2FH4 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/Zc:__cplusplus /Zc:noexceptTypes /Zc:throwingNew /d2FH4 /FS %(AdditionalOptions)</AdditionalOptions>
       <UseStandardPreprocessor>true</UseStandardPreprocessor>
     </ClCompile>
     <Midl>
@@ -740,6 +742,17 @@
     <ClInclude Include="WinMTRMain.h" />
     <ClInclude Include="WinMTROptions.h" />
     <ClInclude Include="WinMTRProperties.h" />
+    <ClCompile Include="WinMTRUtils.ixx">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug - Sanitizers|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug - Sanitizers|ARM64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug - Sanitizers|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
+    </ClCompile>
     <ClCompile Include="WinMTRWSAhelper.ixx">
       <FileType>Document</FileType>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>

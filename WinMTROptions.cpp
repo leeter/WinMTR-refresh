@@ -26,6 +26,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 #include "WinMTRGlobal.h"
 import <iterator>;
+import WinMTRUtils;
+#include <format>
 #include "WinMTROptions.h"
 #include "WinMTRLicense.h"
 
@@ -87,15 +89,19 @@ BOOL WinMTROptions::OnInitDialog()
 {
 	CDialog::OnInitDialog();
 	
-	wchar_t strtmp[20];
+	wchar_t strtmp[20] = {};
+	constexpr auto writable_size = std::size(strtmp) - 1;
 	
-	std::swprintf(strtmp, std::size(strtmp), L"%.1f", interval);
+	auto result = std::format_to_n(strtmp, writable_size, WinMTRUtils::float_number_format, interval);
+	*result.out = '\0';
 	m_editInterval.SetWindowText(strtmp);
-	
-	std::swprintf(strtmp, std::size(strtmp), L"%d", pingsize);
+
+	result = std::format_to_n(strtmp, writable_size, WinMTRUtils::int_number_format, pingsize);
+	*result.out = '\0';
 	m_editSize.SetWindowText(strtmp);
 	
-	std::swprintf(strtmp, std::size(strtmp), L"%d", maxLRU);
+	result = std::format_to_n(strtmp, writable_size, WinMTRUtils::int_number_format, maxLRU);
+	*result.out = '\0';
 	m_editMaxLRU.SetWindowText(strtmp);
 
 	m_checkDNS.SetCheck(useDNS);

@@ -27,6 +27,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 #include "WinMTRGlobal.h"
 #include "WinMTRProperties.h"
+#include <format>
+import WinMTRUtils;
 
 #include "resource.h"
 
@@ -94,26 +96,33 @@ void WinMTRProperties::DoDataExchange(CDataExchange* pDX)
 BOOL WinMTRProperties::OnInitDialog() 
 {
 	CDialog::OnInitDialog();
-	wchar_t buf[255];
+	wchar_t buf[255] = {};
 	
 	m_editIP.SetWindowText(ip.c_str());
 	m_editHost.SetWindowText(host.c_str());
 	m_editComment.SetWindowText(comment.c_str());
-
-	std::swprintf(buf, std::size(buf), L"%d", pck_loss);
+	constexpr auto writable_size = std::size(buf) - 1;
+	auto result = std::format_to_n(buf, writable_size, WinMTRUtils::int_number_format, pck_loss);
+	*result.out = '\0';
 	m_editLoss.SetWindowText(buf);
-	std::swprintf(buf, std::size(buf), L"%d", pck_sent);
+	result = std::format_to_n(buf, writable_size, WinMTRUtils::int_number_format, pck_sent);
+	*result.out = '\0';
 	m_editSent.SetWindowText(buf);
-	std::swprintf(buf, std::size(buf), L"%d", pck_recv);
+	result = std::format_to_n(buf, writable_size, WinMTRUtils::int_number_format, pck_recv);
+	*result.out = '\0';
 	m_editRecv.SetWindowText(buf);
 
-	std::swprintf(buf, std::size(buf), L"%.1f", ping_last);
+	result = std::format_to_n(buf, writable_size, WinMTRUtils::float_number_format, ping_last);
+	*result.out = '\0';
 	m_editLast.SetWindowText(buf);
-	std::swprintf(buf, std::size(buf), L"%.1f", ping_best);
+	result = std::format_to_n(buf, writable_size, WinMTRUtils::float_number_format, ping_best);
+	*result.out = '\0';
 	m_editBest.SetWindowText(buf);
-	std::swprintf(buf, std::size(buf), L"%.1f", ping_worst);
+	result = std::format_to_n(buf, writable_size, WinMTRUtils::float_number_format, ping_worst);
+	*result.out = '\0';
 	m_editWorst.SetWindowText(buf);
-	std::swprintf(buf, std::size(buf), L"%.1f", ping_avrg);
+	result = std::format_to_n(buf, writable_size, WinMTRUtils::float_number_format, ping_avrg);
+	*result.out = '\0';
 	m_editAvrg.SetWindowText(buf);
 
 	return FALSE;
