@@ -28,8 +28,9 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "WinMTRDialog.h"
 #include "WinMTROptions.h"
 #include "WinMTRProperties.h"
-//#include "WinMTRNet.h"
 #include <afxlinkctrl.h>
+#pragma warning (disable : 4005)
+#include <fstream>
 import <winrt/Windows.Foundation.h>;
 #include <winrt/Windows.ApplicationModel.DataTransfer.h>
 #include <winrt/Windows.Foundation.Diagnostics.h>
@@ -42,9 +43,12 @@ using namespace std::string_view_literals;
 static	 char THIS_FILE[] = __FILE__;
 #endif
 
+import WinMTRSNetHost;
 import WinMTRIPUtils;
 import WinMTRNet;
 import WinMTRDnsUtil;
+
+
 
 namespace {
 	constexpr auto DEFAULT_PING_SIZE = 64;
@@ -464,7 +468,7 @@ void WinMTRDialog::OnDblclkList([[maybe_unused]] NMHDR* pNMHDR, LRESULT* pResult
 			int nItem = m_listMTR.GetNextSelectedItem(pos);
 			WinMTRProperties wmtrprop;
 			
-			if(auto lstate = wmtrnet->getStateAt(nItem); !isValidAddress(lstate.addr)) {
+			if(const auto lstate = wmtrnet->getStateAt(nItem); !isValidAddress(lstate.addr)) {
 				wmtrprop.host.clear();
 				wmtrprop.ip.clear();
 				wmtrprop.comment = lstate.getName();
@@ -661,7 +665,7 @@ void WinMTRDialog::OnOptions()
 
 namespace {
 	[[nodiscard]]
-	std::wstring makeTextOutput(WinMTRNet& wmtrnet) {
+	std::wstring makeTextOutput(const WinMTRNet& wmtrnet) {
 		using namespace std::literals;
 		std::wostringstream out_buf;
 		out_buf << L"|-------------------------------------------------------------------------------------------|\r\n" \

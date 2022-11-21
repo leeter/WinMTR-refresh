@@ -42,25 +42,26 @@ module;
 #include <icmpapi.h>
 export module WinMTRNet;
 
-export import <string>;
+import <string>;
 import <sstream>;
 import <string_view>;
 import <atomic>;
 import <mutex>;
 import <array>;
-export import <memory>;
-export import <vector>;
+import <memory>;
+import <vector>;
 import <optional>;
 import <type_traits>;
 import <cstring>;
 import <iterator>;
 import <ppltasks.h>;
-export import <winrt/Windows.Foundation.h>;
+import <winrt/Windows.Foundation.h>;
 
-export import "IWinMTROptionsProvider.hpp";
+import "IWinMTROptionsProvider.hpp";
 import winmtr.helper;
 import WinMTRICMPUtils;
 import WinMTRIPUtils;
+import WinMTRSNetHost;
 
 #ifdef DEBUG
 #define TRACE_MSG(msg)										\
@@ -75,30 +76,6 @@ import WinMTRIPUtils;
 
 constexpr auto MAX_HOPS = 30;
 
-
-export struct s_nethost final{
-	SOCKADDR_STORAGE addr = {};
-	std::wstring name;
-	int xmit = 0;			// number of PING packets sent
-	int returned = 0;		// number of ICMP echo replies received
-	unsigned long total = 0;	// total time
-	int last = 0;				// last time
-	int best = 0;				// best time
-	int worst = 0;			// worst time
-	inline auto getPercent() const noexcept {
-		return (xmit == 0) ? 0 : (100 - (100 * returned / xmit));
-	}
-	inline int getAvg() const noexcept {
-		return returned == 0 ? 0 : total / returned;
-	}
-	std::wstring getName() const {
-		if (name.empty()) {
-			SOCKADDR_STORAGE laddr = addr;
-			return addr_to_string(laddr);
-		}
-		return name;
-	}
-};
 class WinMTRNet;
 namespace {
 
@@ -167,7 +144,7 @@ public:
 		last_remote_addr(),
 		options(wp),
 		wsaHelper(MAKEWORD(2, 2)),
-		tracing(false) {
+		tracing() {
 
 		if (!wsaHelper) [[unlikely]] {
 			//AfxMessageBox(IDP_SOCKETS_INIT_FAILED);
@@ -253,7 +230,7 @@ public:
 		return host[at];
 	}
 private:
-	std::array<s_nethost, MAX_HOPS>	host;
+	std::array<::s_nethost, MAX_HOPS>	host;
 	SOCKADDR_STORAGE last_remote_addr;
 	mutable std::recursive_mutex	ghMutex;
 	std::optional<winrt::Windows::Foundation::IAsyncAction> tracer;

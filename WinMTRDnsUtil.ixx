@@ -1,8 +1,15 @@
 module;
+#pragma warning (disable : 4005)
 #include "targetver.h"
 #define WIN32_LEAN_AND_MEAN
 #define VC_EXTRALEAN
-
+#define NOMCX
+#define NOIME
+#define NOGDI
+#define NONLS
+#define NOAPISET
+#define NOSERVICE
+#define NOMINMAX
 #include <WinSock2.h>
 #include <WS2tcpip.h>
 
@@ -11,6 +18,8 @@ export module WinMTRDnsUtil;
 import <optional>;
 import <coroutine>;
 import <type_traits>;
+import <cstring>;
+import <string>;
 import <ppltasks.h>;
 import <pplawait.h>;
 import <winrt/Windows.Foundation.h>;
