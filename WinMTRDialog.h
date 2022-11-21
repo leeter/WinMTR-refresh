@@ -39,7 +39,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #pragma warning (disable : 4005)
 import <string>;
 import WinMTROptionsProvider;
-import <string>;
 import <memory>;
 import <mutex>;
 import <optional>;
@@ -148,16 +147,16 @@ public:
 	inline bool getUseDNS() const noexcept { return useDNS; }
 
 protected:
-	virtual void DoDataExchange(CDataExchange* pDX);
+	void DoDataExchange(CDataExchange* pDX) override;
 
-	virtual BOOL OnInitDialog();
+	BOOL OnInitDialog() override;
 	afx_msg void OnPaint();
 	afx_msg void OnSize(UINT, int, int);
 	afx_msg void OnSizing(UINT, LPRECT); 
 	afx_msg HCURSOR OnQueryDragIcon();
 	afx_msg void OnRestart();
 	afx_msg void OnOptions();
-	virtual void OnCancel();
+	void OnCancel() override;
 
 	afx_msg void OnCTTC();
 	afx_msg void OnCHTC();

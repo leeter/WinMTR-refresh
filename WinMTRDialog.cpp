@@ -31,7 +31,7 @@ import <cstring>;
 #include "WinMTROptions.h"
 #include "WinMTRProperties.h"
 #include <afxlinkctrl.h>
-
+import <sstream>;
 import <iterator>;
 import <string_view>;
 import <string>;
