@@ -32,7 +32,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #pragma once
 #ifndef WINMTR_GLOBAL_H_
 #define WINMTR_GLOBAL_H_
-
+#pragma warning (disable : 4005)
 #include "targetver.h"
 #define WIN32_LEAN_AND_MEAN
 #define VC_EXTRALEAN
@@ -46,7 +46,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 //#include <string_view>
 //#include <cwchar>
 //#include <format>
-//#include <sstream>
+
 //#include <vector>
 //#include <compare>
 //#include <span>
@@ -62,12 +62,12 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <afxwin.h>
 #include <afxext.h>
 #include <afxdisp.h>
-#include <afxdtctl.h>
+//#include <afxdtctl.h>
 
 #ifndef _AFX_NO_AFXCMN_SUPPORT
   #include <afxcmn.h>
 #endif 
-#include <afxsock.h>
+//#include <afxsock.h>
 
 
 
@@ -100,6 +100,7 @@ constexpr auto MaxHost = 256;
 //#define IP_HEADER_LENGTH   20
 
 #ifdef DEBUG
+#include <sstream>
 #define TRACE_MSG(msg)										\
 	{														\
 	std::wostringstream dbg_msg(std::wostringstream::out);	\

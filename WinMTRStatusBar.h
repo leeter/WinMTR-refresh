@@ -65,7 +65,7 @@ public:
 	
 	void DisableControl( int nIndex, BOOL bDisable=TRUE)
 	{
-		UINT uItemID = GetItemID(nIndex);
+		const UINT uItemID = GetItemID(nIndex);
 		for (const auto & cntl : m_arrPaneControls){
 			if( uItemID == cntl.nID ){
 				if(cntl.hWnd && ::IsWindow(cntl.hWnd) ) {

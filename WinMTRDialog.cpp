@@ -40,6 +40,7 @@ import <string>;
 import <winrt/Windows.Foundation.h>;
 #include <winrt/Windows.ApplicationModel.DataTransfer.h>
 #include <winrt/Windows.Foundation.Diagnostics.h>
+#include <ws2tcpip.h>
 import WinMTROptionsProvider;
 using namespace std::string_view_literals;
 

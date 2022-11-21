@@ -43,10 +43,12 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 //*****************************************************************************
 
 #include "WinMTRGlobal.h"
+#include <locale>
 #include "WinMTRMain.h"
 #include "WinMTRDialog.h"
 #include "WinMTRHelp.h"
 #include "CWinMTRCommandLineParser.h"
+
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -88,11 +90,11 @@ BOOL WinMTRMain::InitInstance()
 {
 	std::locale::global(std::locale(".UTF8"));
 	winrt::init_apartment(winrt::apartment_type::single_threaded);
-	if (!AfxSocketInit())
+	/*if (!AfxSocketInit())
 	{
 		AfxMessageBox(IDP_SOCKETS_INIT_FAILED);
 		return FALSE;
-	}
+	}*/
 
 	AfxEnableControlContainer();
 	
