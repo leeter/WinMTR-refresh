@@ -130,7 +130,7 @@ private:
 	bool				hasUseDNSFromCmdLine = false;
 	bool				useIPv4 = true;
 	bool				useIPv6 = true;
-	std::atomic_bool	tracing = false;
+	std::atomic_bool	tracing;
 
 	void ClearHistory();
 	winrt::Windows::Foundation::IAsyncAction pingThread(std::wstring shost);

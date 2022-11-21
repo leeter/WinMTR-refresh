@@ -24,12 +24,17 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 //
 //*****************************************************************************
 #include "WinMTRGlobal.h"
-
+#pragma warning (disable : 4005)
+import <cstring>;
+#include <cwchar>
 #include "WinMTRDialog.h"
 #include "WinMTROptions.h"
 #include "WinMTRProperties.h"
 #include <afxlinkctrl.h>
-#pragma warning (disable : 4005)
+
+import <iterator>;
+import <string_view>;
+import <string>;
 #include <fstream>
 #include <format>
 import <winrt/Windows.Foundation.h>;
