@@ -31,10 +31,11 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <afxlinkctrl.h>
 #pragma warning (disable : 4005)
 #include <fstream>
+#include <format>
 import <winrt/Windows.Foundation.h>;
 #include <winrt/Windows.ApplicationModel.DataTransfer.h>
 #include <winrt/Windows.Foundation.Diagnostics.h>
-import "IWinMTROptionsProvider.hpp";
+import WinMTROptionsProvider;
 using namespace std::string_view_literals;
 
 #ifdef _DEBUG

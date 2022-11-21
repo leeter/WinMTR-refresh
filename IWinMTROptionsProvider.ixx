@@ -18,10 +18,11 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
-#pragma once
+export module WinMTROptionsProvider;
 
-struct __declspec(novtable) IWinMTROptionsProvider {
+export struct __declspec(novtable) IWinMTROptionsProvider {
 	virtual int getPingSize() const noexcept = 0;
 	virtual double getInterval() const noexcept = 0;
 	virtual bool getUseDNS() const noexcept = 0;
 };
+

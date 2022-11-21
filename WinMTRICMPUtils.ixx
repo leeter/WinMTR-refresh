@@ -284,13 +284,7 @@ struct icmp_ping_traits<sockaddr_in6> {
 export
 template<icmp_pingable traits>
 struct icmp_ping final {
-#ifdef __has_include                           // Check if __has_include is present
-#  if __has_include(<coroutine>)                // Check for a standard library
 	using coro_handle = std::coroutine_handle<>;
-#  else
-	using coro_handle = std::experimental::coroutine_handle<>;
-#  endif
-#endif
 	icmp_ping(HANDLE icmpHandle, traits::addrtype addr, UCHAR ttl, std::span<std::byte> requestData, std::span<std::byte> replyData) noexcept
 		:m_reqData(requestData)
 		, m_replyData(replyData)

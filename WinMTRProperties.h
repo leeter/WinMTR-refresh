@@ -33,8 +33,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 #ifndef WINMTRPROPERTIES_H_
 #define WINMTRPROPERTIES_H_
-
-#include <string>
+#pragma warning (disable : 4005)
+import <string>;
 
 #include "resource.h"
 

@@ -36,13 +36,15 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #define WINMTR_DIALOG_TIMER 100
 
 #include "WinMTRStatusBar.h"
-#include "IWinMTROptionsProvider.hpp"
-#include <string>
-#include <memory>
-#include <mutex>
-#include <optional>
-#include <atomic>
-#include <winrt/Windows.Foundation.h>
+#pragma warning (disable : 4005)
+import <string>;
+import WinMTROptionsProvider;
+import <string>;
+import <memory>;
+import <mutex>;
+import <optional>;
+import <atomic>;
+import <winrt/Windows.Foundation.h>;
 #include "resource.h"
 
 class WinMTRNet;

@@ -57,7 +57,7 @@ import <iterator>;
 import <ppltasks.h>;
 import <winrt/Windows.Foundation.h>;
 
-import "IWinMTROptionsProvider.hpp";
+import WinMTROptionsProvider;
 import winmtr.helper;
 import WinMTRICMPUtils;
 import WinMTRIPUtils;

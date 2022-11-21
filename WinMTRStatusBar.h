@@ -20,8 +20,9 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 #ifndef WINMTRSTATUSBAR_H_
 #define WINMTRSTATUSBAR_H_
-
-#include <vector>
+#pragma warning (disable : 4005)
+import <vector>;
+import <span>;
 
 class WinMTRStatusBar : public CStatusBar
 {
