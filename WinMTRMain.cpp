@@ -116,7 +116,7 @@ BOOL WinMTRMain::InitInstance()
 
 	[[maybe_unused]]
 	auto nResponse = mtrDialog.DoModal();
-
+	winrt::uninit_apartment();
 
 	return FALSE;
 }

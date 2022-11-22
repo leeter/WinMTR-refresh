@@ -21,6 +21,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "WinMTRGlobal.h"
 #include "CWinMTRCommandLineParser.h"
 #include "WinMTRDialog.h"
+import <string_view>;
 
 
 namespace utils {
