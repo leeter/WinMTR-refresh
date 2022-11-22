@@ -39,7 +39,7 @@ public:
 	// Operations
 public:
 	
-	int GetPanesCount() const{
+	int GetPanesCount() const noexcept{
 		return m_nCount;
 	}
 	
@@ -67,7 +67,7 @@ public:
 	
 	BOOL AddPaneControl(HWND hWnd, UINT nID, BOOL bAutoDestroy);
 	
-	void DisableControl( int nIndex, BOOL bDisable=TRUE)
+	void DisableControl( int nIndex, BOOL bDisable=TRUE) noexcept
 	{
 		const UINT uItemID = GetItemID(nIndex);
 		for (const auto & cntl : m_arrPaneControls){
@@ -79,22 +79,22 @@ public:
 		}
 	}
 
-	void SetPaneInfo(int nIndex, UINT nID, UINT nStyle, int cxWidth)
+	void SetPaneInfo(int nIndex, UINT nID, UINT nStyle, int cxWidth) noexcept
 	{
 		CStatusBar::SetPaneInfo(nIndex, nID, nStyle, cxWidth);
 		BOOL bDisabled = ((nStyle&SBPS_DISABLED) == 0);
 		DisableControl(nIndex, bDisabled);
 	}
 
-	void SetPaneStyle(int nIndex, UINT nStyle)
+	void SetPaneStyle(int nIndex, UINT nStyle) noexcept
 	{
 		CStatusBar::SetPaneStyle(nIndex, nStyle);
 		BOOL bDisabled = ((nStyle&SBPS_DISABLED) == 0);
 		DisableControl(nIndex, bDisabled);
 	}
 	
-	BOOL SetIndicators(std::span<UINT> indicators) {
-		return static_cast<CStatusBar*>(this)->SetIndicators(indicators.data(), static_cast<int>(indicators.size()));
+	BOOL SetIndicators(std::span<UINT> indicators) noexcept {
+		return CStatusBar::SetIndicators(indicators.data(), static_cast<int>(indicators.size()));
 	}
 // Overrides
 	// ClassWizard generated virtual function overrides
@@ -109,7 +109,7 @@ protected:
 
 	struct _STATUSBAR_PANE_
 	{
-		_STATUSBAR_PANE_(){
+		_STATUSBAR_PANE_() noexcept{
 			nID = cxText = nStyle = nFlags = 0;
 		}
 		
@@ -127,25 +127,26 @@ protected:
 		HWND hWnd;
 		UINT nID;
 		bool bAutoDestroy;
-		_STATUSBAR_PANE_CTRL_(HWND hWnd, UINT nID, bool bAutoDestroy)
+		_STATUSBAR_PANE_CTRL_(HWND hWnd, UINT nID, bool bAutoDestroy) noexcept
 			:hWnd(hWnd),nID(nID),bAutoDestroy(bAutoDestroy){}
-		_STATUSBAR_PANE_CTRL_();
+		_STATUSBAR_PANE_CTRL_() noexcept
+			:_STATUSBAR_PANE_CTRL_(nullptr, 0, false){}
 		_STATUSBAR_PANE_CTRL_(const _STATUSBAR_PANE_CTRL_&) = delete;
 		~_STATUSBAR_PANE_CTRL_() noexcept;
-		_STATUSBAR_PANE_CTRL_(_STATUSBAR_PANE_CTRL_&&) = default;
-		_STATUSBAR_PANE_CTRL_& operator=(_STATUSBAR_PANE_CTRL_&&) = default;
+		_STATUSBAR_PANE_CTRL_(_STATUSBAR_PANE_CTRL_&&) noexcept = default;
+		_STATUSBAR_PANE_CTRL_& operator=(_STATUSBAR_PANE_CTRL_&&) noexcept = default;
 	};
 	
 	std::vector<_STATUSBAR_PANE_CTRL_> m_arrPaneControls;
 	
-	_STATUSBAR_PANE_* GetPanePtr(int nIndex) const
+	_STATUSBAR_PANE_* GetPanePtr(int nIndex) const noexcept
 	{
 		ASSERT((nIndex >= 0 && nIndex < m_nCount) || m_nCount == 0);
-		return ((_STATUSBAR_PANE_*)m_pData) + nIndex;
+		return static_cast<_STATUSBAR_PANE_*>(m_pData) + nIndex;
 	}
 	
-	bool PaneInfoGet(int nIndex, _STATUSBAR_PANE_* pPane);
-	bool PaneInfoSet(int nIndex, const _STATUSBAR_PANE_& pPane);
+	bool PaneInfoGet(int nIndex, _STATUSBAR_PANE_* pPane) const noexcept;
+	bool PaneInfoSet(int nIndex, const _STATUSBAR_PANE_& pPane) noexcept;
 	
 	void RepositionControls() noexcept;
 	
@@ -176,7 +177,17 @@ namespace {
 
 		~deferWindowPos() noexcept
 		{
-			VERIFY(EndDeferWindowPos(m_hdwp));
+			if (*this) {
+				VERIFY(EndDeferWindowPos(m_hdwp));
+			}
+		}
+
+		/// <summary>
+		/// Indicates if we can defer windows or not, if any of the methods returned nullptr
+		/// then the operation should be aborted and no further methods called.
+		/// </summary>
+		explicit operator bool() const noexcept {
+			return m_hdwp != nullptr;
 		}
 
 		void defer(_In_ HWND hWnd,
@@ -186,7 +197,9 @@ namespace {
 			_In_ int cx,
 			_In_ int cy,
 			_In_ UINT uFlags) noexcept {
-			m_hdwp = DeferWindowPos(m_hdwp, hWnd, hWndInsertAfter, x, y, cx, cy, uFlags);
+			if (*this) {
+				m_hdwp = DeferWindowPos(m_hdwp, hWnd, hWndInsertAfter, x, y, cx, cy, uFlags);
+			}
 		}
 	};
 }
@@ -416,13 +429,15 @@ BOOL WinMTRStatusBar::AddPaneControl(HWND hWnd, UINT nID, BOOL bAutoDestroy)
 
 //////////////////////////////////////////////////////////////////////////
 
-bool WinMTRStatusBar::PaneInfoGet(int nIndex, _STATUSBAR_PANE_* pPane)
+bool WinMTRStatusBar::PaneInfoGet(int nIndex, _STATUSBAR_PANE_* pPane) const noexcept
 {
 	if (nIndex < m_nCount && nIndex >= 0)
 	{
 		GetPaneInfo(nIndex, pPane->nID, pPane->nStyle, pPane->cxText);
 		CString strPaneText;
 		GetPaneText(nIndex, strPaneText);
+		// not actually UB since strText is a CString
+		// TODO: need to figure out why the cast
 		pPane->strText = LPCTSTR(strPaneText);
 		return true;
 	}
@@ -431,7 +446,7 @@ bool WinMTRStatusBar::PaneInfoGet(int nIndex, _STATUSBAR_PANE_* pPane)
 
 //////////////////////////////////////////////////////////////////////////
 
-bool WinMTRStatusBar::PaneInfoSet(int nIndex, const _STATUSBAR_PANE_& pPane)
+bool WinMTRStatusBar::PaneInfoSet(int nIndex, const _STATUSBAR_PANE_& pPane) noexcept
 {
 	if (nIndex < m_nCount && nIndex >= 0) {
 		SetPaneInfo(nIndex, pPane.nID, pPane.nStyle, pPane.cxText);
@@ -441,12 +456,7 @@ bool WinMTRStatusBar::PaneInfoSet(int nIndex, const _STATUSBAR_PANE_& pPane)
 	return false;
 }
 
-WinMTRStatusBar::_STATUSBAR_PANE_CTRL_::_STATUSBAR_PANE_CTRL_()
-	:hWnd(nullptr),
-	nID(0),
-	bAutoDestroy(false)
-{
-}
+	
 
 WinMTRStatusBar::_STATUSBAR_PANE_CTRL_::~_STATUSBAR_PANE_CTRL_() noexcept
 {
