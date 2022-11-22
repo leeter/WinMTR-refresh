@@ -47,7 +47,7 @@ import <string>;
 class WinMTRProperties : public CDialog
 {
 public:
-	WinMTRProperties(CWnd* pParent = NULL);
+	WinMTRProperties(CWnd* pParent = NULL) noexcept;
 
 	
 	enum { IDD = IDD_DIALOG_PROPERTIES };

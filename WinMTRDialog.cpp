@@ -114,7 +114,7 @@ END_MESSAGE_MAP()
 //
 // 
 //*****************************************************************************
-WinMTRDialog::WinMTRDialog(CWnd* pParent)
+WinMTRDialog::WinMTRDialog(CWnd* pParent) noexcept
 	: CDialog(WinMTRDialog::IDD, pParent),
 	interval(DEFAULT_INTERVAL),
 	state(STATES::IDLE),
@@ -256,7 +256,7 @@ const auto NrLRU_REG_KEY = L"NrLRU";
 //
 // 
 //*****************************************************************************
-BOOL WinMTRDialog::InitRegistry()
+BOOL WinMTRDialog::InitRegistry() noexcept
 {
 	CRegKey versionKey;
 	if (versionKey.Create(HKEY_CURRENT_USER,
@@ -573,7 +573,7 @@ void WinMTRDialog::SetUseDNS(bool udns, options_source fromCmdLine) noexcept
 //
 // 
 //*****************************************************************************
-void WinMTRDialog::OnRestart() 
+void WinMTRDialog::OnRestart() noexcept
 {
 	// If clear history is selected, just clear the registry and listbox and return
 	if(m_comboHost.GetCurSel() == m_comboHost.GetCount() - 1) {
@@ -742,7 +742,7 @@ namespace {
 //
 // 
 //*****************************************************************************
-void WinMTRDialog::OnCTTC() 
+void WinMTRDialog::OnCTTC() noexcept
 {	
 	using namespace winrt::Windows::ApplicationModel::DataTransfer;
 	const auto f_buf = makeTextOutput(*wmtrnet);
@@ -758,7 +758,7 @@ void WinMTRDialog::OnCTTC()
 //
 // 
 //*****************************************************************************
-void WinMTRDialog::OnCHTC() 
+void WinMTRDialog::OnCHTC() noexcept
 {	
 	using namespace winrt::Windows::ApplicationModel::DataTransfer;
 	std::wostringstream out;
@@ -777,7 +777,7 @@ void WinMTRDialog::OnCHTC()
 //
 // 
 //*****************************************************************************
-void WinMTRDialog::OnEXPT() 
+void WinMTRDialog::OnEXPT() noexcept
 {	
 	const TCHAR BASED_CODE szFilter[] = _T("Text Files (*.txt)|*.txt|All Files (*.*)|*.*||");
 
@@ -802,7 +802,7 @@ void WinMTRDialog::OnEXPT()
 //
 // 
 //*****************************************************************************
-void WinMTRDialog::OnEXPH() 
+void WinMTRDialog::OnEXPH() noexcept
 {
    const TCHAR szFilter[] = _T("HTML Files (*.htm, *.html)|*.htm;*.html|All Files (*.*)|*.*||");
 
@@ -906,7 +906,7 @@ int WinMTRDialog::DisplayRedraw()
 //
 // 
 //*****************************************************************************
-bool WinMTRDialog::InitMTRNet()
+bool WinMTRDialog::InitMTRNet() noexcept
 {
 	CString sHost;
 	m_comboHost.GetWindowTextW(sHost);
@@ -1210,7 +1210,7 @@ void WinMTRDialog::Transit(STATES new_state)
 }
 
 
-void WinMTRDialog::OnTimer(UINT_PTR nIDEvent)
+void WinMTRDialog::OnTimer(UINT_PTR nIDEvent) noexcept
 {
 	static unsigned int call_count = 0;
 	call_count += 1;

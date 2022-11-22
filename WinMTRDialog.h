@@ -57,7 +57,7 @@ class WinMTRNet;
 class WinMTRDialog final: public CDialog, public IWinMTROptionsProvider
 {
 public:
-	WinMTRDialog(CWnd* pParent = nullptr);
+	WinMTRDialog(CWnd* pParent = nullptr) noexcept;
 
 	enum { IDD = IDD_WINMTR_DIALOG };
 	enum class options_source : bool {
@@ -65,7 +65,7 @@ public:
 		cmd_line
 	};
 
-	afx_msg BOOL InitRegistry();
+	afx_msg BOOL InitRegistry() noexcept;
 
 	WinMTRStatusBar	statusBar;
 
@@ -90,7 +90,7 @@ public:
 
 	
 	
-	bool InitMTRNet();
+	bool InitMTRNet() noexcept;
 
 	int DisplayRedraw();
 	void Transit(STATES new_state);
@@ -155,14 +155,14 @@ protected:
 	afx_msg void OnSize(UINT, int, int);
 	afx_msg void OnSizing(UINT, LPRECT); 
 	afx_msg HCURSOR OnQueryDragIcon();
-	afx_msg void OnRestart();
+	afx_msg void OnRestart() noexcept;
 	afx_msg void OnOptions();
 	void OnCancel() override;
 
-	afx_msg void OnCTTC();
-	afx_msg void OnCHTC();
-	afx_msg void OnEXPT();
-	afx_msg void OnEXPH();
+	afx_msg void OnCTTC() noexcept;
+	afx_msg void OnCHTC() noexcept;
+	afx_msg void OnEXPT() noexcept;
+	afx_msg void OnEXPH() noexcept;
 
 	afx_msg void OnDblclkList(NMHDR* pNMHDR, LRESULT* pResult);
 	
@@ -171,7 +171,7 @@ public:
 	afx_msg void OnCbnSelchangeComboHost();
 	afx_msg void OnCbnSelendokComboHost();
 	afx_msg void OnCbnCloseupComboHost();
-	afx_msg void OnTimer(UINT_PTR nIDEvent);
+	afx_msg void OnTimer(UINT_PTR nIDEvent) noexcept;
 	afx_msg void OnClose();
 	afx_msg void OnBnClickedCancel();
 };

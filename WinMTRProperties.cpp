@@ -53,7 +53,7 @@ END_MESSAGE_MAP()
 //
 // 
 //*****************************************************************************
-WinMTRProperties::WinMTRProperties(CWnd* pParent) : CDialog(WinMTRProperties::IDD, pParent)
+WinMTRProperties::WinMTRProperties(CWnd* pParent) noexcept : CDialog(WinMTRProperties::IDD, pParent)
 ,ping_last()
 ,ping_best()
 ,ping_avrg()
