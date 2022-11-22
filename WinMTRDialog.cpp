@@ -178,7 +178,7 @@ BOOL WinMTRDialog::OnInitDialog()
 	statusBar.SetIndicators(sbi);
 	statusBar.SetPaneInfo(0, statusBar.GetItemID(0),SBPS_STRETCH, 0 );
 	// removing for now but leaving commenteded this goes to a domain buying site, so either they lost the domain or are
-	// out of business
+	// out of business. I'll fix this when that changes.
 	//{ // Add appnor URL
 	//	//std::unique_ptr<CMFCLinkCtrl> m_pWndButton = std::make_unique<CMFCLinkCtrl>();
 	//	if (!m_pWndButton.Create(_T("www.appnor.com"), WS_CHILD|WS_VISIBLE|WS_TABSTOP, CRect(0,0,0,0), &statusBar, 1234)) {
