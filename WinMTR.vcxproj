@@ -686,7 +686,6 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="WinMTRLicense.cpp" />
-    <ClCompile Include="WinMTRLogging.cpp" />
     <ClCompile Include="WinMTRSNetHost.ixx">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug - Sanitizers|Win32'">NotUsing</PrecompiledHeader>
@@ -732,7 +731,6 @@
     <ClInclude Include="targetver.h" />
     <ClInclude Include="WinMTRICMPPIOdef.h" />
     <ClInclude Include="WinMTRLicense.h" />
-    <ClInclude Include="WinMTRLogging.h" />
     <ClCompile Include="WinMTRStatusBar.ixx">
       <FileType>Document</FileType>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
