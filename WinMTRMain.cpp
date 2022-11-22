@@ -47,7 +47,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "WinMTRMain.h"
 #include "WinMTRDialog.h"
 #include "WinMTRHelp.h"
-#include "CWinMTRCommandLineParser.h"
+//#include "CWinMTRCommandLineParser.h"
+import WinMTR.CommandLineParser;
 
 
 #ifdef _DEBUG
@@ -89,7 +90,15 @@ WinMTRMain::WinMTRMain()
 BOOL WinMTRMain::InitInstance()
 {
 	std::locale::global(std::locale(".UTF8"));
-	winrt::init_apartment(winrt::apartment_type::single_threaded);
+	struct rt_apartment {
+		rt_apartment() {
+			winrt::init_apartment(winrt::apartment_type::single_threaded);
+		}
+		~rt_apartment() noexcept {
+			winrt::uninit_apartment();
+		}
+	}apartment;
+	
 	/*if (!AfxSocketInit())
 	{
 		AfxMessageBox(IDP_SOCKETS_INIT_FAILED);
@@ -105,7 +114,7 @@ BOOL WinMTRMain::InitInstance()
 	WinMTRDialog mtrDialog;
 	utils::CWinMTRCommandLineParser cmd_info(mtrDialog);
 	ParseCommandLine(cmd_info);
-	if (cmd_info.m_help) {
+	if (cmd_info.isAskingForHelp()) {
 		WinMTRHelp mtrHelp;
 		m_pMainWnd = &mtrHelp;
 		mtrHelp.DoModal();
@@ -116,7 +125,7 @@ BOOL WinMTRMain::InitInstance()
 
 	[[maybe_unused]]
 	auto nResponse = mtrDialog.DoModal();
-	winrt::uninit_apartment();
+	
 
 	return FALSE;
 }
