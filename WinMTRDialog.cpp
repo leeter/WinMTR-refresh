@@ -30,7 +30,6 @@ import <cstring>;
 #include "WinMTRDialog.h"
 #include "WinMTROptions.h"
 #include "WinMTRProperties.h"
-#include <afxlinkctrl.h>
 import <sstream>;
 import <iterator>;
 import <string_view>;
@@ -178,23 +177,25 @@ BOOL WinMTRDialog::OnInitDialog()
 	UINT sbi[1] = {IDS_STRING_SB_NAME};
 	statusBar.SetIndicators(sbi);
 	statusBar.SetPaneInfo(0, statusBar.GetItemID(0),SBPS_STRETCH, 0 );
-	{ // Add appnor URL
-		std::unique_ptr<CMFCLinkCtrl> m_pWndButton = std::make_unique<CMFCLinkCtrl>();
-		if (!m_pWndButton->Create(_T("www.appnor.com"), WS_CHILD|WS_VISIBLE|WS_TABSTOP, CRect(0,0,0,0), &statusBar, 1234)) {
-			TRACE(_T("Failed to create button control.\n"));
-			return FALSE;
-		}
+	// removing for now but leaving commenteded this goes to a domain buying site, so either they lost the domain or are
+	// out of business
+	//{ // Add appnor URL
+	//	//std::unique_ptr<CMFCLinkCtrl> m_pWndButton = std::make_unique<CMFCLinkCtrl>();
+	//	if (!m_pWndButton.Create(_T("www.appnor.com"), WS_CHILD|WS_VISIBLE|WS_TABSTOP, CRect(0,0,0,0), &statusBar, 1234)) {
+	//		TRACE(_T("Failed to create button control.\n"));
+	//		return FALSE;
+	//	}
 
-		m_pWndButton->SetURL(L"http://www.appnor.com/?utm_source=winmtr&utm_medium=desktop&utm_campaign=software");
-			
-		if(!statusBar.AddPane(1234,1)) {
-			AfxMessageBox(_T("Pane index out of range\nor pane with same ID already exists in the status bar"), MB_ICONERROR);
-			return FALSE;
-		}
-			
-		statusBar.SetPaneWidth(statusBar.CommandToIndex(1234), 100);
-		statusBar.AddPaneControl(m_pWndButton.release(), 1234, true);
-	}
+	//	m_pWndButton.SetURL(L"http://www.appnor.com/?utm_source=winmtr&utm_medium=desktop&utm_campaign=software");
+	//		
+	//	if(!statusBar.AddPane(1234,1)) {
+	//		AfxMessageBox(_T("Pane index out of range\nor pane with same ID already exists in the status bar"), MB_ICONERROR);
+	//		return FALSE;
+	//	}
+	//		
+	//	statusBar.SetPaneWidth(statusBar.CommandToIndex(1234), 100);
+	//	statusBar.AddPaneControl(&m_pWndButton, 1234, true);
+	//}
 
 	for (int i = 0; i < MTR_NR_COLS; i++) {
 		m_listMTR.InsertColumn(i, MTR_COLS[i], LVCFMT_LEFT, MTR_COL_LENGTH[i], -1);
