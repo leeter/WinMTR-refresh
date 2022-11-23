@@ -24,9 +24,14 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 //
 //*****************************************************************************
 
-#include "WinMTRGlobal.h"
-#include "WinMTRLicense.h"
-
+module;
+#define WIN32_LEAN_AND_MEAN
+#define VC_EXTRALEAN
+#pragma warning (disable : 4005)
+#include "targetver.h"
+#include <afxext.h>
+#include "resource.h"
+export module WinMTR.License;
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #undef THIS_FILE
@@ -375,6 +380,22 @@ proprietary programs.  If your program is a subroutine library, you may\r\n\
 consider it more useful to permit linking proprietary applications with the\r\n\
 library.  If this is what you want to do, use the GNU Library General\r\n\
 Public License instead of this License."};
+
+export class WinMTRLicense : public CDialog
+{
+public:
+    WinMTRLicense(CWnd* pParent = NULL);
+
+
+    enum { IDD = IDD_DIALOG_LICENSE };
+
+protected:
+    virtual void DoDataExchange(CDataExchange* pDX);
+
+    virtual BOOL OnInitDialog();
+
+    DECLARE_MESSAGE_MAP()
+};
 
 //*****************************************************************************
 // BEGIN_MESSAGE_MAP

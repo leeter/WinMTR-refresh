@@ -29,7 +29,8 @@ import <iterator>;
 import WinMTRUtils;
 #include <format>
 #include "WinMTROptions.h"
-#include "WinMTRLicense.h"
+import WinMTR.License;
+//#include "WinMTRLicense.h"
 
 #include "resource.h"
 
