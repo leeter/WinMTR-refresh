@@ -1,7 +1,7 @@
 /*
 WinMTR
 Copyright (C)  2010-2019 Appnor MSP S.A. - http://www.appnor.com
-Copyright (C) 2019-2021 Leetsoftwerx
+Copyright (C) 2019-2022 Leetsoftwerx
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -18,21 +18,32 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
-#pragma once
-
-
+// WinMTRHelp.cpp : implementation file
+//
+module;
+#pragma warning (disable : 4005)
+#include "targetver.h"
+#define WIN32_LEAN_AND_MEAN
+#define VC_EXTRALEAN
+#include <afxwin.h>
+#include <afxdialogex.h>
 #include "resource.h"
+export module WinMTR.Help;
+
+
 // WinMTRHelp dialog
 
-class WinMTRHelp : public CDialog
+export class WinMTRHelp final : public CDialog
 {
 	DECLARE_DYNAMIC(WinMTRHelp)
 
 public:
-	WinMTRHelp(CWnd* pParent = NULL);   // standard constructor
-	virtual ~WinMTRHelp();
+	WinMTRHelp(CWnd* pParent = nullptr)   // standard constructor
+		: CDialog(WinMTRHelp::IDD, pParent)
+	{}
+	~WinMTRHelp() override = default;
 
-// Dialog Data
+	// Dialog Data
 	enum { IDD = IDD_DIALOG_HELP };
 
 protected:
@@ -42,3 +53,29 @@ protected:
 public:
 	afx_msg void OnBnClickedOk();
 };
+
+
+// WinMTRHelp dialog
+
+IMPLEMENT_DYNAMIC(WinMTRHelp, CDialog)
+	
+
+void WinMTRHelp::DoDataExchange(CDataExchange* pDX)
+{
+	CDialog::DoDataExchange(pDX);
+}
+
+
+BEGIN_MESSAGE_MAP(WinMTRHelp, CDialog)
+	ON_BN_CLICKED(IDOK, &WinMTRHelp::OnBnClickedOk)
+END_MESSAGE_MAP()
+
+
+// WinMTRHelp message handlers
+
+
+void WinMTRHelp::OnBnClickedOk()
+{
+	// TODO: Add your control notification handler code here
+	CDialog::OnOK();
+}
