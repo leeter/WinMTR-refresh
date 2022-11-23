@@ -395,6 +395,7 @@ winrt::Windows::Foundation::IAsyncAction WinMTRNet::handleICMP(trace_thread curr
 			const auto intervalInSec = this->options->getInterval() * 1s;
 			const auto roundTripDuration = std::chrono::milliseconds(icmp_echo_reply->RoundTripTime);
 			if (intervalInSec > roundTripDuration) {
+				using namespace winrt;
 				const auto sleepTime = intervalInSec - roundTripDuration;
 				co_await std::chrono::duration_cast<winrt::Windows::Foundation::TimeSpan>(sleepTime);
 			}
