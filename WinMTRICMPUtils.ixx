@@ -72,13 +72,13 @@ using ping_reply_t = ping_reply<T>::type;
 export
 template<class T>
 struct any_address {
-	static constexpr void value() {};
+	static constexpr void value() noexcept {};
 };
 
 export
 template<>
 struct any_address<sockaddr_in> {
-	static constexpr auto value() {
+	static constexpr auto value() noexcept {
 		return ADDR_ANY;
 	}
 };
@@ -86,7 +86,7 @@ struct any_address<sockaddr_in> {
 export
 template<>
 struct any_address<sockaddr_in6> {
-	static SOCKADDR_IN6* value() {
+	static SOCKADDR_IN6* value() noexcept {
 		static sockaddr_in6 anyaddr = { .sin6_family = AF_INET6, .sin6_addr = in6addr_any };
 		return &anyaddr;
 	}
@@ -342,7 +342,7 @@ private:
 		UNREFERENCED_PARAMETER(Reserved);
 		auto context = static_cast<icmp_ping<traits>*>(ApcContext);
 		context->m_replysize = static_cast<DWORD>(IoStatusBlock->Information);
-		concurrency::create_task([=] {
+		concurrency::create_task([=]() noexcept {
 			context->m_resume();
 			}, context->m_context);
 	}

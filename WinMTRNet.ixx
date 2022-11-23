@@ -254,7 +254,7 @@ private:
 			memcpy(&host[at].addr, &addr, getAddressSize(addr));
 
 			if (options->getUseDNS()) {
-				Concurrency::create_task([at, sharedThis = shared_from_this()] {
+				Concurrency::create_task([at, sharedThis = shared_from_this()]() noexcept {
 					TRACE_MSG(L"DNS resolver thread started.");
 
 				wchar_t buf[NI_MAXHOST] = {};
