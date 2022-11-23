@@ -24,15 +24,23 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 //
 //*****************************************************************************
 
-#include "WinMTRGlobal.h"
+module;
+#pragma warning (disable : 4005)
+#include "targetver.h"
+#define WIN32_LEAN_AND_MEAN
+#define VC_EXTRALEAN
+//#include "WinMTRGlobal.h"
+#include <afxwin.h>
+#include <format>
+#include "resource.h"
+//#include "WinMTROptions.h"
+export module WinMTR.Options;
 import <iterator>;
 import WinMTRUtils;
-#include <format>
-#include "WinMTROptions.h"
-import WinMTR.License;
-//#include "WinMTRLicense.h"
 
-#include "resource.h"
+import WinMTR.License;
+
+
 
 
 #ifdef _DEBUG
@@ -41,6 +49,59 @@ import WinMTR.License;
 static char THIS_FILE[] = __FILE__;
 #endif
 
+//*****************************************************************************
+// CLASS:  WinMTROptions
+//
+//
+//*****************************************************************************
+export class WinMTROptions final : public CDialog
+{
+public:
+	WinMTROptions(CWnd* pParent = nullptr);
+
+	inline void SetUseDNS(bool udns) noexcept { useDNS = udns; };
+	inline void SetInterval(double i) noexcept { interval = i; };
+	inline void SetPingSize(int ps) noexcept { pingsize = ps; };
+	inline void SetMaxLRU(int mlru) noexcept { maxLRU = mlru; };
+	inline void SetUseIPv4(bool uip4) noexcept { useIPv4 = uip4; }
+	inline void SetUseIPv6(bool uip6) noexcept { useIPv6 = uip6; }
+
+	inline auto GetInterval() const noexcept { return interval; };
+	inline auto GetPingSize() const noexcept { return pingsize; };
+	inline auto GetMaxLRU()	const noexcept { return maxLRU; };
+	inline auto GetUseDNS() const noexcept { return useDNS; }
+	inline auto GetUseIPv4() const noexcept { return useIPv4; }
+	inline auto GetUseIPv6() const noexcept { return useIPv6; }
+
+	enum { IDD = IDD_DIALOG_OPTIONS };
+	CEdit	m_editSize;
+	CEdit	m_editInterval;
+	CEdit	m_editMaxLRU;
+	CButton	m_checkDNS;
+	CButton m_useIPv4;
+	CButton m_useIPv6;
+
+protected:
+	void DoDataExchange(CDataExchange* pDX) override;
+
+	BOOL OnInitDialog() override;
+	void OnOK() override;
+
+	afx_msg void OnLicense();
+	DECLARE_MESSAGE_MAP()
+
+private:
+	double   interval = 0.0;
+	int      pingsize = 0;
+	int		 maxLRU = 0;
+	bool     useDNS = false;
+	bool	 useIPv4 = true;
+	bool	 useIPv6 = true;
+
+public:
+	afx_msg void OnBnClickedIpv4Check();
+	afx_msg void OnBnClickedUseipv6Check();
+};
 
 //*****************************************************************************
 // BEGIN_MESSAGE_MAP

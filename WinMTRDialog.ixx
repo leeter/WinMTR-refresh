@@ -35,12 +35,9 @@ module;
 #ifndef _AFX_NO_AFXCMN_SUPPORT
 #include <afxcmn.h>
 #endif 
-//#include "WinMTRGlobal.h"
 #pragma warning (disable : 4005)
 #include "resource.h"
 #include <cwchar>
-//#include "WinMTRDialog.h"
-#include "WinMTROptions.h"
 #include "WinMTRProperties.h"
 #include <fstream>
 #include <format>
@@ -64,6 +61,7 @@ import WinMTRStatusBar;
 import WinMTRSNetHost;
 import WinMTRIPUtils;
 import WinMTR.Net;
+import WinMTR.Options;
 import WinMTRDnsUtil;
 import WinMTRUtils;
 using namespace std::string_view_literals;
