@@ -159,6 +159,7 @@ protected:
 	LRESULT WindowProc(UINT message, WPARAM wParam, LPARAM lParam) noexcept final override;
 };
 
+module : private;
 
 #ifdef _DEBUG
 #define new DEBUG_NEW

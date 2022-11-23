@@ -397,6 +397,8 @@ protected:
     DECLARE_MESSAGE_MAP()
 };
 
+module : private;
+
 //*****************************************************************************
 // BEGIN_MESSAGE_MAP
 //

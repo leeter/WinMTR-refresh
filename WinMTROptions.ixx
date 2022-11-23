@@ -31,14 +31,11 @@ module;
 #define VC_EXTRALEAN
 //#include "WinMTRGlobal.h"
 #include <afxwin.h>
-#include <format>
+//#include <format>
 #include "resource.h"
 //#include "WinMTROptions.h"
 export module WinMTR.Options;
-import <iterator>;
-import WinMTRUtils;
 
-import WinMTR.License;
 
 
 
@@ -102,6 +99,14 @@ public:
 	afx_msg void OnBnClickedIpv4Check();
 	afx_msg void OnBnClickedUseipv6Check();
 };
+
+module : private;
+
+import <format>;
+import <iterator>;
+import WinMTRUtils;
+
+import WinMTR.License;
 
 //*****************************************************************************
 // BEGIN_MESSAGE_MAP

@@ -37,19 +37,12 @@ module;
 #endif 
 #pragma warning (disable : 4005)
 #include "resource.h"
-#include <cwchar>
 #include "WinMTRProperties.h"
-#include <fstream>
-#include <format>
 #include <winrt/Windows.ApplicationModel.DataTransfer.h>
 #include <winrt/Windows.Foundation.Diagnostics.h>
 #include <ws2tcpip.h>
 export module WinMTR.Dialog;
 
-import <cstring>;
-import <sstream>;
-import <iterator>;
-import <string_view>;
 import <string>;
 import <winrt/Windows.Foundation.h>;
 import <memory>;
@@ -58,12 +51,9 @@ import <optional>;
 import <atomic>;
 import WinMTROptionsProvider;
 import WinMTRStatusBar;
-import WinMTRSNetHost;
-import WinMTRIPUtils;
 import WinMTR.Net;
 import WinMTR.Options;
-import WinMTRDnsUtil;
-import WinMTRUtils;
+
 using namespace std::string_view_literals;
 
 #ifdef _DEBUG
@@ -215,7 +205,18 @@ public:
 	afx_msg void OnBnClickedCancel();
 };
 
+module : private;
 
+import <cstring>;
+import <sstream>;
+import <iterator>;
+import <string_view>;
+import <fstream>;
+import <format>;
+import WinMTRIPUtils;
+import WinMTRSNetHost;
+import WinMTRDnsUtil;
+import WinMTRUtils;
 
 namespace {
 	constexpr auto DEFAULT_PING_SIZE = 64;

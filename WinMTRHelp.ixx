@@ -54,6 +54,7 @@ public:
 	afx_msg void OnBnClickedOk();
 };
 
+module : private;
 
 // WinMTRHelp dialog
 
