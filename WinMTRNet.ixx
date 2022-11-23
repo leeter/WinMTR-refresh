@@ -40,7 +40,7 @@ module;
 #include <Ipexport.h>
 #include "resource.h"
 #include <icmpapi.h>
-export module WinMTRNet;
+export module WinMTR.Net;
 
 import <string>;
 import <sstream>;

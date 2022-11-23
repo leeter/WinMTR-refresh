@@ -63,7 +63,7 @@ import WinMTROptionsProvider;
 import WinMTRStatusBar;
 import WinMTRSNetHost;
 import WinMTRIPUtils;
-import WinMTRNet;
+import WinMTR.Net;
 import WinMTRDnsUtil;
 import WinMTRUtils;
 using namespace std::string_view_literals;
