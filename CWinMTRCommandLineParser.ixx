@@ -29,9 +29,10 @@ module;
 #include <afxwin.h>
 #include <afxext.h>
 #include <afxcmn.h>
-#include "WinMTRDialog.h"
+
 export module WinMTR.CommandLineParser;
 import <string_view>;
+import WinMTR.Dialog;
 
 export namespace utils {
 

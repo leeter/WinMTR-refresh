@@ -709,7 +709,17 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug - Sanitizers|x64'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="WinMTRDialog.cpp" />
+    <ClCompile Include="WinMTRDialog.ixx">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug - Sanitizers|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug - Sanitizers|ARM64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug - Sanitizers|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
+    </ClCompile>
     <ClCompile Include="WinMTRHelp.cpp" />
     <ClCompile Include="WinMTRMain.cpp" />
     <ClCompile Include="WinMTRNet.ixx">
@@ -755,7 +765,6 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug - Sanitizers|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClInclude Include="Resource.h" />
-    <ClInclude Include="WinMTRDialog.h" />
     <ClInclude Include="WinMTRGlobal.h" />
     <ClInclude Include="WinMTRHelp.h" />
     <ClInclude Include="WinMTRMain.h" />

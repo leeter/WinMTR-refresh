@@ -45,10 +45,10 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "WinMTRGlobal.h"
 #include <locale>
 #include "WinMTRMain.h"
-#include "WinMTRDialog.h"
 #include "WinMTRHelp.h"
-//#include "CWinMTRCommandLineParser.h"
+import <winrt/Windows.Foundation.h>;
 import WinMTR.CommandLineParser;
+import WinMTR.Dialog;
 
 
 #ifdef _DEBUG
