@@ -21,10 +21,10 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 //#ifndef WINMTRSTATUSBAR_H_
 //#define WINMTRSTATUSBAR_H_
 module;
+#pragma warning (disable : 4005)
 #include "targetver.h"
 #include <afxext.h>
 export module WinMTRStatusBar;
-#pragma warning (disable : 4005)
 import <vector>;
 import <span>;
 

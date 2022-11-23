@@ -37,37 +37,13 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #define WIN32_LEAN_AND_MEAN
 #define VC_EXTRALEAN
 
-//#include <version>
-//#include <algorithm>
-//#include <array>
-//#include <cwctype>
-//#include <memory>
-//#include <string>
-//#include <string_view>
-//#include <cwchar>
-//#include <format>
-
-//#include <vector>
-//#include <compare>
-//#include <span>
-//#include <cstdint>
-//#include <concepts>
-//#include <utility>
-//#include <ranges>
-//#include <mutex>
-//#include <coroutine>
-//#include <iterator>
-//#include <cstring>
-
 #include <afxwin.h>
 #include <afxext.h>
 #include <afxdisp.h>
-//#include <afxdtctl.h>
 
 #ifndef _AFX_NO_AFXCMN_SUPPORT
   #include <afxcmn.h>
 #endif 
-//#include <afxsock.h>
 
 
 

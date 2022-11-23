@@ -18,8 +18,6 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
-
-//#include "CWinMTRCommandLineParser.h"
 module;
 #pragma warning (disable : 4005)
 #include "targetver.h"
@@ -28,7 +26,6 @@ module;
 
 #include <afxwin.h>
 #include <afxext.h>
-#include <afxcmn.h>
 
 export module WinMTR.CommandLineParser;
 import <string_view>;
