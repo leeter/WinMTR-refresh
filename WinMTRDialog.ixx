@@ -320,9 +320,9 @@ BOOL WinMTRDialog::OnInitDialog()
 	CDialog::OnInitDialog();
 
 	#ifndef  _WIN64
-	const wchar_t caption[] = {L"WinMTR v0.93 32 bit by Appnor MSP - www.winmtr.net"};
+	const wchar_t caption[] = {L"WinMTR v0.95 32 bit by Appnor MSP - www.winmtr.net"};
 	#else
-	const wchar_t caption[] = {L"WinMTR v0.93 64 bit by Appnor MSP - www.winmtr.net"};
+	const wchar_t caption[] = {L"WinMTR v0.95 64 bit by Appnor MSP - www.winmtr.net"};
 	#endif
 
 	SetTimer(1, WINMTR_DIALOG_TIMER, nullptr);
@@ -428,9 +428,9 @@ BOOL WinMTRDialog::InitRegistry() noexcept
 		return FALSE;
 
 	}
-	static const auto WINMTR_VERSION = L"0.9";
+	static const auto WINMTR_VERSION = L"0.95";
 	static const auto WINMTR_LICENSE = L"GPL - GNU Public License";
-	//static const auto WINMTR_COPYRIGHT = L"WinMTR 0.9 (c) 2010-2011 Appnor MSP - Fully Managed Hosting & Cloud Provider www.appnor.com";
+	//static const auto WINMTR_COPYRIGHT = L"WinMTR 0.95 (c) 2010-2011 Appnor MSP - Fully Managed Hosting & Cloud Provider www.appnor.com";
 	static const auto WINMTR_HOMEPAGE = L"http://WinMTR.sourceforge.net";
 	versionKey.SetStringValue(L"Version", WINMTR_VERSION);
 	versionKey.SetStringValue(L"License", WINMTR_LICENSE);
