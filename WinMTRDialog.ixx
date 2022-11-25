@@ -49,6 +49,7 @@ import <memory>;
 import <mutex>;
 import <optional>;
 import <atomic>;
+import <thread>;
 import WinMTROptionsProvider;
 import WinMTRStatusBar;
 import WinMTR.Net;
@@ -138,12 +139,8 @@ private:
 	CButton	m_buttonExpH;
 	std::wstring msz_defaulthostname;
 	std::shared_ptr<WinMTRNet>			wmtrnet;
-	struct tracer_lacky {
-		winrt::Windows::Foundation::IAsyncAction tracer;
-		winrt::apartment_context context;
-	};
 	std::mutex tracer_mutex;
-	std::optional<tracer_lacky> trace_lacky;
+	std::optional<std::jthread> trace_lacky;
 	HICON m_hIcon;
 	double				interval;
 	STATES				state;
@@ -162,7 +159,7 @@ private:
 	std::atomic_bool	tracing;
 
 	void ClearHistory();
-	winrt::Windows::Foundation::IAsyncAction pingThread(std::wstring shost);
+	winrt::Windows::Foundation::IAsyncAction pingThread(std::stop_token token, std::wstring shost);
 	winrt::fire_and_forget stopTrace();
 public:
 
@@ -213,6 +210,7 @@ import <iterator>;
 import <string_view>;
 import <fstream>;
 import <format>;
+import <stop_token>;
 import WinMTRIPUtils;
 import WinMTRSNetHost;
 import WinMTRDnsUtil;
@@ -1138,7 +1136,7 @@ void WinMTRDialog::ClearHistory()
 	m_comboHost.AddString(CString((LPCSTR)IDS_STRING_CLEAR_HISTORY));
 }
 
-winrt::Windows::Foundation::IAsyncAction WinMTRDialog::pingThread(std::wstring sHost)
+winrt::Windows::Foundation::IAsyncAction WinMTRDialog::pingThread(std::stop_token stop_token, std::wstring sHost)
 {
 	if (tracing.exchange(true)) {
 		throw new std::runtime_error("Tracing started twice!");
@@ -1152,9 +1150,6 @@ winrt::Windows::Foundation::IAsyncAction WinMTRDialog::pingThread(std::wstring s
 
 	SOCKADDR_STORAGE addrstore = {};
 	
-
-	const auto cancellation = co_await winrt::get_cancellation_token();
-	cancellation.enable_propagation();
 	for (auto af : { AF_INET, AF_INET6 }) {
 		INT addrSize = sizeof(addrstore);
 		if (auto res = WSAStringToAddressW(
@@ -1164,7 +1159,7 @@ winrt::Windows::Foundation::IAsyncAction WinMTRDialog::pingThread(std::wstring s
 			, reinterpret_cast<LPSOCKADDR>(&addrstore)
 			, &addrSize);
 			!res) {
-			co_await this->wmtrnet->DoTrace(*reinterpret_cast<LPSOCKADDR>(&addrstore));
+			co_await this->wmtrnet->DoTrace(stop_token, *reinterpret_cast<LPSOCKADDR>(&addrstore));
 			co_return;
 		}
 	}
@@ -1182,21 +1177,24 @@ winrt::Windows::Foundation::IAsyncAction WinMTRDialog::pingThread(std::wstring s
 		co_return;
 	}
 	addrstore = result->front();
-	co_await this->wmtrnet->DoTrace(*reinterpret_cast<LPSOCKADDR>(&addrstore));
+	co_await this->wmtrnet->DoTrace(stop_token, *reinterpret_cast<LPSOCKADDR>(&addrstore));
 }
 
 winrt::fire_and_forget WinMTRDialog::stopTrace()
 {
-	std::optional<tracer_lacky> temp;
+	// grab the thread under a mutex so we don't mess this up and cause a data race
+	decltype(trace_lacky) temp;
 	{
-		std::unique_lock lock(this->tracer_mutex);
-		std::swap(temp, this->trace_lacky);
+		std::unique_lock trace_lock{ tracer_mutex };
+		std::swap(temp, trace_lacky);
 	}
+	// don't bother trying call something not there
 	if (!temp) {
 		co_return;
 	}
-	co_await temp->context;
-	temp->tracer.Cancel();
+	co_await winrt::resume_background();
+	temp.reset(); //trigger the stop token
+	co_return;
 }
 
 void WinMTRDialog::OnCbnSelendokComboHost()
@@ -1296,13 +1294,14 @@ void WinMTRDialog::Transit(STATES new_state)
 				if (sHost.IsEmpty()) [[unlikely]] { // Technically never because this is caught in the calling function
 					sHost = L"localhost";
 				}
-				auto thread = std::thread([this](auto sHost) noexcept {
+				std::unique_lock trace_lock{ tracer_mutex };
+				// create the jthread and stop token all in one go
+				trace_lacky.emplace([this](std::stop_token stop_token, auto sHost) noexcept {
 					winrt::init_apartment(winrt::apartment_type::multi_threaded);
 					try {
-						auto tracer_local = this->pingThread(sHost);
+						auto tracer_local = this->pingThread(stop_token, sHost);
 						{
 							std::unique_lock lock(this->tracer_mutex);
-							this->trace_lacky.emplace(tracer_local, winrt::apartment_context());
 						}
 						// keep the thread alive
 						tracer_local.get();
@@ -1313,12 +1312,7 @@ void WinMTRDialog::Transit(STATES new_state)
 					catch (winrt::hresult_illegal_method_call const&){
 						// don't care this happens
 					}
-					{
-						std::unique_lock lock(this->tracer_mutex);
-						this->trace_lacky.reset();
-					}
 					}, std::wstring(sHost));
-				thread.detach();
 			}
 			m_buttonStart.EnableWindow(TRUE);
 		break;

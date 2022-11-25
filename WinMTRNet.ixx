@@ -50,7 +50,7 @@ import <memory>;
 import <vector>;
 import <optional>;
 import <winrt/Windows.Foundation.h>;
-
+import <stop_token>;
 import WinMTROptionsProvider;
 import winmtr.helper;
 
@@ -149,7 +149,7 @@ public:
 
 
 	[[nodiscard("The task should be awaited")]]
-	winrt::Windows::Foundation::IAsyncAction	DoTrace(sockaddr& address);
+	winrt::Windows::Foundation::IAsyncAction	DoTrace(std::stop_token stop_token, sockaddr& address);
 
 	void	ResetHops() noexcept
 	{
@@ -211,7 +211,7 @@ private:
 
 	template<class T>
 	[[nodiscard("The task should be awaited")]]
-	winrt::Windows::Foundation::IAsyncAction handleICMP(trace_thread current);
+	winrt::Windows::Foundation::IAsyncAction handleICMP(std::stop_token stop_token, trace_thread current);
 };
 
 module : private;
@@ -257,30 +257,28 @@ int WinMTRNet::GetMax() const
 }
 
 [[nodiscard("The task should be awaited")]]
-winrt::Windows::Foundation::IAsyncAction WinMTRNet::DoTrace(sockaddr& address)
+winrt::Windows::Foundation::IAsyncAction WinMTRNet::DoTrace(std::stop_token stop_token, sockaddr& address)
 {
-	auto cancellation = co_await winrt::get_cancellation_token();
-	cancellation.enable_propagation();
 	tracing = true;
 	ResetHops();
 	last_remote_addr = {};
 	std::memcpy(&last_remote_addr, &address, getAddressSize(address));
 
-	auto threadMaker = [&address, this](UCHAR i) {
+	auto threadMaker = [&address, this, stop_token](UCHAR i) {
 		trace_thread current(address.sa_family, this, i + 1);
 		using namespace std::string_view_literals;
 		TRACE_MSG(L"Thread with TTL="sv << current.ttl << L" started."sv);
 		std::memcpy(&current.address, &address, getAddressSize(address));
 		if (current.address.ss_family == AF_INET) {
-			return this->handleICMP<sockaddr_in>(std::move(current));
+			return this->handleICMP<sockaddr_in>(stop_token, std::move(current));
 		}
 		else if (current.address.ss_family == AF_INET6) {
-			return this->handleICMP<sockaddr_in6>(std::move(current));
+			return this->handleICMP<sockaddr_in6>(stop_token, std::move(current));
 		}
 		winrt::throw_hresult(HRESULT_FROM_WIN32(WSAEOPNOTSUPP));
 	};
 
-	cancellation.callback([this]() noexcept {
+	std::stop_callback callback(stop_token, [this]() noexcept {
 		this->tracing = false;
 	TRACE_MSG(L"Cancellation");
 		});
@@ -293,7 +291,7 @@ winrt::Windows::Foundation::IAsyncAction WinMTRNet::DoTrace(sockaddr& address)
 
 template<class T>
 [[nodiscard("The task should be awaited")]]
-winrt::Windows::Foundation::IAsyncAction WinMTRNet::handleICMP(trace_thread current) {
+winrt::Windows::Foundation::IAsyncAction WinMTRNet::handleICMP(std::stop_token stop_token, trace_thread current) {
 	using namespace std::literals;
 	using traits = icmp_ping_traits<T>;
 	trace_thread mine = std::move(current);
@@ -303,11 +301,14 @@ winrt::Windows::Foundation::IAsyncAction WinMTRNet::handleICMP(trace_thread curr
 	std::vector<std::byte>	achReqData(nDataLen, static_cast<std::byte>(32)); //whitespaces
 	std::vector<std::byte> achRepData(reply_reply_buffer_size<T>(nDataLen));
 
-	auto cancellation = co_await winrt::get_cancellation_token();
+	
 	T* addr = reinterpret_cast<T*>(&mine.address);
 	while (this->tracing) {
-		if (cancellation()) [[unlikely]]
+
+		// this is a backup for if the atomic above doesn't work
+		if (stop_token.stop_requested()) [[unlikely]]
 		{
+			this->tracing = false;
 			co_return;
 		}
 			// For some strange reason, ICMP API is not filling the TTL for icmp echo reply
@@ -402,6 +403,7 @@ winrt::Windows::Foundation::IAsyncAction WinMTRNet::handleICMP(trace_thread curr
 		}
 
 	} /* end ping loop */
+	co_return;
 }
 
 void	WinMTRNet::SetAddr(int at, sockaddr& addr)
