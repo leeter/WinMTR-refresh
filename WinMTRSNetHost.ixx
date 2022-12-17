@@ -54,7 +54,7 @@ export struct s_nethost final {
 		return returned == 0 ? 0 : total / returned;
 	}
 	[[nodiscard]]
-	std::wstring getName() const {
+	auto getName() const -> std::wstring {
 		if (name.empty()) {
 			return addr_to_string(addr);
 		}

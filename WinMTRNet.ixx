@@ -68,7 +68,7 @@ import WinMTRSNetHost;
 #define TRACE_MSG(msg)
 #endif
 
-export constexpr auto MAX_HOPS = 30;
+constexpr auto MAX_HOPS = 30;
 
 class WinMTRNet;
 namespace {

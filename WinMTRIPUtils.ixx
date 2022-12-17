@@ -72,7 +72,7 @@ inline constexpr bool isValidAddress(const T& addr) noexcept {
 
 export template<socket_addr_type T>
 [[nodiscard]]
-std::wstring addr_to_string(const T & addr) noexcept {
+auto addr_to_string(const T & addr) noexcept -> std::wstring {
 	if (!isValidAddress(addr)) {
 		return {};
 	}
