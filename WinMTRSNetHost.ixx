@@ -35,6 +35,7 @@ export module WinMTRSNetHost;
 
 import WinMTRIPUtils;
 import <string>;
+export using ::SOCKADDR_STORAGE;
 
 export struct s_nethost final {
 	SOCKADDR_STORAGE addr = {};
