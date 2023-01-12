@@ -44,6 +44,7 @@ import <type_traits>;
 import <ppl.h>;
 import <ppltasks.h>;
 import <pplawait.h>;
+import <winrt/base.h>;
 
 constexpr auto ECHO_REPLY_TIMEOUT = 5000;
 
@@ -284,10 +285,25 @@ struct icmp_ping_traits<sockaddr_in6> {
 export
 template<icmp_pingable traits>
 struct icmp_ping final {
+	struct wait_traits
+	{
+		using type = PTP_WAIT;
+
+		static void close(type value) noexcept
+		{
+			CloseThreadpoolWait(value);
+		}
+
+		static constexpr type invalid() noexcept
+		{
+			return nullptr;
+		}
+	};
 	using coro_handle = std::coroutine_handle<>;
-	icmp_ping(HANDLE icmpHandle, traits::addrtype addr, UCHAR ttl, std::span<std::byte> requestData, std::span<std::byte> replyData) noexcept
+	icmp_ping(HANDLE icmpHandle, HANDLE waitevent, traits::addrtype addr, UCHAR ttl, std::span<std::byte> requestData, std::span<std::byte> replyData) noexcept
 		:m_reqData(requestData)
 		, m_replyData(replyData)
+		, m_waitHandle(waitevent)
 		, m_handle(icmpHandle)
 		, m_addr(addr)
 		, m_ttl(ttl)
@@ -306,8 +322,8 @@ struct icmp_ping final {
 
 		const auto io_res = traits::pingmethod(
 			m_handle
+			, m_waitHandle
 			, nullptr
-			, &callback
 			, this
 			, local
 			, m_addr
@@ -324,11 +340,27 @@ struct icmp_ping final {
 		if (const auto err = GetLastError(); err != ERROR_IO_PENDING) [[unlikely]] {
 			throw std::system_error(err, std::system_category());
 		}
+
+		FILETIME FileDueTime;
+		ULARGE_INTEGER ulDueTime;
+			//
+		// Set the timer to fire in 5 seconds.
+		//
+		ulDueTime.QuadPart = static_cast<ULONGLONG>( -(5 * 10 * 1000 * 1000));
+		FileDueTime.dwHighDateTime = ulDueTime.HighPart;
+		FileDueTime.dwLowDateTime = ulDueTime.LowPart;
+		m_tpwait.attach(CreateThreadpoolWait(&WaitCallback, this, nullptr));
+		if (!m_tpwait) [[unlikely]] {
+			throw std::system_error(GetLastError(), std::system_category());
+		}
+
+		SetThreadpoolWait(m_tpwait.get(), m_waitHandle, &FileDueTime);
+
 	}
 
 	auto await_resume() const noexcept
 	{
-		return traits::parsemethod(m_replyData.data(), m_replysize);
+		return traits::parsemethod(m_replyData.data(), m_replyData.size());
 	}
 
 	bool await_ready() const noexcept
@@ -336,13 +368,14 @@ struct icmp_ping final {
 		return false;
 	}
 private:
-	static void NTAPI callback(IN PVOID ApcContext,
-		IN PIO_STATUS_BLOCK IoStatusBlock,
-		IN ULONG Reserved) noexcept {
-		UNREFERENCED_PARAMETER(Reserved);
-		auto context = static_cast<icmp_ping<traits>*>(ApcContext);
-		context->m_replysize = static_cast<DWORD>(IoStatusBlock->Information);
-		concurrency::create_task([=]() noexcept {
+	static void CALLBACK WaitCallback(
+		PTP_CALLBACK_INSTANCE Instance,
+		PVOID                 Context,
+		PTP_WAIT              Wait,
+		TP_WAIT_RESULT        WaitResult
+	) noexcept {
+		auto context = static_cast<icmp_ping<traits>*>(Context);
+		concurrency::create_task([context]() noexcept {
 			context->m_resume();
 			}, context->m_context);
 	}
@@ -351,6 +384,8 @@ private:
 	coro_handle m_resume{ nullptr };
 	std::span<std::byte> m_reqData;
 	std::span<std::byte> m_replyData;
+	winrt::handle_type<wait_traits> m_tpwait;
+	HANDLE m_waitHandle;
 	HANDLE m_handle;
 	traits::addrtype m_addr;
 	DWORD m_replysize = 0;
@@ -360,8 +395,8 @@ private:
 
 export
 template<class T, class addrtype = std::remove_pointer_t<std::remove_cvref_t<T>>, class traits = icmp_ping_traits<addrtype>>
-inline auto IcmpSendEchoAsync(HANDLE icmpHandle, T addr, UCHAR ttl, std::span<std::byte> requestData, std::span<std::byte> replyData) noexcept {
-	return icmp_ping<traits>{icmpHandle, traits::to_addr_from_storage(addr), ttl, requestData, replyData};
+inline auto IcmpSendEchoAsync(HANDLE icmpHandle, HANDLE waitevent, T addr, UCHAR ttl, std::span<std::byte> requestData, std::span<std::byte> replyData) noexcept {
+	return icmp_ping<traits>{icmpHandle, waitevent, traits::to_addr_from_storage(addr), ttl, requestData, replyData};
 }
 
 export

@@ -183,7 +183,7 @@ private:
 		std::unique_lock lock(ghMutex);
 		return host[at].addr;
 	}
-	void	SetAddr(int at, sockaddr& addr);
+	winrt::fire_and_forget	SetAddr(int at, sockaddr& addr);
 	void	SetName(int at, std::wstring n)
 	{
 		std::unique_lock lock(ghMutex);
@@ -300,7 +300,7 @@ winrt::Windows::Foundation::IAsyncAction WinMTRNet::handleICMP(std::stop_token s
 	const auto				nDataLen = this->options->getPingSize();
 	std::vector<std::byte>	achReqData(nDataLen, static_cast<std::byte>(32)); //whitespaces
 	std::vector<std::byte> achRepData(reply_reply_buffer_size<T>(nDataLen));
-
+	winrt::handle wait_handle(CreateEventW(nullptr, FALSE, FALSE, nullptr));
 	
 	T* addr = reinterpret_cast<T*>(&mine.address);
 	while (this->tracing) {
@@ -322,7 +322,7 @@ winrt::Windows::Foundation::IAsyncAction WinMTRNet::handleICMP(std::stop_token s
 		// - as soon as we get a hop, we start pinging directly that hop, with a greater TTL
 		// - a drawback would be that, some servers are configured to reply for TTL transit expire, but not to ping requests, so,
 		// for these servers we'll have 100% loss
-		const auto dwReplyCount = co_await IcmpSendEchoAsync(mine.icmpHandle.get(), addr, mine.ttl, achReqData, achRepData);
+		const auto dwReplyCount = co_await IcmpSendEchoAsync(mine.icmpHandle.get(), wait_handle.get(), addr, mine.ttl, achReqData, achRepData);
 		this->AddXmit(mine.ttl - 1);
 		if (dwReplyCount) {
 			auto icmp_echo_reply = reinterpret_cast<traits::reply_type_ptr>(achRepData.data());
@@ -406,40 +406,43 @@ winrt::Windows::Foundation::IAsyncAction WinMTRNet::handleICMP(std::stop_token s
 	co_return;
 }
 
-void	WinMTRNet::SetAddr(int at, sockaddr& addr)
+winrt::fire_and_forget	WinMTRNet::SetAddr(int at, sockaddr& addr)
 {
-	std::unique_lock lock(ghMutex);
-	if (!isValidAddress(host[at].addr) && isValidAddress(addr)) {
+	{
+		std::unique_lock lock(ghMutex);
+		if (isValidAddress(host[at].addr) || !isValidAddress(addr)) {
+			co_return;
+		}
 		host[at].addr = {};
 		//TRACE_MSG(L"Start DnsResolverThread for new address " << addr << L". Old addr value was " << host[at].addr);
 		memcpy(&host[at].addr, &addr, getAddressSize(addr));
-
-		if (options->getUseDNS()) {
-			Concurrency::create_task([at, sharedThis = shared_from_this()]() noexcept {
-				TRACE_MSG(L"DNS resolver thread started.");
-
-			wchar_t buf[NI_MAXHOST] = {};
-			sockaddr_storage addr = sharedThis->GetAddr(at);
-
-			if (const auto nresult = GetNameInfoW(
-				reinterpret_cast<sockaddr*>(&addr)
-				, static_cast<socklen_t>(getAddressSize(addr))
-				, buf
-				, static_cast<DWORD>(std::size(buf))
-				, nullptr
-				, 0
-				, 0);
-				// zero on success
-				!nresult) {
-				sharedThis->SetName(at, buf);
-			}
-			else {
-				sharedThis->SetName(at, addr_to_string(addr));
-			}
-
-			TRACE_MSG(L"DNS resolver thread stopped.");
-				});
-		}
 	}
+	if (!options->getUseDNS()) {
+		co_return;
+	}
+	auto local_at = at;
+	// this could happen after a cleanup is called, so keep this alive until the coroutine returns
+	auto sharedThis = shared_from_this();
+	co_await winrt::resume_background();
+	wchar_t buf[NI_MAXHOST] = {};
+	sockaddr_storage tempaddr = sharedThis->GetAddr(local_at);
+
+	if (const auto nresult = GetNameInfoW(
+		reinterpret_cast<sockaddr*>(&tempaddr)
+		, static_cast<socklen_t>(getAddressSize(tempaddr))
+		, buf
+		, static_cast<DWORD>(std::size(buf))
+		, nullptr
+		, 0
+		, 0);
+		// zero on success
+		!nresult) {
+		sharedThis->SetName(local_at, buf);
+	}
+	else {
+		sharedThis->SetName(local_at, addr_to_string(tempaddr));
+	}
+
+	TRACE_MSG(L"DNS resolver thread stopped.");
 }
 
