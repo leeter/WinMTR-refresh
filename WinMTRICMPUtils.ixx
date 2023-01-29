@@ -35,6 +35,9 @@ module;
 #include "WinMTRICMPPIOdef.h"
 #include <iphlpapi.h>
 #include <icmpapi.h>
+#ifdef _RESUMABLE_ENABLE_LEGACY_AWAIT_ADAPTERS
+#error "don't compile with /await"
+#endif
 export module WinMTRICMPUtils;
 
 import <concepts>;
@@ -335,10 +338,10 @@ struct icmp_ping final {
 			, ECHO_REPLY_TIMEOUT);
 
 		if (io_res != ERROR_SUCCESS) [[unlikely]] {
-			throw std::system_error(io_res, std::system_category());
+			winrt::throw_hresult(HRESULT_FROM_WIN32(io_res));
 		}
 		if (const auto err = GetLastError(); err != ERROR_IO_PENDING) [[unlikely]] {
-			throw std::system_error(err, std::system_category());
+			winrt::throw_last_error();
 		}
 
 		FILETIME FileDueTime;
@@ -346,12 +349,12 @@ struct icmp_ping final {
 			//
 		// Set the timer to fire in 5 seconds.
 		//
-		ulDueTime.QuadPart = static_cast<ULONGLONG>( -(5 * 10 * 1000 * 1000));
+		ulDueTime.QuadPart = static_cast<ULONGLONG>( -(5ll * 10ll * 1000ll * 1000ll));
 		FileDueTime.dwHighDateTime = ulDueTime.HighPart;
 		FileDueTime.dwLowDateTime = ulDueTime.LowPart;
 		m_tpwait.attach(CreateThreadpoolWait(&WaitCallback, this, nullptr));
 		if (!m_tpwait) [[unlikely]] {
-			throw std::system_error(GetLastError(), std::system_category());
+			winrt::throw_last_error();
 		}
 
 		SetThreadpoolWait(m_tpwait.get(), m_waitHandle, &FileDueTime);

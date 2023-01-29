@@ -145,7 +145,7 @@ private:
 	double				interval;
 	STATES				state;
 	STATE_TRANSITIONS	transition;
-	int					pingsize;
+	unsigned			pingsize;
 	int					maxLRU;
 	int					nrLRU = 0;
 	bool				m_autostart = false;
@@ -165,12 +165,12 @@ public:
 
 	void SetHostName(std::wstring host);
 	void SetInterval(float i, options_source fromCmdLine = options_source::none) noexcept;
-	void SetPingSize(int ps, options_source fromCmdLine = options_source::none) noexcept;
+	void SetPingSize(unsigned ps, options_source fromCmdLine = options_source::none) noexcept;
 	void SetMaxLRU(int mlru, options_source fromCmdLine = options_source::none) noexcept;
 	void SetUseDNS(bool udns, options_source fromCmdLine = options_source::none) noexcept;
 
 	inline double getInterval() const noexcept { return interval; }
-	inline int getPingSize() const noexcept { return pingsize; }
+	inline unsigned getPingSize() const noexcept { return pingsize; }
 	inline bool getUseDNS() const noexcept { return useDNS; }
 
 protected:
@@ -686,7 +686,7 @@ void WinMTRDialog::SetHostName(std::wstring host)
 // WinMTRDialog::SetPingSize
 //
 //*****************************************************************************
-void WinMTRDialog::SetPingSize(int ps, options_source fromCmdLine) noexcept
+void WinMTRDialog::SetPingSize(unsigned ps, options_source fromCmdLine) noexcept
 {
 	pingsize = ps;
 	hasPingsizeFromCmdLine = static_cast<bool>(fromCmdLine);

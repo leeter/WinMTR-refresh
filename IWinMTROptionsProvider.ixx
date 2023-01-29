@@ -21,7 +21,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 export module WinMTROptionsProvider;
 
 export struct __declspec(novtable) IWinMTROptionsProvider {
-	virtual int getPingSize() const noexcept = 0;
+	virtual unsigned getPingSize() const noexcept = 0;
 	virtual double getInterval() const noexcept = 0;
 	virtual bool getUseDNS() const noexcept = 0;
 };

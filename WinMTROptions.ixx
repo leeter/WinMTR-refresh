@@ -29,6 +29,7 @@ module;
 #include "targetver.h"
 #define WIN32_LEAN_AND_MEAN
 #define VC_EXTRALEAN
+#define NOMINMAX
 //#include "WinMTRGlobal.h"
 #include <afxwin.h>
 //#include <format>
@@ -89,8 +90,8 @@ protected:
 
 private:
 	double   interval = 0.0;
-	int      pingsize = 0;
-	int		 maxLRU = 0;
+	unsigned pingsize = 0;
+	unsigned maxLRU = 0;
 	bool     useDNS = false;
 	bool	 useIPv4 = true;
 	bool	 useIPv6 = true;
@@ -139,8 +140,11 @@ void WinMTROptions::DoDataExchange(CDataExchange* pDX)
 {
 	CDialog::DoDataExchange(pDX);
 	DDX_Control(pDX, IDC_EDIT_SIZE, m_editSize);
+	DDV_MinMaxUInt(pDX, pingsize, WinMTRUtils::MIN_PING_SIZE, WinMTRUtils::MAX_PING_SIZE);
 	DDX_Control(pDX, IDC_EDIT_INTERVAL, m_editInterval);
+	DDV_MinMaxDouble(pDX, interval, WinMTRUtils::MIN_INTERVAL, WinMTRUtils::MAX_INTERVAL);
 	DDX_Control(pDX, IDC_EDIT_MAX_LRU, m_editMaxLRU);
+	DDV_MinMaxUInt(pDX, maxLRU, WinMTRUtils::MIN_MAX_LRU, WinMTRUtils::MAX_MAX_LRU);
 	DDX_Control(pDX, IDC_CHECK_DNS, m_checkDNS);
 	DDX_Control(pDX, IDC_USEIPV6_CHECK, m_useIPv6);
 	DDX_Control(pDX, IDC_IPV4_CHECK, m_useIPv4);
@@ -197,11 +201,11 @@ void WinMTROptions::OnOK()
 
 	m_editSize.GetWindowText(tmpstr, 20);
 	end = nullptr;
-	pingsize = wcstol(tmpstr, &end, 10);
+	pingsize = wcstoul(tmpstr, &end, 10);
 	
 	m_editMaxLRU.GetWindowText(tmpstr, 20);
 	end = nullptr;
-	maxLRU = wcstol(tmpstr, &end, 10);
+	maxLRU = wcstoul(tmpstr, &end, 10);
 
 	useIPv4 = m_useIPv4.GetCheck();
 	useIPv6 = m_useIPv6.GetCheck();

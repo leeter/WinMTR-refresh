@@ -265,7 +265,7 @@ winrt::Windows::Foundation::IAsyncAction WinMTRNet::DoTrace(std::stop_token stop
 	std::memcpy(&last_remote_addr, &address, getAddressSize(address));
 
 	auto threadMaker = [&address, this, stop_token](UCHAR i) {
-		trace_thread current(address.sa_family, this, i + 1);
+		trace_thread current{ address.sa_family, this, static_cast<UCHAR>(i + 1) };
 		using namespace std::string_view_literals;
 		TRACE_MSG(L"Thread with TTL="sv << current.ttl << L" started."sv);
 		std::memcpy(&current.address, &address, getAddressSize(address));
@@ -278,14 +278,14 @@ winrt::Windows::Foundation::IAsyncAction WinMTRNet::DoTrace(std::stop_token stop
 		winrt::throw_hresult(HRESULT_FROM_WIN32(WSAEOPNOTSUPP));
 	};
 
-	std::stop_callback callback(stop_token, [this]() noexcept {
+	std::stop_callback callback{ stop_token, [this]() noexcept {
 		this->tracing = false;
 	TRACE_MSG(L"Cancellation");
-		});
+		} };
 	//// one thread per TTL value
 	co_await std::invoke([]<UCHAR ...threads>(std::integer_sequence<UCHAR, threads...>, auto threadMaker) {
 		return winrt::when_all(std::invoke(threadMaker, threads)...);
-	}, std::make_integer_sequence<UCHAR, MAX_HOPS>(), threadMaker);
+	}, std::make_integer_sequence<UCHAR, MAX_HOPS>{}, threadMaker);
 	TRACE_MSG(L"Tracing Ended");
 }
 
@@ -298,9 +298,9 @@ winrt::Windows::Foundation::IAsyncAction WinMTRNet::handleICMP(std::stop_token s
 	co_await winrt::resume_background();
 	using namespace std::string_view_literals;
 	const auto				nDataLen = this->options->getPingSize();
-	std::vector<std::byte>	achReqData(nDataLen, static_cast<std::byte>(32)); //whitespaces
-	std::vector<std::byte> achRepData(reply_reply_buffer_size<T>(nDataLen));
-	winrt::handle wait_handle(CreateEventW(nullptr, FALSE, FALSE, nullptr));
+	std::vector<std::byte>	achReqData{ nDataLen, static_cast<std::byte>(32) }; //whitespaces
+	std::vector<std::byte> achRepData{ reply_reply_buffer_size<T>(nDataLen) };
+	winrt::handle wait_handle{ CreateEventW(nullptr, FALSE, FALSE, nullptr) };
 	
 	T* addr = reinterpret_cast<T*>(&mine.address);
 	while (this->tracing) {
