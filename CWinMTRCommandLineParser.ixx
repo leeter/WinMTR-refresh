@@ -28,7 +28,7 @@ module;
 #include <afxext.h>
 
 export module WinMTR.CommandLineParser;
-import <string_view>;
+
 import WinMTR.Dialog;
 
 export namespace utils {
@@ -41,43 +41,7 @@ export namespace utils {
 			:dlg(dlg) {}
 	private:
 
-		void ParseParam(const WCHAR* pszParam, BOOL bFlag, [[maybe_unused]] BOOL bLast) noexcept override final
-		{
-			using namespace std::literals;
-			if (bFlag) {
-				if (L"h"sv == pszParam || L"-help"sv == pszParam) {
-					this->m_help = true;
-				}
-				else if (L"n"sv == pszParam || L"-numeric"sv == pszParam) {
-					this->dlg.SetUseDNS(false, WinMTRDialog::options_source::cmd_line);
-				}
-				else if (L"i"sv == pszParam || L"-interval"sv == pszParam) {
-					this->next = expect_next::interval;
-				}
-				else if (L"m"sv == pszParam || L"-maxLRU"sv == pszParam) {
-					this->next = expect_next::lru;
-				}
-				else if (L"s"sv == pszParam || L"-size"sv == pszParam) {
-					this->next = expect_next::ping_size;
-				}
-				return;
-			}
-			wchar_t* end = nullptr;
-			switch (this->next) {
-			case expect_next::lru:
-				this->dlg.SetMaxLRU(std::wcstol(pszParam, &end, 10), WinMTRDialog::options_source::cmd_line);
-				break;
-			case expect_next::interval:
-				this->dlg.SetInterval(static_cast<float>(std::wcstof(pszParam, &end)), WinMTRDialog::options_source::cmd_line);
-				break;
-			case expect_next::ping_size:
-				this->dlg.SetPingSize(std::wcstol(pszParam, &end, 10), WinMTRDialog::options_source::cmd_line);
-				break;
-			default:
-				break;
-			}
-			this->next = expect_next::none;
-		}
+		void ParseParam(const WCHAR* pszParam, BOOL bFlag, [[maybe_unused]] BOOL bLast) noexcept override final;
 #ifdef _UNICODE
 		void ParseParam([[maybe_unused]] const char* pszParam, [[maybe_unused]] BOOL bFlag, [[maybe_unused]] BOOL bLast) noexcept override final
 		{
@@ -103,4 +67,67 @@ export namespace utils {
 		}
 		
 	};
+}
+
+
+module : private;
+
+import <string_view>;
+import WinMTRUtils;
+
+
+void utils::CWinMTRCommandLineParser::ParseParam(const WCHAR* pszParam, BOOL bFlag, [[maybe_unused]] BOOL bLast) noexcept
+{
+	using namespace std::literals;
+	if (bFlag) {
+		if (L"h"sv == pszParam || L"-help"sv == pszParam) {
+			this->m_help = true;
+		}
+		else if (L"n"sv == pszParam || L"-numeric"sv == pszParam) {
+			this->dlg.SetUseDNS(false, WinMTRDialog::options_source::cmd_line);
+		}
+		else if (L"i"sv == pszParam || L"-interval"sv == pszParam) {
+			this->next = expect_next::interval;
+		}
+		else if (L"m"sv == pszParam || L"-maxLRU"sv == pszParam) {
+			this->next = expect_next::lru;
+		}
+		else if (L"s"sv == pszParam || L"-size"sv == pszParam) {
+			this->next = expect_next::ping_size;
+		}
+		return;
+	}
+	wchar_t* end = nullptr;
+	switch (this->next) {
+	case expect_next::lru:
+	{
+		auto parsed = std::wcstol(pszParam, &end, 10);
+		if (parsed < WinMTRUtils::MIN_MAX_LRU || parsed > WinMTRUtils::MAX_MAX_LRU) {
+			parsed = WinMTRUtils::DEFAULT_MAX_LRU;
+		}
+		this->dlg.SetMaxLRU(parsed, WinMTRDialog::options_source::cmd_line);
+	}
+	break;
+	case expect_next::interval:
+	{
+		auto parsed = std::wcstof(pszParam, &end);
+		if (parsed > WinMTRUtils::MAX_INTERVAL || parsed < WinMTRUtils::MIN_INTERVAL) {
+			parsed = WinMTRUtils::DEFAULT_INTERVAL;
+		}
+		this->dlg.SetInterval(parsed, WinMTRDialog::options_source::cmd_line);
+	}
+	break;
+	case expect_next::ping_size:
+	{
+		auto parsed = std::wcstol(pszParam, &end, 10);
+		if (parsed > WinMTRUtils::MAX_PING_SIZE || parsed < WinMTRUtils::MIN_PING_SIZE) {
+			parsed = WinMTRUtils::DEFAULT_PING_SIZE;
+		}
+		this->dlg.SetPingSize(parsed, WinMTRDialog::options_source::cmd_line);
+	}
+	break;
+	default:
+		break;
+	}
+	this->next = expect_next::none;
 }
