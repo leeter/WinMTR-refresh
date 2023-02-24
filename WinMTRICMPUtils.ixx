@@ -363,7 +363,7 @@ struct icmp_ping final {
 
 	auto await_resume() const noexcept
 	{
-		return traits::parsemethod(m_replyData.data(), m_replyData.size());
+		return traits::parsemethod(m_replyData.data(), static_cast<DWORD>(m_replyData.size()));
 	}
 
 	bool await_ready() const noexcept

@@ -37,6 +37,7 @@ module;
 #define NOMINMAX
 #include <winsock2.h>
 #include <WS2tcpip.h>
+#include "WinMTRICMPPIOdef.h"
 #include <Ipexport.h>
 #include "resource.h"
 #include <icmpapi.h>
