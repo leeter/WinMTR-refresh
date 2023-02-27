@@ -106,7 +106,7 @@ BEGIN
     EDITTEXT        IDC_EDIT_SIZE,196,99,34,13,ES_AUTOHSCROLL | ES_NUMBER
     CONTROL         "Resolve names",IDC_CHECK_DNS,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,167,119,63,8
     GROUPBOX        "",IDC_STATIC,7,7,237,82,BS_FLAT
-    CTEXT           "WinMTR-Refresh v0.96 is offered under GPL V2",IDC_STATIC,42,14,194,17
+    CTEXT           "WinMTR-Refresh v0.97 is offered under GPL V2",IDC_STATIC,42,14,194,17
     PUSHBUTTON      "&License and Credits",ID_LICENSE,81,67,94,14,BS_FLAT
     LTEXT           "Max. hosts in LRU list:",IDC_STATIC,15,119,74,10,NOT WS_GROUP
     EDITTEXT        IDC_EDIT_MAX_LRU,90,116,34,13,ES_AUTOHSCROLL | ES_NUMBER
@@ -161,7 +161,7 @@ CAPTION "WinMTR-Refresh"
 FONT 8, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
     DEFPUSHBUTTON   "OK",IDOK,144,101,50,14
-    LTEXT           "WinMTR-Refresh v0.96 is offered under GPL V2",IDC_STATIC,7,9,176,10
+    LTEXT           "WinMTR-Refresh v0.97 is offered under GPL V2",IDC_STATIC,7,9,176,10
     LTEXT           "Usage: WinMTR [options] target_host_name",IDC_STATIC,7,29,144,8
     LTEXT           "Options:",IDC_STATIC,7,39,28,8
     LTEXT           "     --interval, -i VALUE. Set ping interval.",IDC_STATIC,26,47,131,8
@@ -178,8 +178,8 @@ END
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 0,9,6,0
- PRODUCTVERSION 0,9,6,0
+ FILEVERSION 0,9,7,0
+ PRODUCTVERSION 0,9,7,0
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -195,12 +195,12 @@ BEGIN
         BLOCK "040904b0"
         BEGIN
             VALUE "FileDescription", "WinMTR-Refresh"
-            VALUE "FileVersion", "0.9.6.0"
+            VALUE "FileVersion", "0.9.7.0"
             VALUE "InternalName", "WinMTR"
-            VALUE "LegalCopyright", "WinMTR 0.9.6.0 (c) 2010-2011 Appnor MSP, 2020-2023 Leetsoftwerx."
+            VALUE "LegalCopyright", "WinMTR 0.9.7.0 (c) 2010-2011 Appnor MSP, 2020-2023 Leetsoftwerx."
             VALUE "OriginalFilename", "WinMTR.EXE"
             VALUE "ProductName", "WinMTR Application"
-            VALUE "ProductVersion", "0.9.6.0"
+            VALUE "ProductVersion", "0.9.7.0"
         END
     END
     BLOCK "VarFileInfo"
@@ -320,10 +320,21 @@ END
 STRINGTABLE
 BEGIN
     IDP_SOCKETS_INIT_FAILED "Windows sockets initialization failed."
-    IDS_STRING_SB_NAME      "WinMTR-Refresh v0.96 GPL V2"
+    IDS_STRING_SB_NAME      "WinMTR-Refresh v0.97 GPL V2"
     IDS_STRING_SB_PING      "0000000"
     IDS_STRING_CLEAR_HISTORY "Clear History"
     IDS_STRING_UNABLE_TO_RESOLVE_HOSTNAME "Unable to resolve hostname."
+    IDS_STRING_STOP         "Stop"
+    IDS_STRING_START        "Start"
+    IDS_STRING_WAITING_STOP_TRACE 
+                            "Waiting for last packets in order to stop trace ..."
+    IDS_STRING_DBL_CLICK_MORE_INFO 
+                            "Double click on host name for more information."
+END
+
+STRINGTABLE
+BEGIN
+    IDS_STRING_NO_RESPONSE_FROM_HOST "No response from host"
 END
 
 #endif    // English (United States) resources

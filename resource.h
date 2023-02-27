@@ -8,6 +8,11 @@
 #define IDS_STRING_SB_PING              105
 #define IDS_STRING_CLEAR_HISTORY        106
 #define IDS_STRING_UNABLE_TO_RESOLVE_HOSTNAME 107
+#define IDS_STRING_STOP                 108
+#define IDS_STRING_START                109
+#define IDS_STRING_WAITING_STOP_TRACE   110
+#define IDS_STRING_DBL_CLICK_MORE_INFO  111
+#define IDS_STRING_NO_RESPONSE_FROM_HOST 112
 #define IDR_MAINFRAME                   128
 #define IDD_DIALOG_OPTIONS              129
 #define IDD_DIALOG_LICENSE              130
@@ -48,7 +53,7 @@
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        136
+#define _APS_NEXT_RESOURCE_VALUE        138
 #define _APS_NEXT_COMMAND_VALUE         32771
 #define _APS_NEXT_CONTROL_VALUE         1029
 #define _APS_NEXT_SYMED_VALUE           101

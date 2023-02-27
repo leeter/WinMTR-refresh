@@ -322,10 +322,8 @@ BOOL WinMTRDialog::OnInitDialog()
 	const auto verNumber = WinMTRVerUtil::getExeVersion();
 	#ifndef  _WIN64
 	constexpr auto bitness = 32;
-	//const wchar_t caption[] = {L"WinMTR-Refresh v0.96 32 bit"};
 	#else
 	constexpr auto bitness = 64;
-	//const wchar_t caption[] = {L"WinMTR-Refresh v0.96 64 bit"};
 	#endif
 	const auto caption = std::format(L"WinMTR-Refresh v{} {} bit"sv, verNumber, bitness);
 	SetTimer(1, WINMTR_DIALOG_TIMER, nullptr);
@@ -435,7 +433,7 @@ BOOL WinMTRDialog::InitRegistry() noexcept
 	static const auto WINMTR_VERSION = L"0.96";
 	static const auto WINMTR_LICENSE = L"GPL - GNU Public License";
 	static const auto WINMTR_HOMEPAGE = L"https://github.com/leeter/WinMTR-refresh";
-	versionKey.SetStringValue(L"Version", WINMTR_VERSION);
+	versionKey.SetStringValue(L"Version", WinMTRVerUtil::getExeVersion().c_str());
 	versionKey.SetStringValue(L"License", WINMTR_LICENSE);
 	versionKey.SetStringValue(L"HomePage", WINMTR_HOMEPAGE);
 	CRegKey config_key;
@@ -853,10 +851,13 @@ namespace {
 			L"|                       Host              -   %%  | Sent | Recv | Best | Avrg | Wrst | Last |\r\n" \
 			L"|-------------------------------------------------|------|------|------|------|------|------|\r\n"sv;
 		std::ostream_iterator<wchar_t, wchar_t> out(out_buf);
+		CString noResponse;
+		noResponse.LoadStringW(IDS_STRING_NO_RESPONSE_FROM_HOST);
+		
 		for (const auto curr_state = wmtrnet.getCurrentState(); const auto& hop : curr_state) {
 			auto name = hop.getName();
 			if (name.empty()) {
-				name = L"No response from host"sv;
+				name = noResponse;
 			}
 			std::format_to(out, L"| {:40} - {:4} | {:4} | {:4} | {:4} | {:4} | {:4} | {:4} |\r\n"sv,
 				name, hop.getPercent(),
@@ -877,10 +878,14 @@ namespace {
 		out << L"<table>" \
 			L"<thead><tr><th>Host</th><th>%%</th><th>Sent</th><th>Recv</th><th>Best</th><th>Avrg</th><th>Wrst</th><th>Last</th></tr></thead><tbody>"sv;
 		std::ostream_iterator<wchar_t, wchar_t> outitr(out);
+
+		CString noResponse;
+		noResponse.LoadStringW(IDS_STRING_NO_RESPONSE_FROM_HOST);
+
 		for (const auto curr_state = wmtrnet.getCurrentState(); const auto& hop : curr_state) {
 			auto name = hop.getName();
 			if (name.empty()) {
-				name = L"No response from host"sv;
+				name = noResponse;
 			}
 			std::format_to(outitr
 				, L"<tr><td>{}</td><td>{}</td><td>{}</td><td>{}</td><td>{}</td><td>{}</td><td>{}</td><td>{}</td></tr>"sv
@@ -931,7 +936,6 @@ void WinMTRDialog::OnCHTC() noexcept
 	const auto htmlFormat = HtmlFormatHelper::CreateHtmlFormat(f_buf);
 	auto dataPackage = DataPackage();
 	dataPackage.SetHtmlFormat(htmlFormat);
-
 	Clipboard::SetContentWithOptions(dataPackage, nullptr);
 }
 
@@ -1014,11 +1018,13 @@ int WinMTRDialog::DisplayRedraw()
 		m_listMTR.DeleteItem(m_listMTR.GetItemCount() - 1); 
 	}
 
+	static CString noResponse((LPCWSTR)IDS_STRING_NO_RESPONSE_FROM_HOST);
+
 	for (int i = 0; const auto & host : netstate) {
 
 		auto name = host.getName();
 		if (name.empty()) {
-			name = L"No response from host"sv;
+			name = noResponse;
 		}
 		
 		auto result = std::format_to_n(nr_crt, std::size(nr_crt) - 1, WinMTRUtils::int_number_format, i+1);
@@ -1179,7 +1185,7 @@ winrt::Windows::Foundation::IAsyncAction WinMTRDialog::pingThread(std::stop_toke
 	timeval timeout{ .tv_sec = 30 };
 	auto result = co_await GetAddrInfoAsync(sHost, &timeout, hintFamily);
 	if (!result || result->empty()) {
-		AfxMessageBox(L"Unable to resolve address.");
+		AfxMessageBox(IDS_STRING_UNABLE_TO_RESOLVE_HOSTNAME);
 		co_return;
 	}
 	addrstore = result->front();
@@ -1286,12 +1292,15 @@ void WinMTRDialog::Transit(STATES new_state)
 	// modify controls according to new state
 	switch(transition) {
 		case STATE_TRANSITIONS::IDLE_TO_TRACING:
-			m_buttonStart.EnableWindow(FALSE);
-			m_buttonStart.SetWindowText(L"Stop");
-			m_comboHost.EnableWindow(FALSE);
-			m_buttonOptions.EnableWindow(FALSE);
-			statusBar.SetPaneText(0, L"Double click on host name for more information.");
 			{
+				m_buttonStart.EnableWindow(FALSE);
+				CString newText;
+				newText.LoadStringW(IDS_STRING_STOP);
+				m_buttonStart.SetWindowText(newText);
+				m_comboHost.EnableWindow(FALSE);
+				m_buttonOptions.EnableWindow(FALSE);
+				newText.LoadStringW(IDS_STRING_DBL_CLICK_MORE_INFO);
+				statusBar.SetPaneText(0, newText);
 				// using a different thread to create an MTA so we don't have explosion issues with the
 				// thread pool
 				CString sHost;
@@ -1326,12 +1335,17 @@ void WinMTRDialog::Transit(STATES new_state)
 			// nothing to be done
 		break;
 		case STATE_TRANSITIONS::STOPPING_TO_IDLE:
+		{
+			CString newText;
+			newText.LoadStringW(IDS_STRING_START);
 			m_buttonStart.EnableWindow(TRUE);
-			statusBar.SetPaneText(0, CString((LPCSTR)IDS_STRING_SB_NAME) );
-			m_buttonStart.SetWindowText(L"Start");
+			statusBar.SetPaneText(0, CString((LPCSTR)IDS_STRING_SB_NAME));
+			m_buttonStart.SetWindowText(newText);
 			m_comboHost.EnableWindow(TRUE);
 			m_buttonOptions.EnableWindow(TRUE);
 			m_comboHost.SetFocus();
+		}
+			
 		break;
 		case STATE_TRANSITIONS::STOPPING_TO_STOPPING:
 			DisplayRedraw();
@@ -1340,13 +1354,16 @@ void WinMTRDialog::Transit(STATES new_state)
 			DisplayRedraw();
 		break;
 		case STATE_TRANSITIONS::TRACING_TO_STOPPING:
+		{
 			m_buttonStart.EnableWindow(FALSE);
 			m_comboHost.EnableWindow(FALSE);
 			m_buttonOptions.EnableWindow(FALSE);
 			this->stopTrace();
-			//wmtrnet->StopTrace();
-			statusBar.SetPaneText(0, L"Waiting for last packets in order to stop trace ...");
+			CString newText;
+			newText.LoadStringW(IDS_STRING_WAITING_STOP_TRACE);
+			statusBar.SetPaneText(0, newText);
 			DisplayRedraw();
+		}
 		break;
 		case STATE_TRANSITIONS::IDLE_TO_EXIT:
 			m_buttonStart.EnableWindow(FALSE);
@@ -1354,11 +1371,15 @@ void WinMTRDialog::Transit(STATES new_state)
 			m_buttonOptions.EnableWindow(FALSE);
 		break;
 		case STATE_TRANSITIONS::TRACING_TO_EXIT:
+		{
 			m_buttonStart.EnableWindow(FALSE);
 			m_comboHost.EnableWindow(FALSE);
 			m_buttonOptions.EnableWindow(FALSE);
 			this->stopTrace();
-			statusBar.SetPaneText(0, L"Waiting for last packets in order to stop trace ...");
+			CString newText;
+			newText.LoadStringW(IDS_STRING_WAITING_STOP_TRACE);
+			statusBar.SetPaneText(0, newText);
+		}
 		break;
 		case STATE_TRANSITIONS::STOPPING_TO_EXIT:
 			m_buttonStart.EnableWindow(FALSE);
