@@ -215,6 +215,9 @@ import WinMTRIPUtils;
 import WinMTRSNetHost;
 import WinMTRDnsUtil;
 import WinMTRUtils;
+import WinMTRVerUtil;
+
+using namespace std::literals;
 
 namespace {
 	constexpr auto DEFAULT_PING_SIZE = 64;
@@ -316,15 +319,17 @@ void WinMTRDialog::DoDataExchange(CDataExchange* pDX)
 BOOL WinMTRDialog::OnInitDialog()
 {
 	CDialog::OnInitDialog();
-
+	const auto verNumber = WinMTRVerUtil::getExeVersion();
 	#ifndef  _WIN64
-	const wchar_t caption[] = {L"WinMTR-Refresh v0.96 32 bit"};
+	constexpr auto bitness = 32;
+	//const wchar_t caption[] = {L"WinMTR-Refresh v0.96 32 bit"};
 	#else
-	const wchar_t caption[] = {L"WinMTR-Refresh v0.96 64 bit"};
+	constexpr auto bitness = 64;
+	//const wchar_t caption[] = {L"WinMTR-Refresh v0.96 64 bit"};
 	#endif
-
+	const auto caption = std::format(L"WinMTR-Refresh v{} {} bit"sv, verNumber, bitness);
 	SetTimer(1, WINMTR_DIALOG_TIMER, nullptr);
-	SetWindowTextW(caption);
+	SetWindowTextW(caption.c_str());
 
 	SetIcon(m_hIcon, TRUE);			
 	SetIcon(m_hIcon, FALSE);
@@ -373,8 +378,9 @@ BOOL WinMTRDialog::OnInitDialog()
 	// Now move all the controls so they are in the same relative
 	// position within the remaining client area as they would be
 	// with no control bars.
-	CPoint ptOffset(rcClientNow.left - rcClientStart.left,
-					rcClientNow.top - rcClientStart.top);
+	//CPoint ptOffset(rcClientNow.left - rcClientStart.left,
+					//rcClientNow.top - rcClientStart.top);
+	const auto ptOffset = rcClientNow.TopLeft() - rcClientStart.TopLeft();
 
 	CRect  rcChild;
 	CWnd* pwndChild = GetWindow(GW_CHILD);
@@ -1162,6 +1168,7 @@ winrt::Windows::Foundation::IAsyncAction WinMTRDialog::pingThread(std::stop_toke
 			co_return;
 		}
 	}
+	
 	int  hintFamily = AF_UNSPEC; //both
 	if (!this->useIPv4) {
 		hintFamily = AF_INET6;
@@ -1170,7 +1177,7 @@ winrt::Windows::Foundation::IAsyncAction WinMTRDialog::pingThread(std::stop_toke
 		hintFamily = AF_INET;
 	}
 	timeval timeout{ .tv_sec = 30 };
-	auto result = co_await GetAddrInfoAsync(sHost.c_str(), &timeout, hintFamily);
+	auto result = co_await GetAddrInfoAsync(sHost, &timeout, hintFamily);
 	if (!result || result->empty()) {
 		AfxMessageBox(L"Unable to resolve address.");
 		co_return;
