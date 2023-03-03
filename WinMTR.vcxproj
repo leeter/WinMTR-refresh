@@ -217,9 +217,6 @@
       <SubSystem>Windows</SubSystem>
       <OutputFile>.\Release_x32\WinMTR.exe</OutputFile>
       <AdditionalDependencies>MinCore.lib;onecore.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <UACExecutionLevel>AsInvoker</UACExecutionLevel>
-      <EnableUAC>false</EnableUAC>
-      <UACUIAccess>true</UACUIAccess>
       <LargeAddressAware>true</LargeAddressAware>
       <OptimizeReferences>true</OptimizeReferences>
       <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
@@ -271,9 +268,6 @@
       <SubSystem>Windows</SubSystem>
       <OutputFile>.\Release_x64\WinMTR.exe</OutputFile>
       <AdditionalDependencies>MinCore.lib;onecore.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <UACExecutionLevel>AsInvoker</UACExecutionLevel>
-      <EnableUAC>false</EnableUAC>
-      <UACUIAccess>true</UACUIAccess>
       <LargeAddressAware>true</LargeAddressAware>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <FixedBaseAddress>false</FixedBaseAddress>
@@ -329,9 +323,6 @@
       <SubSystem>Windows</SubSystem>
       <OutputFile>.\Release_ARM64\WinMTR.exe</OutputFile>
       <AdditionalDependencies>MinCore.lib;onecore.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <UACExecutionLevel>AsInvoker</UACExecutionLevel>
-      <EnableUAC>false</EnableUAC>
-      <UACUIAccess>true</UACUIAccess>
       <LargeAddressAware>true</LargeAddressAware>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <FixedBaseAddress>false</FixedBaseAddress>
