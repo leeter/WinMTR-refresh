@@ -220,6 +220,7 @@
       <LargeAddressAware>true</LargeAddressAware>
       <OptimizeReferences>true</OptimizeReferences>
       <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
+      <AdditionalOptions> /DEPENDENTLOADFLAG:0x800 %(AdditionalOptions)</AdditionalOptions>
     </Link>
     <Manifest>
       <EnableDpiAwareness>PerMonitorHighDPIAware</EnableDpiAwareness>
@@ -274,6 +275,7 @@
       <CETCompat>true</CETCompat>
       <OptimizeReferences>true</OptimizeReferences>
       <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
+      <AdditionalOptions> /DEPENDENTLOADFLAG:0x800 %(AdditionalOptions)</AdditionalOptions>
     </Link>
     <Manifest>
       <EnableDpiAwareness>PerMonitorHighDPIAware</EnableDpiAwareness>
@@ -328,6 +330,7 @@
       <FixedBaseAddress>false</FixedBaseAddress>
       <OptimizeReferences>true</OptimizeReferences>
       <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
+      <AdditionalOptions> /DEPENDENTLOADFLAG:0x800 %(AdditionalOptions)</AdditionalOptions>
     </Link>
     <Manifest>
       <EnableDpiAwareness>PerMonitorHighDPIAware</EnableDpiAwareness>
@@ -378,6 +381,7 @@
       <OutputFile>.\Debug_x32\WinMTR.exe</OutputFile>
       <AdditionalDependencies>MinCore.lib;onecore.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <LargeAddressAware>true</LargeAddressAware>
+      <AdditionalOptions> /DEPENDENTLOADFLAG:0x800 %(AdditionalOptions)</AdditionalOptions>
     </Link>
     <Manifest />
     <Manifest />
@@ -430,6 +434,7 @@
       <OutputFile>.\Debug_x32\WinMTR.exe</OutputFile>
       <AdditionalDependencies>MinCore.lib;onecore.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <LargeAddressAware>true</LargeAddressAware>
+      <AdditionalOptions> /DEPENDENTLOADFLAG:0x800 %(AdditionalOptions)</AdditionalOptions>
     </Link>
     <Manifest />
     <Manifest />
@@ -478,6 +483,7 @@
       <OutputFile>.\Debug_x64\WinMTR.exe</OutputFile>
       <AdditionalDependencies>MinCore.lib;onecore.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <LargeAddressAware>true</LargeAddressAware>
+      <AdditionalOptions> /DEPENDENTLOADFLAG:0x800 %(AdditionalOptions)</AdditionalOptions>
     </Link>
     <Manifest />
     <Manifest />
@@ -526,6 +532,7 @@
       <OutputFile>.\Debug_x64\WinMTR.exe</OutputFile>
       <AdditionalDependencies>MinCore.lib;onecore.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <LargeAddressAware>true</LargeAddressAware>
+      <AdditionalOptions> /DEPENDENTLOADFLAG:0x800 %(AdditionalOptions)</AdditionalOptions>
     </Link>
     <Manifest />
     <Manifest />
@@ -575,7 +582,7 @@
       <OutputFile>.\Debug_x64_san\WinMTR.exe</OutputFile>
       <AdditionalDependencies>MinCore.lib;onecore.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <LargeAddressAware>true</LargeAddressAware>
-      <AdditionalOptions> %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions> /DEPENDENTLOADFLAG:0x800 %(AdditionalOptions)</AdditionalOptions>
     </Link>
     <Manifest />
     <Manifest />
@@ -625,7 +632,7 @@
       <OutputFile>.\Debug_x64_san\WinMTR.exe</OutputFile>
       <AdditionalDependencies>MinCore.lib;onecore.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <LargeAddressAware>true</LargeAddressAware>
-      <AdditionalOptions> %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions> /DEPENDENTLOADFLAG:0x800 %(AdditionalOptions)</AdditionalOptions>
     </Link>
     <Manifest />
     <Manifest />
@@ -968,24 +975,6 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug - Sanitizers|x64'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
-      <ScanSourceForModuleDependencies Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ScanSourceForModuleDependencies>
-      <TranslateIncludes Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</TranslateIncludes>
-      <ScanSourceForModuleDependencies Condition="'$(Configuration)|$(Platform)'=='Debug - Sanitizers|Win32'">true</ScanSourceForModuleDependencies>
-      <TranslateIncludes Condition="'$(Configuration)|$(Platform)'=='Debug - Sanitizers|Win32'">true</TranslateIncludes>
-      <ScanSourceForModuleDependencies Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ScanSourceForModuleDependencies>
-      <TranslateIncludes Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</TranslateIncludes>
-      <ScanSourceForModuleDependencies Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">true</ScanSourceForModuleDependencies>
-      <TranslateIncludes Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">true</TranslateIncludes>
-      <ScanSourceForModuleDependencies Condition="'$(Configuration)|$(Platform)'=='Debug - Sanitizers|ARM64'">true</ScanSourceForModuleDependencies>
-      <TranslateIncludes Condition="'$(Configuration)|$(Platform)'=='Debug - Sanitizers|ARM64'">true</TranslateIncludes>
-      <ScanSourceForModuleDependencies Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">true</ScanSourceForModuleDependencies>
-      <TranslateIncludes Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">true</TranslateIncludes>
-      <ScanSourceForModuleDependencies Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ScanSourceForModuleDependencies>
-      <TranslateIncludes Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</TranslateIncludes>
-      <ScanSourceForModuleDependencies Condition="'$(Configuration)|$(Platform)'=='Debug - Sanitizers|x64'">true</ScanSourceForModuleDependencies>
-      <TranslateIncludes Condition="'$(Configuration)|$(Platform)'=='Debug - Sanitizers|x64'">true</TranslateIncludes>
-      <ScanSourceForModuleDependencies Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ScanSourceForModuleDependencies>
-      <TranslateIncludes Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</TranslateIncludes>
     </ClCompile>
     <ClCompile Include="WinMTRProperties.cpp" />
   </ItemGroup>
