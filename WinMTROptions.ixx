@@ -30,22 +30,9 @@ module;
 #define WIN32_LEAN_AND_MEAN
 #define VC_EXTRALEAN
 #define NOMINMAX
-//#include "WinMTRGlobal.h"
 #include <afxwin.h>
-//#include <format>
 #include "resource.h"
-//#include "WinMTROptions.h"
 export module WinMTR.Options;
-
-
-
-
-
-#ifdef _DEBUG
-#define new DEBUG_NEW
-#undef THIS_FILE
-static char THIS_FILE[] = __FILE__;
-#endif
 
 //*****************************************************************************
 // CLASS:  WinMTROptions
@@ -102,6 +89,12 @@ public:
 };
 
 module : private;
+
+#ifdef _DEBUG
+#define new DEBUG_NEW
+#undef THIS_FILE
+static char THIS_FILE[] = __FILE__;
+#endif
 
 import <format>;
 import <iterator>;
@@ -163,15 +156,15 @@ BOOL WinMTROptions::OnInitDialog()
 	wchar_t strtmp[20] = {};
 	constexpr auto writable_size = std::size(strtmp) - 1;
 	
-	auto result = std::format_to_n(strtmp, writable_size, WinMTRUtils::float_number_format, interval);
+	auto result = std::format_to_n(std::begin(strtmp), writable_size, WinMTRUtils::float_number_format, interval);
 	*result.out = '\0';
 	m_editInterval.SetWindowText(strtmp);
 
-	result = std::format_to_n(strtmp, writable_size, WinMTRUtils::int_number_format, pingsize);
+	result = std::format_to_n(std::begin(strtmp), writable_size, WinMTRUtils::int_number_format, pingsize);
 	*result.out = '\0';
 	m_editSize.SetWindowText(strtmp);
 	
-	result = std::format_to_n(strtmp, writable_size, WinMTRUtils::int_number_format, maxLRU);
+	result = std::format_to_n(std::begin(strtmp), writable_size, WinMTRUtils::int_number_format, maxLRU);
 	*result.out = '\0';
 	m_editMaxLRU.SetWindowText(strtmp);
 

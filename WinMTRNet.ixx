@@ -72,56 +72,54 @@ import WinMTRSNetHost;
 constexpr auto MAX_HOPS = 30;
 
 class WinMTRNet;
-namespace {
 
-	struct ICMPHandleTraits
+
+struct ICMPHandleTraits
+{
+	using type = HANDLE;
+
+	static void close(type value) noexcept
 	{
-		using type = HANDLE;
-
-		static void close(type value) noexcept
-		{
-			WINRT_VERIFY_(TRUE, ::IcmpCloseHandle(value));
-		}
-
-		[[nodiscard]]
-		static type invalid() noexcept
-		{
-			return INVALID_HANDLE_VALUE;
-		}
-	};
-
-	using IcmpHandle = winrt::handle_type<ICMPHandleTraits>;
+		WINRT_VERIFY_(TRUE, ::IcmpCloseHandle(value));
+	}
 
 	[[nodiscard]]
-	inline bool operator==(const SOCKADDR_STORAGE& lhs, const SOCKADDR_STORAGE& rhs) noexcept {
-		return std::memcmp(&lhs, &rhs, sizeof(SOCKADDR_STORAGE)) == 0;
+	static type invalid() noexcept
+	{
+		return INVALID_HANDLE_VALUE;
 	}
-	
-	struct trace_thread final {
-		trace_thread(const trace_thread&) = delete;
-		trace_thread& operator=(const trace_thread&) = delete;
-		trace_thread(trace_thread&&) = default;
-		trace_thread& operator=(trace_thread&&) = default;
+};
 
-		trace_thread(ADDRESS_FAMILY af, WinMTRNet* winmtr, UCHAR ttl) noexcept
-			:
-			address(),
-			winmtr(winmtr),
-			ttl(ttl)
-		{
-			if (af == AF_INET) {
-				icmpHandle.attach(IcmpCreateFile());
-			}
-			else if (af == AF_INET6) {
-				icmpHandle.attach(Icmp6CreateFile());
-			}
-		}
-		SOCKADDR_STORAGE address;
-		IcmpHandle icmpHandle;
-		WinMTRNet* winmtr;
-		UCHAR		ttl;
-	};
+using IcmpHandle = winrt::handle_type<ICMPHandleTraits>;
+
+[[nodiscard]]
+inline bool operator==(const SOCKADDR_STORAGE& lhs, const SOCKADDR_STORAGE& rhs) noexcept {
+	return std::memcmp(&lhs, &rhs, sizeof(SOCKADDR_STORAGE)) == 0;
 }
+
+struct trace_thread final {
+	trace_thread(const trace_thread&) = delete;
+	trace_thread& operator=(const trace_thread&) = delete;
+	trace_thread(trace_thread&&) = default;
+	trace_thread& operator=(trace_thread&&) = default;
+
+	trace_thread(ADDRESS_FAMILY af, UCHAR ttl) noexcept
+		:
+		address(),
+		ttl(ttl)
+	{
+		if (af == AF_INET) {
+			icmpHandle.attach(IcmpCreateFile());
+		}
+		else if (af == AF_INET6) {
+			icmpHandle.attach(Icmp6CreateFile());
+		}
+	}
+	SOCKADDR_STORAGE address;
+	IcmpHandle icmpHandle;
+	UCHAR		ttl;
+};
+
 
 //*****************************************************************************
 // CLASS:  WinMTRNet
@@ -266,7 +264,7 @@ winrt::Windows::Foundation::IAsyncAction WinMTRNet::DoTrace(std::stop_token stop
 	std::memcpy(&last_remote_addr, &address, getAddressSize(address));
 
 	auto threadMaker = [&address, this, stop_token](UCHAR i) {
-		trace_thread current{ address.sa_family, this, static_cast<UCHAR>(i + 1) };
+		trace_thread current{ address.sa_family, static_cast<UCHAR>(i + 1) };
 		using namespace std::string_view_literals;
 		TRACE_MSG(L"Thread with TTL="sv << current.ttl << L" started."sv);
 		std::memcpy(&current.address, &address, getAddressSize(address));

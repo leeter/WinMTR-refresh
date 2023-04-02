@@ -20,23 +20,23 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #pragma once
 
 #include <minwindef.h>
-#include <bcrypt.h>
+#include <winternl.h>
 
-typedef struct _IO_STATUS_BLOCK {
-	union {
-		NTSTATUS Status;
-		PVOID    Pointer;
-	} DUMMYUNIONNAME;
-	ULONG_PTR Information;
-} IO_STATUS_BLOCK, * PIO_STATUS_BLOCK;
-
-typedef
-VOID
-(NTAPI* PIO_APC_ROUTINE) (
-	IN PVOID ApcContext,
-	IN PIO_STATUS_BLOCK IoStatusBlock,
-	IN ULONG Reserved
-	);
+//typedef struct _IO_STATUS_BLOCK {
+//	union {
+//		NTSTATUS Status;
+//		PVOID    Pointer;
+//	} DUMMYUNIONNAME;
+//	ULONG_PTR Information;
+//} IO_STATUS_BLOCK, * PIO_STATUS_BLOCK;
+//
+//typedef
+//VOID
+//(NTAPI* PIO_APC_ROUTINE) (
+//	IN PVOID ApcContext,
+//	IN PIO_STATUS_BLOCK IoStatusBlock,
+//	IN ULONG Reserved
+//	);
 #define PIO_APC_ROUTINE_DEFINED
 
 
