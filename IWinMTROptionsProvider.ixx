@@ -19,7 +19,9 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
 export module WinMTROptionsProvider;
-
+/***
+* Note: Implementers must ensure that calling any of the methods is thread safe
+*/
 export struct __declspec(novtable) IWinMTROptionsProvider {
 	virtual unsigned getPingSize() const noexcept = 0;
 	virtual double getInterval() const noexcept = 0;
