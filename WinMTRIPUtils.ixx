@@ -41,7 +41,7 @@ import <string>;
 export template<class T>
 concept socket_type = requires(T a) {
 	a.sa_family;
-	std::convertible_to<decltype(a.sa_family), ADDRESS_FAMILY>;
+	requires std::convertible_to<decltype(a.sa_family), ADDRESS_FAMILY>;
 };
 
 export template<typename T>
