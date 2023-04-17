@@ -44,13 +44,17 @@ concept socket_type = requires(T a) {
 	requires std::convertible_to<decltype(a.sa_family), ADDRESS_FAMILY>;
 };
 
-export template<typename T>
-	requires socket_type<T> || std::convertible_to<T, SOCKADDR_STORAGE>
+template<typename T>
+	requires socket_type<T> || std::convertible_to<T, SOCKADDR_STORAGE> || std::convertible_to<T, SOCKADDR_INET>
 inline constexpr auto getAddressFamily(const T & addr) noexcept {
+	using cvref_t = std::remove_cvref_t<T>;
 	if constexpr (socket_type<T>) {
 		return addr.sa_family;
 	}
-	else if (std::is_same_v<SOCKADDR_STORAGE, std::remove_cvref_t<T>>) {
+	else if constexpr (std::is_same_v<SOCKADDR_INET, cvref_t>) {
+		return addr.si_family;
+	}
+	else if (std::is_same_v<SOCKADDR_STORAGE, cvref_t>) {
 		return addr.ss_family;
 	}
 }
@@ -61,7 +65,7 @@ inline constexpr size_t getAddressSize(const T& addr) noexcept {
 }
 
 export template<class T>
-concept socket_addr_type = socket_type<T> || std::convertible_to<T, sockaddr_storage>;
+concept socket_addr_type = socket_type<T> || std::convertible_to<T, sockaddr_storage> || std::convertible_to<T, SOCKADDR_INET>;
 
 export template<socket_addr_type T>
 inline constexpr bool isValidAddress(const T& addr) noexcept {

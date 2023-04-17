@@ -81,9 +81,7 @@ struct trace_thread final {
 	trace_thread& operator=(trace_thread&&) = default;
 
 	trace_thread(ADDRESS_FAMILY af, UCHAR ttl) noexcept
-		:
-		address(),
-		ttl(ttl)
+		:ttl(ttl)
 	{
 		if (af == AF_INET) {
 			icmpHandle.attach(IcmpCreateFile());
@@ -92,29 +90,26 @@ struct trace_thread final {
 			icmpHandle.attach(Icmp6CreateFile());
 		}
 	}
-	SOCKADDR_STORAGE address;
 	IcmpHandle icmpHandle;
 	UCHAR		ttl;
 };
 
 [[nodiscard("The task should be awaited")]]
-winrt::Windows::Foundation::IAsyncAction WinMTRNet::DoTrace(std::stop_token stop_token, sockaddr& address)
+winrt::Windows::Foundation::IAsyncAction WinMTRNet::DoTrace(std::stop_token stop_token, SOCKADDR_INET address)
 {
 	tracing = true;
 	ResetHops();
-	last_remote_addr = {};
-	std::memcpy(&last_remote_addr, &address, getAddressSize(address));
+	last_remote_addr = address;
 
 	auto threadMaker = [&address, this, stop_token](UCHAR i) {
-		trace_thread current{ address.sa_family, static_cast<UCHAR>(i + 1) };
+		trace_thread current{ address.si_family, static_cast<UCHAR>(i + 1) };
 		using namespace std::string_view_literals;
 		TRACE_MSG(L"Thread with TTL="sv << current.ttl << L" started."sv);
-		std::memcpy(&current.address, &address, getAddressSize(address));
-		if (current.address.ss_family == AF_INET) {
-			return this->handleICMP<sockaddr_in>(stop_token, current);
+		if (address.si_family == AF_INET) {
+			return this->handleICMP(address.Ipv4, stop_token, current);
 		}
-		else if (current.address.ss_family == AF_INET6) {
-			return this->handleICMP<sockaddr_in6>(stop_token, current);
+		else if (address.si_family == AF_INET6) {
+			return this->handleICMP(address.Ipv6, stop_token, current);
 		}
 		winrt::throw_hresult(HRESULT_FROM_WIN32(WSAEOPNOTSUPP));
 	};
@@ -131,11 +126,23 @@ winrt::Windows::Foundation::IAsyncAction WinMTRNet::DoTrace(std::stop_token stop
 }
 
 template<class T>
+requires std::is_same_v<sockaddr_in, T> || std::is_same_v<sockaddr_in6, T>
+constexpr SOCKADDR_INET to_sockaddr_inet(T addr) noexcept {
+	if constexpr (std::is_same_v<sockaddr_in, T>) {
+		return { .Ipv4 = addr };
+	}
+	else {
+		return { .Ipv6 = addr };
+	}
+}
+
+template<class T>
 [[nodiscard("The task should be awaited")]]
-winrt::Windows::Foundation::IAsyncAction WinMTRNet::handleICMP(std::stop_token stop_token, trace_thread& current) {
+winrt::Windows::Foundation::IAsyncAction WinMTRNet::handleICMP(T remote_addr, std::stop_token stop_token, trace_thread& current) {
 	using namespace std::literals;
 	using traits = icmp_ping_traits<T>;
 	trace_thread mine = std::move(current);
+	T local_addr = remote_addr;
 	co_await winrt::resume_background();
 	using namespace std::string_view_literals;
 	const auto				nDataLen = this->options->getPingSize();
@@ -143,7 +150,7 @@ winrt::Windows::Foundation::IAsyncAction WinMTRNet::handleICMP(std::stop_token s
 	std::vector<std::byte> achRepData{ reply_reply_buffer_size<T>(nDataLen) };
 	winrt::handle wait_handle{ CreateEventW(nullptr, FALSE, FALSE, nullptr) };
 
-	T* addr = reinterpret_cast<T*>(&mine.address);
+	T* addr = reinterpret_cast<T*>(&local_addr);
 	while (this->tracing) {
 
 		// this is a backup for if the atomic above doesn't work
@@ -175,7 +182,7 @@ winrt::Windows::Foundation::IAsyncAction WinMTRNet::handleICMP(std::stop_token s
 				this->addNewReturn(mine.ttl - 1, icmp_echo_reply->RoundTripTime);
 				{
 					auto naddr = traits::to_addr_from_ping(icmp_echo_reply);
-					this->SetAddr(mine.ttl - 1, *reinterpret_cast<sockaddr*>(&naddr));
+					this->SetAddr(mine.ttl - 1, to_sockaddr_inet(naddr));
 				}
 				break;
 			case IP_BUF_TOO_SMALL:
@@ -247,16 +254,15 @@ winrt::Windows::Foundation::IAsyncAction WinMTRNet::handleICMP(std::stop_token s
 	co_return;
 }
 
-winrt::fire_and_forget	WinMTRNet::SetAddr(int at, sockaddr& addr)
+winrt::fire_and_forget	WinMTRNet::SetAddr(int at, SOCKADDR_INET addr)
 {
 	{
 		std::unique_lock lock(ghMutex);
 		if (isValidAddress(host[at].addr) || !isValidAddress(addr)) {
 			co_return;
 		}
-		host[at].addr = {};
+		host[at].addr = addr;
 		//TRACE_MSG(L"Start DnsResolverThread for new address " << addr << L". Old addr value was " << host[at].addr);
-		std::memcpy(&host[at].addr, &addr, getAddressSize(addr));
 	}
 	if (!options->getUseDNS()) {
 		co_return;
@@ -266,7 +272,7 @@ winrt::fire_and_forget	WinMTRNet::SetAddr(int at, sockaddr& addr)
 	auto sharedThis = shared_from_this();
 	co_await winrt::resume_background();
 	wchar_t buf[NI_MAXHOST] = {};
-	sockaddr_storage tempaddr = sharedThis->GetAddr(local_at);
+	auto tempaddr = sharedThis->GetAddr(local_at);
 
 	if (const auto nresult = GetNameInfoW(
 		reinterpret_cast<sockaddr*>(&tempaddr)

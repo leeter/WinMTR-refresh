@@ -41,8 +41,8 @@ import WinMTRIPUtils;
 import :ClassDef;
 
 [[nodiscard]]
-inline bool operator==(const SOCKADDR_STORAGE& lhs, const SOCKADDR_STORAGE& rhs) noexcept {
-	return std::memcmp(&lhs, &rhs, sizeof(SOCKADDR_STORAGE)) == 0;
+inline bool operator==(const SOCKADDR_INET& lhs, const SOCKADDR_INET& rhs) noexcept {
+	return std::memcmp(&lhs, &rhs, sizeof(SOCKADDR_INET)) == 0;
 }
 
 

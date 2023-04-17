@@ -31,14 +31,15 @@ module;
 #define NOSERVICE
 #define NOMINMAX
 #include <WinSock2.h>
+#include <ws2ipdef.h>
 export module WinMTRSNetHost;
 
 import WinMTRIPUtils;
 import <string>;
-export using ::SOCKADDR_STORAGE;
+
 
 export struct s_nethost final {
-	SOCKADDR_STORAGE addr = {};
+	SOCKADDR_INET addr = {};
 	std::wstring name;
 	int xmit = 0;			// number of PING packets sent
 	int returned = 0;		// number of ICMP echo replies received

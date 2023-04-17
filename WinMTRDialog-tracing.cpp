@@ -22,10 +22,12 @@ module;
 #pragma warning (disable : 4005)
 #include "targetver.h"
 #define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
 #include <afx.h>
 #include <afxext.h>
 #include <afxdisp.h>
 #include <ws2tcpip.h>
+#include <ws2ipdef.h>
 #include "resource.h"
 
 module WinMTR.Dialog:tracing;
@@ -56,7 +58,7 @@ bool WinMTRDialog::InitMTRNet() noexcept
 		sHost = L"localhost";
 	}
 
-	SOCKADDR_STORAGE addrstore{};
+	SOCKADDR_INET addrstore{};
 	for (auto af : { AF_INET, AF_INET6 }) {
 		INT addrSize = sizeof(addrstore);
 		if (auto res = WSAStringToAddressW(
@@ -105,7 +107,7 @@ winrt::Windows::Foundation::IAsyncAction WinMTRDialog::pingThread(std::stop_toke
 		}
 	}tracexit{ this };
 
-	SOCKADDR_STORAGE addrstore = {};
+	SOCKADDR_INET addrstore = {};
 
 	for (auto af : { AF_INET, AF_INET6 }) {
 		INT addrSize = sizeof(addrstore);
@@ -116,7 +118,7 @@ winrt::Windows::Foundation::IAsyncAction WinMTRDialog::pingThread(std::stop_toke
 			, reinterpret_cast<LPSOCKADDR>(&addrstore)
 			, &addrSize);
 			!res) {
-			co_await this->wmtrnet->DoTrace(stop_token, *reinterpret_cast<LPSOCKADDR>(&addrstore));
+			co_await this->wmtrnet->DoTrace(stop_token, std::move(addrstore));
 			co_return;
 		}
 	}
@@ -135,7 +137,7 @@ winrt::Windows::Foundation::IAsyncAction WinMTRDialog::pingThread(std::stop_toke
 		co_return;
 	}
 	addrstore = result->front();
-	co_await this->wmtrnet->DoTrace(stop_token, *reinterpret_cast<LPSOCKADDR>(&addrstore));
+	co_await this->wmtrnet->DoTrace(stop_token, std::move(addrstore));
 }
 
 winrt::fire_and_forget WinMTRDialog::stopTrace()

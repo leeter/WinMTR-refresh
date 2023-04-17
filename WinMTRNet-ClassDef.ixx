@@ -30,6 +30,7 @@ module;
 #define NOSERVICE
 #define NOMINMAX
 #include <winsock2.h>
+#include <ws2ipdef.h>
 export module WinMTR.Net:ClassDef;
 
 import <optional>;
@@ -72,7 +73,7 @@ public:
 
 
 	[[nodiscard("The task should be awaited")]]
-	winrt::Windows::Foundation::IAsyncAction	DoTrace(std::stop_token stop_token, sockaddr& address);
+	winrt::Windows::Foundation::IAsyncAction	DoTrace(std::stop_token stop_token, SOCKADDR_INET address);
 
 	void	ResetHops() noexcept
 	{
@@ -94,7 +95,7 @@ public:
 	static constexpr auto MAX_HOPS = 30;
 private:
 	std::array<s_nethost, WinMTRNet::MAX_HOPS>	host;
-	SOCKADDR_STORAGE last_remote_addr;
+	SOCKADDR_INET last_remote_addr;
 	mutable std::recursive_mutex	ghMutex;
 	std::optional<winrt::Windows::Foundation::IAsyncAction> tracer;
 	std::optional<winrt::apartment_context> context;
@@ -103,12 +104,12 @@ private:
 	std::atomic_bool	tracing;
 
 	[[nodiscard]]
-	SOCKADDR_STORAGE GetAddr(int at) const
+	SOCKADDR_INET GetAddr(int at) const
 	{
 		std::unique_lock lock(ghMutex);
 		return host[at].addr;
 	}
-	winrt::fire_and_forget	SetAddr(int at, sockaddr& addr);
+	winrt::fire_and_forget	SetAddr(int at, SOCKADDR_INET addr);
 	void	SetName(int at, std::wstring n)
 	{
 		std::unique_lock lock(ghMutex);
@@ -136,5 +137,5 @@ private:
 
 	template<class T>
 	[[nodiscard("The task should be awaited")]]
-	winrt::Windows::Foundation::IAsyncAction handleICMP(std::stop_token stop_token, trace_thread& current);
+	winrt::Windows::Foundation::IAsyncAction handleICMP(T remote_addr, std::stop_token stop_token, trace_thread& current);
 };

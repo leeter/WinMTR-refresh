@@ -12,7 +12,7 @@ module;
 #define NOMINMAX
 #include <WinSock2.h>
 #include <WS2tcpip.h>
-
+#include <ws2ipdef.h>
 export module WinMTRDnsUtil;
 
 import <string_view>;
@@ -30,11 +30,11 @@ export template<class T, class U>
 concept layout_compatible = std::is_layout_compatible_v<U, T>;
 
 export template<layout_compatible<ADDRINFOEXW> A>
-std::optional<SOCKADDR_STORAGE> get_sockaddr_from_addrinfo(const A* info) {
+std::optional<SOCKADDR_INET> get_sockaddr_from_addrinfo(const A* info) {
 	if (info->ai_addr == nullptr) {
 		return std::nullopt;
 	}
-	SOCKADDR_STORAGE addrstore = {};
+	SOCKADDR_INET addrstore = {};
 
 	std::memcpy(&addrstore, info->ai_addr, info->ai_addrlen);
 	return addrstore;
@@ -116,15 +116,15 @@ public:
 		}
 	}
 
-	std::optional<std::vector<SOCKADDR_STORAGE>> await_resume() const noexcept
+	std::optional<std::vector<SOCKADDR_INET>> await_resume() const noexcept
 	{
 		if (m_dwError != ERROR_SUCCESS) {
 			return std::nullopt;
 		}
 
-		std::vector<SOCKADDR_STORAGE> addresses;
+		std::vector<SOCKADDR_INET> addresses;
 		for (auto result = m_results; result; result = result->ai_next) {
-			SOCKADDR_STORAGE addrstore = {};
+			SOCKADDR_INET addrstore = {};
 
 			std::memcpy(&addrstore, m_results->ai_addr, m_results->ai_addrlen);
 			auto addr = get_sockaddr_from_addrinfo(result);

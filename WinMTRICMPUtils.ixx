@@ -30,6 +30,7 @@ import <concepts>;
 import <coroutine>;
 import <span>;
 import <type_traits>;
+import <algorithm>;
 import <ppl.h>;
 import <ppltasks.h>;
 import <pplawait.h>;
@@ -267,7 +268,7 @@ struct icmp_ping_traits<sockaddr_in6> {
 	}
 	static storagetype to_addr_from_ping(const reply_type_ptr reply) noexcept {
 		sockaddr_in6 naddr = { .sin6_family = AF_INET6 };
-		memcpy(&naddr.sin6_addr, reply->Address.sin6_addr, sizeof(naddr.sin6_addr));
+		std::ranges::copy(reply->Address.sin6_addr, naddr.sin6_addr.u.Word);
 		return naddr;
 	}
 };

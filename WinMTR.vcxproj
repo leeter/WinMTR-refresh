@@ -836,24 +836,6 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug - Sanitizers|x64'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
-      <ScanSourceForModuleDependencies Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ScanSourceForModuleDependencies>
-      <TranslateIncludes Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</TranslateIncludes>
-      <ScanSourceForModuleDependencies Condition="'$(Configuration)|$(Platform)'=='Debug - Sanitizers|Win32'">true</ScanSourceForModuleDependencies>
-      <TranslateIncludes Condition="'$(Configuration)|$(Platform)'=='Debug - Sanitizers|Win32'">true</TranslateIncludes>
-      <ScanSourceForModuleDependencies Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ScanSourceForModuleDependencies>
-      <TranslateIncludes Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</TranslateIncludes>
-      <ScanSourceForModuleDependencies Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">true</ScanSourceForModuleDependencies>
-      <TranslateIncludes Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">true</TranslateIncludes>
-      <ScanSourceForModuleDependencies Condition="'$(Configuration)|$(Platform)'=='Debug - Sanitizers|ARM64'">true</ScanSourceForModuleDependencies>
-      <TranslateIncludes Condition="'$(Configuration)|$(Platform)'=='Debug - Sanitizers|ARM64'">true</TranslateIncludes>
-      <ScanSourceForModuleDependencies Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">true</ScanSourceForModuleDependencies>
-      <TranslateIncludes Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">true</TranslateIncludes>
-      <ScanSourceForModuleDependencies Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ScanSourceForModuleDependencies>
-      <TranslateIncludes Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</TranslateIncludes>
-      <ScanSourceForModuleDependencies Condition="'$(Configuration)|$(Platform)'=='Debug - Sanitizers|x64'">true</ScanSourceForModuleDependencies>
-      <TranslateIncludes Condition="'$(Configuration)|$(Platform)'=='Debug - Sanitizers|x64'">true</TranslateIncludes>
-      <ScanSourceForModuleDependencies Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ScanSourceForModuleDependencies>
-      <TranslateIncludes Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</TranslateIncludes>
     </ClCompile>
     <ClCompile Include="WinMTRLicense.ixx">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
@@ -945,24 +927,6 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug - Sanitizers|x64'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
-      <ScanSourceForModuleDependencies Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ScanSourceForModuleDependencies>
-      <TranslateIncludes Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</TranslateIncludes>
-      <ScanSourceForModuleDependencies Condition="'$(Configuration)|$(Platform)'=='Debug - Sanitizers|Win32'">true</ScanSourceForModuleDependencies>
-      <TranslateIncludes Condition="'$(Configuration)|$(Platform)'=='Debug - Sanitizers|Win32'">true</TranslateIncludes>
-      <ScanSourceForModuleDependencies Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ScanSourceForModuleDependencies>
-      <TranslateIncludes Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</TranslateIncludes>
-      <ScanSourceForModuleDependencies Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">true</ScanSourceForModuleDependencies>
-      <TranslateIncludes Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">true</TranslateIncludes>
-      <ScanSourceForModuleDependencies Condition="'$(Configuration)|$(Platform)'=='Debug - Sanitizers|ARM64'">true</ScanSourceForModuleDependencies>
-      <TranslateIncludes Condition="'$(Configuration)|$(Platform)'=='Debug - Sanitizers|ARM64'">true</TranslateIncludes>
-      <ScanSourceForModuleDependencies Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">true</ScanSourceForModuleDependencies>
-      <TranslateIncludes Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">true</TranslateIncludes>
-      <ScanSourceForModuleDependencies Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ScanSourceForModuleDependencies>
-      <TranslateIncludes Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</TranslateIncludes>
-      <ScanSourceForModuleDependencies Condition="'$(Configuration)|$(Platform)'=='Debug - Sanitizers|x64'">true</ScanSourceForModuleDependencies>
-      <TranslateIncludes Condition="'$(Configuration)|$(Platform)'=='Debug - Sanitizers|x64'">true</TranslateIncludes>
-      <ScanSourceForModuleDependencies Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ScanSourceForModuleDependencies>
-      <TranslateIncludes Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</TranslateIncludes>
     </ClCompile>
     <ClCompile Include="WinMTRDialog.ixx">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
