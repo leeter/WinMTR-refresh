@@ -18,6 +18,18 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 #pragma once
+#pragma warning (disable : 4005)
+#include "targetver.h"
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
+#define NOMCX
+#define NOIME
+#define NOGDI
+#define NONLS
+#define NOAPISET
+#define NOSERVICE
+#include <WinSock2.h>
+#include <WS2tcpip.h>
 
 #include <minwindef.h>
 #include <winternl.h>
@@ -38,6 +50,10 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 //	IN ULONG Reserved
 //	);
 #define PIO_APC_ROUTINE_DEFINED
+
+#include <iphlpapi.h>
+#include <icmpapi.h>
+#include <Ipexport.h>
 
 
 

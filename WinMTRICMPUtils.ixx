@@ -20,21 +20,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 module;
 #pragma warning (disable : 4005)
-#include "targetver.h"
-#define WIN32_LEAN_AND_MEAN
-#define VC_EXTRALEAN
-#define NOMCX
-#define NOIME
-#define NOGDI
-#define NONLS
-#define NOAPISET
-#define NOSERVICE
-#define NOMINMAX
-#include <WinSock2.h>
-#include <WS2tcpip.h>
-#include "WinMTRICMPPIOdef.h"
-#include <iphlpapi.h>
-#include <icmpapi.h>
+
 #ifdef _RESUMABLE_ENABLE_LEGACY_AWAIT_ADAPTERS
 #error "don't compile with /await"
 #endif
@@ -48,6 +34,7 @@ import <ppl.h>;
 import <ppltasks.h>;
 import <pplawait.h>;
 import <winrt/base.h>;
+import "WinMTRICMPPIOdef.h";
 
 constexpr auto ECHO_REPLY_TIMEOUT = 5000;
 

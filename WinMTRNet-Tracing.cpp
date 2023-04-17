@@ -51,9 +51,51 @@ import <string_view>;
 import <mutex>;
 import <cstring>;
 import <winrt/Windows.Foundation.h>;
+import "WinMTRICMPPIOdef.h";
 import WinMTRIPUtils;
 import WinMTRICMPUtils;
 import :ClassDef;
+
+struct ICMPHandleTraits
+{
+	using type = HANDLE;
+
+	static void close(type value) noexcept
+	{
+		WINRT_VERIFY_(TRUE, ::IcmpCloseHandle(value));
+	}
+
+	[[nodiscard]]
+	static type invalid() noexcept
+	{
+		return INVALID_HANDLE_VALUE;
+	}
+};
+
+using IcmpHandle = winrt::handle_type<ICMPHandleTraits>;
+
+struct trace_thread final {
+	trace_thread(const trace_thread&) = delete;
+	trace_thread& operator=(const trace_thread&) = delete;
+	trace_thread(trace_thread&&) = default;
+	trace_thread& operator=(trace_thread&&) = default;
+
+	trace_thread(ADDRESS_FAMILY af, UCHAR ttl) noexcept
+		:
+		address(),
+		ttl(ttl)
+	{
+		if (af == AF_INET) {
+			icmpHandle.attach(IcmpCreateFile());
+		}
+		else if (af == AF_INET6) {
+			icmpHandle.attach(Icmp6CreateFile());
+		}
+	}
+	SOCKADDR_STORAGE address;
+	IcmpHandle icmpHandle;
+	UCHAR		ttl;
+};
 
 [[nodiscard("The task should be awaited")]]
 winrt::Windows::Foundation::IAsyncAction WinMTRNet::DoTrace(std::stop_token stop_token, sockaddr& address)
@@ -69,10 +111,10 @@ winrt::Windows::Foundation::IAsyncAction WinMTRNet::DoTrace(std::stop_token stop
 		TRACE_MSG(L"Thread with TTL="sv << current.ttl << L" started."sv);
 		std::memcpy(&current.address, &address, getAddressSize(address));
 		if (current.address.ss_family == AF_INET) {
-			return this->handleICMP<sockaddr_in>(stop_token, std::move(current));
+			return this->handleICMP<sockaddr_in>(stop_token, current);
 		}
 		else if (current.address.ss_family == AF_INET6) {
-			return this->handleICMP<sockaddr_in6>(stop_token, std::move(current));
+			return this->handleICMP<sockaddr_in6>(stop_token, current);
 		}
 		winrt::throw_hresult(HRESULT_FROM_WIN32(WSAEOPNOTSUPP));
 	};
@@ -90,7 +132,7 @@ winrt::Windows::Foundation::IAsyncAction WinMTRNet::DoTrace(std::stop_token stop
 
 template<class T>
 [[nodiscard("The task should be awaited")]]
-winrt::Windows::Foundation::IAsyncAction WinMTRNet::handleICMP(std::stop_token stop_token, trace_thread current) {
+winrt::Windows::Foundation::IAsyncAction WinMTRNet::handleICMP(std::stop_token stop_token, trace_thread& current) {
 	using namespace std::literals;
 	using traits = icmp_ping_traits<T>;
 	trace_thread mine = std::move(current);
