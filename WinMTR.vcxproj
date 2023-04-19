@@ -216,7 +216,7 @@
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <SubSystem>Windows</SubSystem>
       <OutputFile>.\Release_x32\WinMTR.exe</OutputFile>
-      <AdditionalDependencies>MinCore.lib;onecore.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>onecore.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <LargeAddressAware>true</LargeAddressAware>
       <OptimizeReferences>true</OptimizeReferences>
       <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
@@ -268,7 +268,7 @@
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <SubSystem>Windows</SubSystem>
       <OutputFile>.\Release_x64\WinMTR.exe</OutputFile>
-      <AdditionalDependencies>MinCore.lib;onecore.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>onecore.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <LargeAddressAware>true</LargeAddressAware>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <FixedBaseAddress>false</FixedBaseAddress>
@@ -324,7 +324,7 @@
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <SubSystem>Windows</SubSystem>
       <OutputFile>.\Release_ARM64\WinMTR.exe</OutputFile>
-      <AdditionalDependencies>MinCore.lib;onecore.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>onecore.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <LargeAddressAware>true</LargeAddressAware>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <FixedBaseAddress>false</FixedBaseAddress>
@@ -379,7 +379,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
       <OutputFile>.\Debug_x32\WinMTR.exe</OutputFile>
-      <AdditionalDependencies>MinCore.lib;onecore.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>onecore.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <LargeAddressAware>true</LargeAddressAware>
       <AdditionalOptions> /DEPENDENTLOADFLAG:0x800 %(AdditionalOptions)</AdditionalOptions>
     </Link>
@@ -432,7 +432,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
       <OutputFile>.\Debug_x32\WinMTR.exe</OutputFile>
-      <AdditionalDependencies>MinCore.lib;onecore.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>onecore.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <LargeAddressAware>true</LargeAddressAware>
       <AdditionalOptions> /DEPENDENTLOADFLAG:0x800 %(AdditionalOptions)</AdditionalOptions>
     </Link>
@@ -481,7 +481,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
       <OutputFile>.\Debug_x64\WinMTR.exe</OutputFile>
-      <AdditionalDependencies>MinCore.lib;onecore.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>onecore.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <LargeAddressAware>true</LargeAddressAware>
       <AdditionalOptions> /DEPENDENTLOADFLAG:0x800 %(AdditionalOptions)</AdditionalOptions>
     </Link>
@@ -530,7 +530,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
       <OutputFile>.\Debug_x64\WinMTR.exe</OutputFile>
-      <AdditionalDependencies>MinCore.lib;onecore.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>onecore.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <LargeAddressAware>true</LargeAddressAware>
       <AdditionalOptions> /DEPENDENTLOADFLAG:0x800 %(AdditionalOptions)</AdditionalOptions>
     </Link>
@@ -580,7 +580,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
       <OutputFile>.\Debug_x64_san\WinMTR.exe</OutputFile>
-      <AdditionalDependencies>MinCore.lib;onecore.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>onecore.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <LargeAddressAware>true</LargeAddressAware>
       <AdditionalOptions> /DEPENDENTLOADFLAG:0x800 %(AdditionalOptions)</AdditionalOptions>
     </Link>
@@ -630,7 +630,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
       <OutputFile>.\Debug_x64_san\WinMTR.exe</OutputFile>
-      <AdditionalDependencies>MinCore.lib;onecore.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>onecore.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <LargeAddressAware>true</LargeAddressAware>
       <AdditionalOptions> /DEPENDENTLOADFLAG:0x800 %(AdditionalOptions)</AdditionalOptions>
     </Link>
