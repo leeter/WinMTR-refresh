@@ -1,4 +1,4 @@
-﻿WinMTR – Appnor's Free Network Diagnostic Tool - http://winmtr.net
+﻿WinMTR – Appnor's Free Network Diagnostic Tool
 
 Thank you for downloading WinMTR v0.93!
 
@@ -7,13 +7,12 @@ Thank you for downloading WinMTR v0.93!
 WinMTR is a free MS Windows visual application that combines the functionality of the traceroute and ping in a single network diagnostic tool. WinMTR is Open Source Software, maintained by Appnor MSP, a fully managed hosting & cloud provider.
 
 It was started in 2000 by Vasile Laurentiu Stanimir  as a clone for the popular Matt’s Traceroute (hence MTR) Linux/UNIX utility. 
-Read more about WinMTR’s history: http://winmtr.net/history/
 
 # License & Redistribution
 
 WinMTR is offered as Open Source Software under GPL v2. 
 Read more about the licensing conditions: http://www.gnu.org/licenses/gpl-2.0.html
-Download the code from: http://sourceforge.net/projects/winmtr/
+Download the code from: https://github.com/leeter/WinMTR-refresh
 
 # Installation
 
@@ -57,17 +56,17 @@ Please report it to us to make sure it’s not a bug in the application.
 
 
 # Old Changelog
-31.01.2011 - Version v0.92 is out, fixing reporting errors for very slow connections.
-11.01.2011 - Version v0.91 is out under GPL v2, by popular request.
-24.12.2010 - New version! for 32 and 64 bit Operating Systems. Now works on Windows 7 as a regular user. Various bug fixes. License changed from GPL to commercial, but not for long ;-) (v0.9) 
-20.01.2002 - Last entered hosts an options are now hold in registry. Home page and development moved to Sourceforge.
-05.09.2001 - Replace edit box with combo box which hold last entered host names. Fixed a memory leak which caused program to crash after a long time running. (v0.7)
-11.27.2000 - Added resizing support and flat buttons. (v0.6)
+* 31.01.2011 - Version v0.92 is out, fixing reporting errors for very slow connections.
+* 11.01.2011 - Version v0.91 is out under GPL v2, by popular request.
+* 24.12.2010 - New version! for 32 and 64 bit Operating Systems. Now works on Windows 7 as a regular user. Various bug fixes. License changed from GPL to commercial, but not for long ;-) (v0.9) 
+* 20.01.2002 - Last entered hosts an options are now hold in registry. Home page and development moved to Sourceforge.
+* 05.09.2001 - Replace edit box with combo box which hold last entered host names. Fixed a memory leak which caused program to crash after a long time running. (v0.7)
+* 11.27.2000 - Added resizing support and flat buttons. (v0.6)
 11.26.2000 - Added copy data to clipboard and possibility to save data to file as text or HTML.(v0.5)
-08.03.2000 - Added double-click on host name in list for detailed information. (v0.4)
-08.02.2000 - Fixed ICMP error codes handling. Print an error message corresponding to ICP_HOST_UNREACHABLE error code instead of a empty line. (v0.3)
-08.01.2000 - Support for full command-line operations. (v0.2)
-07.28.2000 - First release. (v0.1)
+* 08.03.2000 - Added double-click on host name in list for detailed information. (v0.4)
+* 08.02.2000 - Fixed ICMP error codes handling. Print an error message corresponding to ICP_HOST_UNREACHABLE error code instead of a empty line. (v0.3)
+* 08.01.2000 - Support for full command-line operations. (v0.2)
+* 07.28.2000 - First release. (v0.1)
 
 # Bug Reports
 
@@ -83,8 +82,6 @@ If you are a developer planning to extend the current open source code, please l
 
 # Contact
 
-Use the form available at http://winmtr.net or write to us contact AT winmtr DOT net
-
 &copy; GPL v2 -  2010-2010 Appnor MSP S.A. - http://www.appnor.com
 
-&copy; GPL v2 - 2020-2021 Leetsoftwerx
+&copy; GPL v2 - 2020-2023 Leetsoftwerx
