@@ -45,7 +45,6 @@ export namespace utils {
 #ifdef _UNICODE
 		void ParseParam([[maybe_unused]] const char* pszParam, [[maybe_unused]] BOOL bFlag, [[maybe_unused]] BOOL bLast) noexcept override final
 		{
-			using namespace std::literals;
 		}
 #endif
 	private:
