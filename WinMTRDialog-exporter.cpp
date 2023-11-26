@@ -75,7 +75,7 @@ namespace {
 		out_buf << L"   "sv << cs_tmp.GetString();
 		return out_buf.str();
 	}
-
+	// jscpd:ignore-start
 	std::wostream& makeHTMLOutput(WinMTRNet& wmtrnet, std::wostream& out) {
 		out << L"<table>" \
 			L"<thead><tr><th>Host</th><th>%%</th><th>Sent</th><th>Recv</th><th>Best</th><th>Avrg</th><th>Wrst</th><th>Last</th></tr></thead><tbody>"sv;
@@ -105,6 +105,7 @@ namespace {
 		out << L"</tbody></table>"sv;
 		return out;
 	}
+	// jscpd:ignore-end
 }
 
 //*****************************************************************************
