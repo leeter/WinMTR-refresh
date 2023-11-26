@@ -12,6 +12,7 @@ JSON_JSONLINT_FILTER_REGEX_EXCLUDE: '(\.vscode/)'
 YAML_YAMLLINT_FILTER_REGEX_EXCLUDE: '(templates/\.mega-linter\.yml)'
 YAML_PRETTIER_FILTER_REGEX_EXCLUDE: '(templates/\.mega-linter\.yml|mkdocs\.yml)'
 YAML_V8R_FILTER_REGEX_EXCLUDE: '(descriptors|templates/\.mega-linter\.yml|\.codecov\.yml)'
+CPP_FILTER_REGEX_INCLUDE: '(\.cpp|\.ixx|\.h)'
 BASH_FILTER_REGEX_EXCLUDE: "(lib)"
 MARKDOWN_FILTER_REGEX_EXCLUDE: '(license\.md|docs/licenses)'
 MARKDOWN_MARKDOWN_LINK_CHECK_DISABLE_ERRORS: true
