@@ -5,6 +5,8 @@ APPLY_FIXES: all
 
 DISABLE_LINTERS:
   - REPOSITORY_CHECKOV
+  - REPOSITORY_KICS
+  - REPOSITORY_DEVSKIM
 
 PRINT_ALL_FILES: false
 FILTER_REGEX_EXCLUDE: '(\.automation/test|\.automation/generated|\.venv|\.github/workflows|docs/javascripts|docs/overrides|docs/json-schemas|flavors|clj-kondo|TEMPLATES)'
@@ -18,4 +20,4 @@ MARKDOWN_FILTER_REGEX_EXCLUDE: '(license\.md|docs/licenses)'
 MARKDOWN_MARKDOWN_LINK_CHECK_DISABLE_ERRORS: true
 SPELL_VALE_FILE_EXTENSIONS:
   - .md
-SPELL_FILTER_REGEX_EXCLUDE: (valestyles|\.github|docs/licenses)
+SPELL_FILTER_REGEX_EXCLUDE: (\.mega-linter\.yml|valestyles|\.github|docs/licenses)
