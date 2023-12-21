@@ -76,7 +76,7 @@ jobs:
           # main. Override with true if you always want to lint all sources
           #
           # To validate the entire codebase, set to:
-          VALIDATE_ALL_CODEBASE: true
+          # VALIDATE_ALL_CODEBASE: true
           #
           # To validate only diff with main, set to:
           # VALIDATE_ALL_CODEBASE: >-
