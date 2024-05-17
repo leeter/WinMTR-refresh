@@ -100,7 +100,7 @@ jobs:
 
           # Upload MegaLinter artifacts
       - name: Archive production artifacts
-        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # pin@v4
+        uses: actions/upload-artifact@552bf3722c16e81001aea7db72d8cedf64eb5f68 # pin@v4
 
         if: success() || failure()
         with:
