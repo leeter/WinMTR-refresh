@@ -1,0 +1,8 @@
+
+IndentWidth: 4
+TabWidth: 4
+UseTabStyle: ForContinuationAndIndentation
+AlignAfterOpenBracket: Align
+BracedInitializerIndentWidth: 4
+Standard: c++20
+SpacesInAngles: never
