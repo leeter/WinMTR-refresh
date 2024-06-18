@@ -140,7 +140,7 @@ jobs:
       # Create pull request if applicable
       # (for now works only on PR from same repository, not from forks)
       - name: Create Pull Request with applied fixes
-        uses: peter-evans/create-pull-request@ca98a71ccc705c342f8ce2da65477ee957baf25c # pin@v5
+        uses: peter-evans/create-pull-request@c5a7806660adbe173f04e3e038b0ccdcd758773c # pin@v5
         id: cpr
         if: env.APPLY_FIXES_IF_PR == 'true'
         with:
