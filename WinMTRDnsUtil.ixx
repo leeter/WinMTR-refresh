@@ -17,6 +17,7 @@ export module WinMTRDnsUtil;
 
 import <string_view>;
 import <optional>;
+import <expected>;
 import <coroutine>;
 import <type_traits>;
 import <cstring>;
@@ -40,14 +41,14 @@ std::optional<SOCKADDR_INET> get_sockaddr_from_addrinfo(const A* info) {
 	return addrstore;
 }
 
-export template<layout_compatible<ADDRINFOEXW> A>
-std::optional<std::wstring> get_name_from_addrinfo(const ADDRINFOEXW* info) {
-	if (info->ai_canonname == nullptr) {
-		return std::nullopt;
-	}
-	
-	return std::wstring(info->ai_canonname);
-}
+//export template<layout_compatible<ADDRINFOEXW> A>
+//std::optional<std::wstring> get_name_from_addrinfo(const ADDRINFOEXW* info) {
+//	if (info->ai_canonname == nullptr) {
+//		return std::nullopt;
+//	}
+//	
+//	return std::wstring(info->ai_canonname);
+//}
 
 export struct addrinfo_deleter final {
 	void operator()(PADDRINFOEXW adder_info) const noexcept {
@@ -80,7 +81,7 @@ public:
 	{
 	}
 
-	~name_lookup_async()
+	~name_lookup_async() noexcept
 	{
 		if (m_results) {
 			FreeAddrInfoExW(m_results);
@@ -98,7 +99,7 @@ public:
 		m_resume = resume_handle;
 		// AF_UNSPEC counts as AF_INET | AF_INET6
 		ADDRINFOEXW hint = { .ai_flags = m_flags, .ai_family = m_family };
-		auto result = GetAddrInfoExW(
+		const auto result = GetAddrInfoExW(
 			m_Name.data()
 			, nullptr ///PCWSTR                             pServiceName,
 			, NS_DNS
@@ -116,19 +117,15 @@ public:
 		}
 	}
 
-	std::optional<std::vector<SOCKADDR_INET>> await_resume() const noexcept
+	std::expected<std::vector<SOCKADDR_INET>, winrt::hresult> await_resume() const noexcept
 	{
 		if (m_dwError != ERROR_SUCCESS) {
-			return std::nullopt;
+			return std::unexpected{ winrt::hresult{HRESULT_FROM_WIN32(m_dwError) } };
 		}
 
 		std::vector<SOCKADDR_INET> addresses;
 		for (auto result = m_results; result; result = result->ai_next) {
-			SOCKADDR_INET addrstore = {};
-
-			std::memcpy(&addrstore, m_results->ai_addr, m_results->ai_addrlen);
-			auto addr = get_sockaddr_from_addrinfo(result);
-			if (addr) {
+			if (const auto addr = get_sockaddr_from_addrinfo(result); addr) {
 				addresses.push_back(*addr);
 			}
 		}
