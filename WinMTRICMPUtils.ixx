@@ -20,7 +20,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 module;
 #pragma warning (disable : 4005)
-
+#include<sal.h>
 #ifdef _RESUMABLE_ENABLE_LEGACY_AWAIT_ADAPTERS
 #error "don't compile with /await"
 #endif
@@ -332,14 +332,17 @@ struct icmp_ping final {
 			winrt::throw_last_error();
 		}
 
-		FILETIME FileDueTime;
-		ULARGE_INTEGER ulDueTime;
-			//
+		
+		//
 		// Set the timer to fire in 5 seconds.
 		//
-		ulDueTime.QuadPart = static_cast<ULONGLONG>( -(5ll * 10ll * 1000ll * 1000ll));
-		FileDueTime.dwHighDateTime = ulDueTime.HighPart;
-		FileDueTime.dwLowDateTime = ulDueTime.LowPart;
+		ULARGE_INTEGER ulDueTime{
+			.QuadPart = static_cast<ULONGLONG>(-(5ll * 10ll * 1000ll * 1000ll))
+		};
+		FILETIME FileDueTime{
+			.dwLowDateTime = ulDueTime.LowPart,
+			.dwHighDateTime = ulDueTime.HighPart
+		};
 		m_tpwait.attach(CreateThreadpoolWait(&WaitCallback, this, nullptr));
 		if (!m_tpwait) [[unlikely]] {
 			winrt::throw_last_error();
