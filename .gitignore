@@ -24,3 +24,4 @@
 /Release_x32
 /Release Installer_x64
 /megalinter-reports/
+/vcpkg_installed/x64-windows
