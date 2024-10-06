@@ -25,3 +25,4 @@
 /Release Installer_x64
 /megalinter-reports/
 /vcpkg_installed/x64-windows
+/vcpkg_installed/ARM64-windows-static
