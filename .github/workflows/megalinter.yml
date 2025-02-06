@@ -64,7 +64,7 @@ jobs:
 
         # You can override MegaLinter flavor used to have faster performances
         # More info at https://megalinter.io/flavors/
-        uses: oxsecurity/megalinter/flavors/c_cpp@ec124f7998718d79379a3c5b39f5359952baf21d # pin@839e6d63c0423eb74ce2578225f8b8b4bed63ede # v8.4.2
+        uses: oxsecurity/megalinter/flavors/c_cpp@ec124f7998718d79379a3c5b39f5359952baf21d # pin@ec124f7998718d79379a3c5b39f5359952baf21d # v8.4.2
 
         id: ml
 
