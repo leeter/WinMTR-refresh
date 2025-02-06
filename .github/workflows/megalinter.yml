@@ -162,7 +162,7 @@ jobs:
         run: sudo chown -Rc $UID .git/
 
       - name: Commit and push applied linter fixes
-        uses: stefanzweifel/git-auto-commit-action@e35726034b3ecce33707aab96909aed0a404d55c # pin@v5
+        uses: stefanzweifel/git-auto-commit-action@c86fa26bedab90b9a250e22f66759c0c50699f15 # pin@v5
         if: env.APPLY_FIXES_IF_COMMIT == 'true'
         with:
           branch: >-
