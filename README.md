@@ -24,6 +24,13 @@ As you can see, WinMTR requires no other installation effort.
 
 Trick: You can copy the WinMTR.exe file in Windows/System32 so it’s accessible via the command line – cmd!
 
+## Supported platforms:
+* Windows 11 latest release
+* Windows 10x64 (until MS support drop)
+
+## Best effort platforms (the maintainer doesn't have hardware, and the compiler doesn't always cooperate)
+* Windows 11 on ARM
+
 # Usage
 
 Visual:
