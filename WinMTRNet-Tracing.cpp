@@ -104,7 +104,7 @@ winrt::Windows::Foundation::IAsyncAction WinMTRNet::DoTrace(std::stop_token stop
 	auto threadMaker = [&address, this, stop_token](UCHAR i) {
 		trace_thread current{ address.si_family, static_cast<UCHAR>(i + 1) };
 		using namespace std::string_view_literals;
-		TRACE_MSG(L"Thread with TTL="sv << current.ttl << L" started."sv);
+		TRACE_MSG(L"Thread with TTL="sv << mine.ttl << L" started."sv);
 		if (address.si_family == AF_INET) {
 			return this->handleICMP(address.Ipv4, stop_token, current);
 		}
@@ -186,59 +186,59 @@ winrt::Windows::Foundation::IAsyncAction WinMTRNet::handleICMP(T remote_addr, st
 				}
 				break;
 			case IP_BUF_TOO_SMALL:
-				this->SetName(current.ttl - 1, L"Reply buffer too small."s);
+				this->SetName(mine.ttl - 1, L"Reply buffer too small."s);
 				break;
 			case IP_DEST_NET_UNREACHABLE:
-				this->SetName(current.ttl - 1, L"Destination network unreachable."s);
+				this->SetName(mine.ttl - 1, L"Destination network unreachable."s);
 				break;
 			case IP_DEST_HOST_UNREACHABLE:
-				this->SetName(current.ttl - 1, L"Destination host unreachable."s);
+				this->SetName(mine.ttl - 1, L"Destination host unreachable."s);
 				break;
 			case IP_DEST_PROT_UNREACHABLE:
-				this->SetName(current.ttl - 1, L"Destination protocol unreachable."s);
+				this->SetName(mine.ttl - 1, L"Destination protocol unreachable."s);
 				break;
 			case IP_DEST_PORT_UNREACHABLE:
-				this->SetName(current.ttl - 1, L"Destination port unreachable."s);
+				this->SetName(mine.ttl - 1, L"Destination port unreachable."s);
 				break;
 			case IP_NO_RESOURCES:
-				this->SetName(current.ttl - 1, L"Insufficient IP resources were available."s);
+				this->SetName(mine.ttl - 1, L"Insufficient IP resources were available."s);
 				break;
 			case IP_BAD_OPTION:
-				this->SetName(current.ttl - 1, L"Bad IP option was specified."s);
+				this->SetName(mine.ttl - 1, L"Bad IP option was specified."s);
 				break;
 			case IP_HW_ERROR:
-				this->SetName(current.ttl - 1, L"Hardware error occurred."s);
+				this->SetName(mine.ttl - 1, L"Hardware error occurred."s);
 				break;
 			case IP_PACKET_TOO_BIG:
-				this->SetName(current.ttl - 1, L"Packet was too big."s);
+				this->SetName(mine.ttl - 1, L"Packet was too big."s);
 				break;
 			case IP_REQ_TIMED_OUT:
-				this->SetName(current.ttl - 1, L"Request timed out."s);
+				this->SetName(mine.ttl - 1, L"Request timed out."s);
 				break;
 			case IP_BAD_REQ:
-				this->SetName(current.ttl - 1, L"Bad request."s);
+				this->SetName(mine.ttl - 1, L"Bad request."s);
 				break;
 			case IP_BAD_ROUTE:
-				this->SetName(current.ttl - 1, L"Bad route."s);
+				this->SetName(mine.ttl - 1, L"Bad route."s);
 				break;
 			case IP_TTL_EXPIRED_REASSEM:
-				this->SetName(current.ttl - 1, L"The time to live expired during fragment reassembly."s);
+				this->SetName(mine.ttl - 1, L"The time to live expired during fragment reassembly."s);
 				break;
 			case IP_PARAM_PROBLEM:
-				this->SetName(current.ttl - 1, L"Parameter problem."s);
+				this->SetName(mine.ttl - 1, L"Parameter problem."s);
 				break;
 			case IP_SOURCE_QUENCH:
-				this->SetName(current.ttl - 1, L"Datagrams are arriving too fast to be processed and datagrams may have been discarded."s);
+				this->SetName(mine.ttl - 1, L"Datagrams are arriving too fast to be processed and datagrams may have been discarded."s);
 				break;
 			case IP_OPTION_TOO_BIG:
-				this->SetName(current.ttl - 1, L"An IP option was too big."s);
+				this->SetName(mine.ttl - 1, L"An IP option was too big."s);
 				break;
 			case IP_BAD_DESTINATION:
-				this->SetName(current.ttl - 1, L"Bad destination."s);
+				this->SetName(mine.ttl - 1, L"Bad destination."s);
 				break;
 			case IP_GENERAL_FAILURE:
 			default:
-				this->SetName(current.ttl - 1, L"General failure."s);
+				this->SetName(mine.ttl - 1, L"General failure."s);
 				break;
 			}
 			const auto intervalInSec = this->options->getInterval() * 1s;
