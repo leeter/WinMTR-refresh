@@ -1,7 +1,7 @@
 /*
 WinMTR
 Copyright (C)  2010-2019 Appnor MSP S.A. - http://www.appnor.com
-Copyright (C) 2019-2023 Leetsoftwerx
+Copyright (C) 2019-2025 Leetsoftwerx
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
