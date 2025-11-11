@@ -104,7 +104,7 @@ winrt::Windows::Foundation::IAsyncAction WinMTRNet::DoTrace(std::stop_token stop
 	auto threadMaker = [&address, this, stop_token](UCHAR i) {
 		trace_thread current{ address.si_family, static_cast<UCHAR>(i + 1) };
 		using namespace std::string_view_literals;
-		TRACE_MSG(L"Thread with TTL="sv << mine.ttl << L" started."sv);
+		TRACE_MSG(L"Thread with TTL="sv << current.ttl << L" started."sv);
 		if (address.si_family == AF_INET) {
 			return this->handleICMP(address.Ipv4, stop_token, current);
 		}
