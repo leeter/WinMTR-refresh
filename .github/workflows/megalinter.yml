@@ -51,7 +51,7 @@ jobs:
 
       # Git Checkout
       - name: Checkout Code
-        uses: actions/checkout@71cf2267d89c5cb81562390fa70a37fa40b1305e # pin@v4
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # pin@v4
         with:
           token: ${{ secrets.PAT || secrets.GITHUB_TOKEN }}
 
